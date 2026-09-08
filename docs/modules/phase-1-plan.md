@@ -1,537 +1,468 @@
-# Blue Royal HRMS — Phase 1 Architecture & Implementation Plan
+# Blue Royal HRMS — Phase 1 Architecture & Implementation Plan (Revised v3)
 
-**Document ID:** `DOC-PLAN-PHASE1-001`  
+**Document ID:** `DOC-PLAN-PHASE1-003`  
 **Date:** 2026-09-08  
-**Status:** Architectural Plan — Pending Review & Sign-Off  
-**Scope:** Phase 1 Foundation Masters & Work Rostering Infrastructure  
+**Status:** Architectural Plan — Final Revised Model  
+**Scope:** Phase 1 Foundation Masters, Dual-Stream Rate Engine, Work Rostering & Effective-Dating Infrastructure  
 **Prerequisites:** Phase 0 (Foundation, Auth, RBAC, Database & Audit Engine) — **Approved & Verified**
 
 ---
 
-## 1. Executive Summary & Architectural Cohesion
+## 1. Architectural Decisions & Requirements Alignment
 
-Phase 1 transitions Blue Royal HRMS from the foundation layer into the **Core Master Data & Workforce Rostering Engine**. The goal of Phase 1 is to establish the source-of-truth master records and the temporal structures (effective-dated histories) required by downstream operational modules (Attendance, Overtime, Leave, Payroll, and WPS).
+Following final architectural review, the Phase 1 specification resolves five critical design requirements:
 
-### Alignment with Phase 0 Patterns
+1. **Official Four-Rate Resolution Flow for Invoicing / Billing:**
+   - Established the strict point-in-time billing rate resolution pipeline:
+     $$\text{Work Date} \longrightarrow \text{Employee Assignment} \longrightarrow \text{Client + Project + Designation} \longrightarrow \begin{cases} \text{Project-specific Billing Rate on Date} \\ \downarrow (\text{fallback}) \\ \text{Client-wide Billing Rate on Date} \\ \downarrow (\text{fallback}) \\ \textbf{MISSING\_BILLING\_RATE} \end{cases}$$
+   - Established as a reusable backend domain service in Phase 1 for future consumption by Billing and Business Reports.
+   - Strictly enforces zero derivation between employee payroll rates and client billing rates.
 
-1. **Layered Clean Architecture:** Strict Route ➔ Controller ➔ Service ➔ Model separation. No business logic in controllers or Angular views.
-2. **Dedicated Tooling Workspace:** All schema DDL and seeders are placed in the `database/` workspace (Umzug migrations). Application models in `backend/src/modules/` only reflect runtime schemas.
-3. **Contracts Package (`@blue-royal/contracts`):** Every Phase 1 DTO, request schema, and response payload is defined in `packages/contracts` and shared across backend and frontend.
-4. **Sequelize Pool & Managed Transactions:** All multi-row updates (e.g., closing a previous effective rate and opening a new one) execute inside `runInTransaction`.
-5. **Observability & Auditing:** All mutations dispatch structured audit events via `AuditService.recordEvent` capturing old and new JSONB values.
+2. **Accurate Table Count (13 Tables in Phase 1):**
+   - Corrected and reconciled the exact count of Phase 1 tables:
+     1. `designations`
+     2. `employees`
+     3. `clients`
+     4. `projects`
+     5. `employee_assignments`
+     6. `employee_hourly_rates`
+     7. `client_billing_rates`
+     8. `shifts`
+     9. `employee_shift_assignments`
+     10. `weekly_off_configs`
+     11. `public_holidays`
+     12. `salary_components`
+     13. `employee_salary_structures`
 
----
+3. **Designation Source of Truth (Assignment-Centric Historical Authority):**
+   - Removed direct `designation_id` from the `employees` table to eliminate conflicting dual sources of truth.
+   - `employee_assignments.designation_id` is the single, authoritative source of an employee's designation throughout their deployment history.
+   - An employee's current designation is derived dynamically from their currently active assignment. If an employee has no active assignment, their designation state is unassigned.
 
-## 2. Temporal Data Model: Effective Dating & Historical Correctness
+4. **Strict Separation: Hourly Remuneration vs. Salary Structure:**
+   - `employee_hourly_rates`: Governs hourly/timesheet-based remuneration (`normal_hourly_rate` + `ot_hourly_rate`).
+   - `employee_salary_structures`: Governs monthly configured salary components (`Basic`, `HRA`, `TA`, `DA`, `Medical`, `Other`) linked to `salary_components`.
+   - The two compensation schemas are kept strictly separate.
 
-> [!IMPORTANT]
-> **The Principle of Historical Integrity:**
-> In an HRMS, calculations for past dates must evaluate the state of the employee _as it existed on that date_. Future salary increments, project transfers, or shift modifications must **never** alter historical attendance or payroll results.
-
-The following modules strictly implement **Effective-Dated Records**:
-
-1. **Employee Assignment** (`client_id`, `project_id`)
-2. **Employee Hourly Rates** (`normal_hourly_rate`, `ot_hourly_rate`)
-3. **Shift Assignments / Roster**
-
-### Temporal Mechanics
-
-- Every effective-dated table contains:
-  - `effective_from` (DATE, NOT NULL) — Beginning of validity interval (inclusive).
-  - `effective_to` (DATE, NULLABLE) — End of validity interval (inclusive). A `NULL` value denotes the currently active, ongoing record.
-  - `is_active` (BOOLEAN, default `true`).
-- **Mutation Workflow (Updating an Effective-Dated Record):**
-  When an admin changes an employee's assignment or hourly rate effective as of date `D`:
-  1. Wrapped in `runInTransaction`.
-  2. Find the currently open record where `effective_to IS NULL` or `effective_to >= D`.
-  3. Close previous record by setting `effective_to = D - 1 day`.
-  4. Insert new record with `effective_from = D` and `effective_to = NULL`.
-  5. Prevent overlapping intervals with database constraints / service-layer interval validations.
-
----
-
-## 3. Detailed Specifications for the 8 Phase 1 Modules
-
----
-
-### Module 1: Employee Master
-
-#### 1.1 Business Purpose
-
-Maintains the master record of employment identity, biographical info, compliance documentation (passport, visa, Emirates ID/national ID), department, and employment life-cycle status.
-
-#### 1.2 Module Boundary
-
-- Backend: `backend/src/modules/employee/`
-- Contracts: `packages/contracts/src/employee/`
-- Frontend: `frontend/src/app/features/employee/`
-
-#### 1.3 Database Entity: `employees`
-
-| Column               | Type         | Nullable | Constraints & Description                                                              |
-| -------------------- | ------------ | -------- | -------------------------------------------------------------------------------------- |
-| `id`                 | UUID         | No       | Primary Key, `gen_random_uuid()`                                                       |
-| `employee_code`      | VARCHAR(32)  | No       | Unique, indexed (e.g. `BR-00104`)                                                      |
-| `user_id`            | UUID         | Yes      | Foreign Key ➔ `users(id)` ON DELETE SET NULL (optional self-service login)             |
-| `first_name`         | VARCHAR(100) | No       | Given name                                                                             |
-| `middle_name`        | VARCHAR(100) | Yes      | Middle name                                                                            |
-| `last_name`          | VARCHAR(100) | No       | Family name                                                                            |
-| `gender`             | VARCHAR(16)  | No       | Enum: `male`, `female`, `other`                                                        |
-| `date_of_birth`      | DATE         | No       | Date of birth                                                                          |
-| `nationality`        | VARCHAR(64)  | No       | Country of nationality                                                                 |
-| `email`              | VARCHAR(255) | Yes      | Work or personal email                                                                 |
-| `phone_number`       | VARCHAR(32)  | Yes      | Primary phone number                                                                   |
-| `national_id_number` | VARCHAR(64)  | Yes      | National ID / Emirates ID number                                                       |
-| `national_id_expiry` | DATE         | Yes      | National ID expiration date                                                            |
-| `passport_number`    | VARCHAR(64)  | Yes      | Passport number                                                                        |
-| `passport_expiry`    | DATE         | Yes      | Passport expiration date                                                               |
-| `visa_number`        | VARCHAR(64)  | Yes      | Visa / Permit number                                                                   |
-| `visa_expiry`        | DATE         | Yes      | Visa expiration date                                                                   |
-| `department`         | VARCHAR(100) | Yes      | Department or division name                                                            |
-| `designation`        | VARCHAR(100) | No       | Official job title                                                                     |
-| `date_of_joining`    | DATE         | No       | Official joining date                                                                  |
-| `probation_end_date` | DATE         | Yes      | End of probation period                                                                |
-| `status`             | VARCHAR(32)  | No       | Enum: `active`, `on_leave`, `probation`, `terminated`, `resigned`. Default `probation` |
-| `created_at`         | TIMESTAMPTZ  | No       | Audit creation timestamp                                                               |
-| `updated_at`         | TIMESTAMPTZ  | No       | Audit modification timestamp                                                           |
-| `deleted_at`         | TIMESTAMPTZ  | Yes      | Paranoid soft delete                                                                   |
-
-#### 1.4 API Endpoints
-
-- `GET /api/v1/employees` — Paginated list with search (`code`, `name`, `status`, `department`).
-- `GET /api/v1/employees/:id` — Detailed employee profile including current assignment and hourly rates.
-- `POST /api/v1/employees` — Create new employee.
-- `PUT /api/v1/employees/:id` — Update biographical and profile details.
-- `DELETE /api/v1/employees/:id` — Soft-delete employee record.
-
-#### 1.5 Permissions
-
-- `employees:read`, `employees:create`, `employees:update`, `employees:delete`
+5. **Universal Reusable Point-in-Time Resolution Engine:**
+   - Standardized temporal lookup pattern across all effective-dated entities:
+     - Exact start date matching (`targetDate = effective_from`)
+     - Exact end date matching (`targetDate = effective_to`)
+     - Date before interval (`targetDate < effective_from`)
+     - Date after interval (`targetDate > effective_to`)
+     - Non-overlapping interval validation
+     - Future scheduled changes
+     - Historical point-in-time reconstruction
 
 ---
 
-### Module 2: Client Master
+## 2. Point-in-Time Resolution Engine (Dual-Stream Model)
 
-#### 2.1 Business Purpose
+### 2.1 The Two Independent Financial Streams
+Blue Royal HRMS strictly isolates **Labor Cost (Payroll)** from **Commercial Revenue (Billing)**.
 
-Maintains master records of corporate clients/contracting partners for whom services, projects, and manpower deployment are provided.
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       WORK DATE: [ YYYY-MM-DD ]                                 │
+└───────────────────────────────────────────────┬─────────────────────────────────────────────────┘
+                                                │
+                                                ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                             EMPLOYEE ASSIGNMENT RESOLUTION                                      │
+│                                                                                                 │
+│  Query: employee_assignments WHERE employee_id = :empId                                         │
+│         AND effective_from <= :workDate AND (effective_to IS NULL OR effective_to >= :workDate) │
+│                                                                                                 │
+│  Yields: { client_id, project_id, designation_id }                                              │
+│  Failure: UNASSIGNED_EMPLOYEE (Work logged without active deployment)                          │
+└───────────────────────┬─────────────────────────────────────────────────┬───────────────────────┘
+                        │                                                 │
+                        ▼                                                 ▼
+┌───────────────────────────────────────────────┐ ┌───────────────────────────────────────────────┐
+│        STREAM A: EMPLOYEE PAYROLL (COST)      │ │        STREAM B: CLIENT BILLING (REVENUE)     │
+├───────────────────────────────────────────────┤ ├───────────────────────────────────────────────┤
+│  Query: employee_hourly_rates                 │ │  Step 1: Project-Specific Rate                │
+│         WHERE employee_id = :empId            │ │  Query: client_billing_rates                  │
+│         AND effective_from <= :workDate       │ │         WHERE client_id = :clientId           │
+│         AND (effective_to IS NULL             │ │           AND project_id = :projectId         │
+│              OR effective_to >= :workDate)    │ │           AND designation_id = :designationId │
+│                                               │ │           AND effective_from <= :workDate     │
+│  Success:                                     │ │           AND (effective_to IS NULL           │
+│    { normal_hourly_rate, ot_hourly_rate }     │ │                OR effective_to >= :workDate)  │
+│                                               │ │                                               │
+│  Failure:                                     │ │  Found? ──► YES: Return Project Billing Rate  │
+│    MISSING_EMPLOYEE_PAY_RATE                  │ │          │                                    │
+│    (Payroll calculation halts for this date)  │ │          └──► NO: Step 2 (Fallback)           │
+│                                               │ │                                               │
+│  * NEVER influenced by client billing rates.  │ │  Step 2: Client-Wide Rate (Fallback)          │
+│  * Represents worker's contractual pay.       │ │  Query: client_billing_rates                  │
+│                                               │ │         WHERE client_id = :clientId           │
+│                                               │ │           AND project_id IS NULL              │
+│                                               │ │           AND designation_id = :designationId │
+│                                               │ │           AND effective_from <= :workDate     │
+│                                               │ │           AND (effective_to IS NULL           │
+│                                               │ │                OR effective_to >= :workDate)  │
+│                                               │ │                                               │
+│                                               │ │  Found? ──► YES: Return Client Billing Rate   │
+│                                               │ │          │                                    │
+│                                               │ │          └──► NO: MISSING_BILLING_RATE        │
+│                                               │ │               (Flagged on Invoicing/Report)   │
+└───────────────────────────────────────────────┘ └───────────────────────────────────────────────┘
+```
 
-#### 2.2 Module Boundary
+### 2.2 Reusable Point-in-Time Resolution Service Contract
+In Phase 1, we implement the backend service `BillingRateResolutionService` and `EffectiveDateService`:
 
-- Backend: `backend/src/modules/client/`
-- Contracts: `packages/contracts/src/client/`
-- Frontend: `frontend/src/app/features/client/`
-
-#### 2.3 Database Entity: `clients`
-
-| Column             | Type         | Nullable | Constraints & Description               |
-| ------------------ | ------------ | -------- | --------------------------------------- |
-| `id`               | UUID         | No       | Primary Key, `gen_random_uuid()`        |
-| `code`             | VARCHAR(32)  | No       | Unique client code (e.g. `CLI-EMAAR`)   |
-| `name`             | VARCHAR(255) | No       | Full legal company name                 |
-| `trade_license_no` | VARCHAR(64)  | Yes      | Trade license / Commercial registration |
-| `contact_person`   | VARCHAR(100) | Yes      | Primary contact name                    |
-| `contact_email`    | VARCHAR(255) | Yes      | Primary contact email                   |
-| `contact_phone`    | VARCHAR(32)  | Yes      | Primary contact telephone               |
-| `billing_address`  | TEXT         | Yes      | Official billing address                |
-| `is_active`        | BOOLEAN      | No       | Default `true`                          |
-| `created_at`       | TIMESTAMPTZ  | No       | Creation timestamp                      |
-| `updated_at`       | TIMESTAMPTZ  | No       | Modification timestamp                  |
-| `deleted_at`       | TIMESTAMPTZ  | Yes      | Soft delete                             |
-
-#### 2.4 API Endpoints
-
-- `GET /api/v1/clients` — Paginated list of clients with active filter.
-- `GET /api/v1/clients/:id` — Client details with associated projects.
-- `POST /api/v1/clients` — Create new client.
-- `PUT /api/v1/clients/:id` — Update client info.
-- `DELETE /api/v1/clients/:id` — Soft-delete / deactivate client.
-
-#### 2.5 Permissions
-
-- `clients:read`, `clients:create`, `clients:update`, `clients:delete`
-
----
-
-### Module 3: Project Master
-
-#### 3.1 Business Purpose
-
-Tracks specific projects, site locations, or service contracts associated with a client to which employees are deployed.
-
-#### 3.2 Module Boundary
-
-- Backend: `backend/src/modules/project/`
-- Contracts: `packages/contracts/src/project/`
-- Frontend: `frontend/src/app/features/project/`
-
-#### 3.3 Database Entity: `projects`
-
-| Column          | Type         | Nullable | Constraints & Description                                              |
-| --------------- | ------------ | -------- | ---------------------------------------------------------------------- |
-| `id`            | UUID         | No       | Primary Key, `gen_random_uuid()`                                       |
-| `client_id`     | UUID         | No       | Foreign Key ➔ `clients(id)` ON DELETE RESTRICT                         |
-| `code`          | VARCHAR(32)  | No       | Unique project code                                                    |
-| `name`          | VARCHAR(255) | No       | Project or site name                                                   |
-| `site_location` | VARCHAR(255) | Yes      | Physical worksite address or GPS coordinates                           |
-| `start_date`    | DATE         | Yes      | Project inception date                                                 |
-| `end_date`      | DATE         | Yes      | Project completion/expiry date                                         |
-| `status`        | VARCHAR(32)  | No       | Enum: `planning`, `active`, `suspended`, `completed`. Default `active` |
-| `created_at`    | TIMESTAMPTZ  | No       | Creation timestamp                                                     |
-| `updated_at`    | TIMESTAMPTZ  | No       | Modification timestamp                                                 |
-| `deleted_at`    | TIMESTAMPTZ  | Yes      | Soft delete                                                            |
-
-#### 3.4 API Endpoints
-
-- `GET /api/v1/projects` — Paginated list with filters by `client_id`, `status`.
-- `GET /api/v1/projects/:id` — Project details.
-- `POST /api/v1/projects` — Create project.
-- `PUT /api/v1/projects/:id` — Update project.
-- `DELETE /api/v1/projects/:id` — Soft-delete project.
-
-#### 3.5 Permissions
-
-- `projects:read`, `projects:create`, `projects:update`, `projects:delete`
+```typescript
+export interface ResolvedBillingRate {
+  status: 'RESOLVED' | 'MISSING_ASSIGNMENT' | 'MISSING_BILLING_RATE';
+  workDate: string;
+  employeeId: string;
+  clientId?: string;
+  projectId?: string;
+  designationId?: string;
+  rateSource?: 'PROJECT_SPECIFIC' | 'CLIENT_WIDE_FALLBACK';
+  normalBillingRate?: number;
+  otBillingRate?: number;
+  errorCode?: string;
+  errorMessage?: string;
+}
+```
 
 ---
 
-### Module 4: Employee Assignment (Effective-Dated)
+## 3. Detailed Entity Specifications (13 Tables)
 
-#### 4.1 Business Purpose
+### Table 1: `designations` (Master Catalog)
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key, default `gen_random_uuid()` |
+| `code` | VARCHAR(32) | No | Unique code (e.g. `DES-ELEC`, `DES-MECH`, `DES-FOREMAN`) |
+| `title` | VARCHAR(100) | No | Official designation title |
+| `description` | VARCHAR(255) | Yes | Details / duties |
+| `is_active` | BOOLEAN | No | Default `true` |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
 
-Tracks which client and project an employee is deployed to over time. Maintains 100% historical accuracy for cost allocation and billing.
+---
 
-#### 4.2 Module Boundary
+### Table 2: `employees` (Core Biographical Identity Only)
+*Designation has been removed from this table to prevent conflicting sources of truth. The employee's designation is derived from their active assignment in `employee_assignments`.*
+*Compliance documents (Passport, Visa, Emirates ID, Licenses) are owned by the future Documents module.*
 
-- Backend: `backend/src/modules/assignment/`
-- Contracts: `packages/contracts/src/assignment/`
-- Frontend: `frontend/src/app/features/employee/components/assignment-history/`
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key, default `gen_random_uuid()` |
+| `employee_code` | VARCHAR(32) | No | Unique business code (e.g. `BR-00101`) |
+| `user_id` | UUID | Yes | FK ➔ `users(id)` ON DELETE SET NULL (self-service portal login) |
+| `first_name` | VARCHAR(100) | No | Given name |
+| `middle_name` | VARCHAR(100) | Yes | Middle name |
+| `last_name` | VARCHAR(100) | No | Family name |
+| `gender` | VARCHAR(16) | No | Enum: `male`, `female`, `other` |
+| `date_of_birth` | DATE | No | Birth date |
+| `nationality` | VARCHAR(64) | No | Country of citizenship |
+| `email` | VARCHAR(255) | Yes | Primary email |
+| `phone_number` | VARCHAR(32) | Yes | Primary contact phone |
+| `date_of_joining` | DATE | No | Joining date |
+| `probation_end_date`| DATE | Yes | Probation completion target |
+| `status` | VARCHAR(32) | No | Enum: `active`, `on_leave`, `probation`, `terminated`, `resigned`. Default `probation` |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+| `deleted_at` | TIMESTAMPTZ | Yes | Soft delete |
 
-#### 4.3 Database Entity: `employee_assignments`
+---
 
-| Column           | Type         | Nullable | Constraints & Description                       |
-| ---------------- | ------------ | -------- | ----------------------------------------------- |
-| `id`             | UUID         | No       | Primary Key, `gen_random_uuid()`                |
-| `employee_id`    | UUID         | No       | Foreign Key ➔ `employees(id)` ON DELETE CASCADE |
-| `client_id`      | UUID         | No       | Foreign Key ➔ `clients(id)` ON DELETE RESTRICT  |
-| `project_id`     | UUID         | No       | Foreign Key ➔ `projects(id)` ON DELETE RESTRICT |
-| `effective_from` | DATE         | No       | Start date of assignment                        |
-| `effective_to`   | DATE         | Yes      | End date (`NULL` = current active assignment)   |
-| `remarks`        | VARCHAR(255) | Yes      | Transfer reason or notes                        |
-| `created_at`     | TIMESTAMPTZ  | No       | Creation timestamp                              |
-| `updated_at`     | TIMESTAMPTZ  | No       | Modification timestamp                          |
+### Table 3: `clients` (Commercial Client Master)
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `code` | VARCHAR(32) | No | Unique client code (e.g. `CLI-ALNABOODAH`) |
+| `name` | VARCHAR(255) | No | Legal entity name |
+| `contact_person` | VARCHAR(100) | Yes | Contact person name |
+| `contact_email` | VARCHAR(255) | Yes | Commercial email |
+| `contact_phone` | VARCHAR(32) | Yes | Telephone number |
+| `billing_address` | TEXT | Yes | Official billing address |
+| `is_active` | BOOLEAN | No | Default `true` |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+| `deleted_at` | TIMESTAMPTZ | Yes | Soft delete |
+
+---
+
+### Table 4: `projects` (Client Work Site / Project Master)
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `client_id` | UUID | No | FK ➔ `clients(id)` ON DELETE RESTRICT |
+| `code` | VARCHAR(32) | No | Unique project code (e.g. `PRJ-DOWNTOWN-T1`) |
+| `name` | VARCHAR(255) | No | Site / project name |
+| `site_location` | VARCHAR(255) | Yes | Physical location/emirate |
+| `start_date` | DATE | Yes | Project start |
+| `end_date` | DATE | Yes | Project completion |
+| `status` | VARCHAR(32) | No | Enum: `planning`, `active`, `suspended`, `completed`. Default `active` |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+| `deleted_at` | TIMESTAMPTZ | Yes | Soft delete |
+
+---
+
+### Table 5: `employee_assignments` (Authoritative Historical Deployment & Designation)
+*The authoritative historical source of both employee deployment and employee designation.*
+
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `employee_id` | UUID | No | FK ➔ `employees(id)` ON DELETE CASCADE |
+| `client_id` | UUID | No | FK ➔ `clients(id)` ON DELETE RESTRICT |
+| `project_id` | UUID | No | FK ➔ `projects(id)` ON DELETE RESTRICT |
+| `designation_id`| UUID | No | FK ➔ `designations(id)` ON DELETE RESTRICT |
+| `effective_from` | DATE | No | Start date of deployment |
+| `effective_to` | DATE | Yes | End date (`NULL` = ongoing active deployment) |
+| `remarks` | VARCHAR(255) | Yes | Operational deployment notes |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
 
 **Indexes:**
-
-- `CREATE INDEX idx_emp_assignments_active ON employee_assignments (employee_id, effective_from, effective_to);`
-
-#### 4.4 Effective-Dating Business Rules
-
-- At any point in time `T`, an employee may have **at most one** active assignment.
-- Assigning an employee to a new Project/Client automatically closes their preceding open assignment as of `effective_from - 1 day`.
-- Point-in-time lookup service: `getAssignmentForDate(employeeId: string, date: Date)`.
-
-#### 4.5 API Endpoints
-
-- `GET /api/v1/employees/:id/assignments` — List entire historical assignment timeline for an employee.
-- `POST /api/v1/employees/:id/assignments` — Create a new assignment effective from a given date.
-
-#### 4.6 Permissions
-
-- `assignments:read`, `assignments:create`, `assignments:update`
+- `CREATE INDEX idx_emp_assignments_timeline ON employee_assignments (employee_id, effective_from, effective_to);`
+- `CREATE INDEX idx_emp_assignments_proj ON employee_assignments (project_id, designation_id);`
 
 ---
 
-### Module 5: Shift Master & Shift Assignment
+### Table 6: `employee_hourly_rates` (Payroll Cost Remuneration)
+*Governs employee remuneration for hourly-paid labor. Never derived from client billing.*
 
-#### 5.1 Business Purpose
-
-Defines standard working shift schedules (start time, end time, break duration, cross-midnight / night-shift indicator) and assigns shifts to employees on an effective-dated basis.
-
-#### 5.2 Module Boundary
-
-- Backend: `backend/src/modules/shift/`
-- Contracts: `packages/contracts/src/shift/`
-- Frontend: `frontend/src/app/features/shift/`
-
-#### 5.3 Database Entities
-
-##### Table 5.3.1: `shifts`
-
-| Column              | Type         | Nullable | Constraints & Description                         |
-| ------------------- | ------------ | -------- | ------------------------------------------------- |
-| `id`                | UUID         | No       | Primary Key                                       |
-| `code`              | VARCHAR(32)  | No       | Unique shift code (e.g. `SHIFT-A`, `NIGHT-01`)    |
-| `name`              | VARCHAR(100) | No       | Display name (e.g. `Morning Standard 8hr`)        |
-| `start_time`        | TIME         | No       | Start time (e.g. `08:00:00`)                      |
-| `end_time`          | TIME         | No       | End time (e.g. `17:00:00`)                        |
-| `break_minutes`     | INTEGER      | No       | Break time duration in minutes (default 60)       |
-| `work_hours`        | NUMERIC(4,2) | No       | Planned working hours excluding break (e.g. 8.00) |
-| `is_night_shift`    | BOOLEAN      | No       | `true` if shift crosses midnight                  |
-| `grace_period_mins` | INTEGER      | No       | Late arrival tolerance in minutes (default 15)    |
-| `is_active`         | BOOLEAN      | No       | Default `true`                                    |
-| `created_at`        | TIMESTAMPTZ  | No       | Creation timestamp                                |
-| `updated_at`        | TIMESTAMPTZ  | No       | Modification timestamp                            |
-
-##### Table 5.3.2: `employee_shift_assignments` (Effective-Dated)
-
-| Column           | Type        | Nullable | Constraints & Description                       |
-| ---------------- | ----------- | -------- | ----------------------------------------------- |
-| `id`             | UUID        | No       | Primary Key                                     |
-| `employee_id`    | UUID        | No       | Foreign Key ➔ `employees(id)` ON DELETE CASCADE |
-| `shift_id`       | UUID        | No       | Foreign Key ➔ `shifts(id)` ON DELETE RESTRICT   |
-| `effective_from` | DATE        | No       | Date shift assignment takes effect              |
-| `effective_to`   | DATE        | Yes      | Date shift assignment ends (`NULL` = ongoing)   |
-| `created_at`     | TIMESTAMPTZ | No       | Creation timestamp                              |
-| `updated_at`     | TIMESTAMPTZ | No       | Modification timestamp                          |
-
-#### 5.4 API Endpoints
-
-- `GET /api/v1/shifts` — List all defined shifts.
-- `POST /api/v1/shifts` — Create new shift schedule.
-- `PUT /api/v1/shifts/:id` — Update shift parameters.
-- `GET /api/v1/employees/:id/shifts` — Retrieve employee's historical shift schedule.
-- `POST /api/v1/employees/:id/shifts` — Assign a shift effective from date.
-
-#### 5.5 Permissions
-
-- `shifts:read`, `shifts:create`, `shifts:update`
-
----
-
-### Module 6: Company Calendar / Weekly Off / Public Holidays
-
-#### 6.1 Business Purpose
-
-Defines company-wide standard weekly rest days (e.g. Friday/Saturday or Saturday/Sunday) and official public holidays for a given calendar year. Used by the attendance and payroll engine to compute Overtime on holidays and regular attendance days.
-
-#### 6.2 Module Boundary
-
-- Backend: `backend/src/modules/calendar/`
-- Contracts: `packages/contracts/src/calendar/`
-- Frontend: `frontend/src/app/features/calendar/`
-
-#### 6.3 Database Entities
-
-##### Table 6.3.1: `weekly_off_configs`
-
-| Column           | Type         | Nullable | Constraints & Description                       |
-| ---------------- | ------------ | -------- | ----------------------------------------------- |
-| `id`             | UUID         | No       | Primary Key                                     |
-| `name`           | VARCHAR(100) | No       | e.g. `Standard Weekend (Sunday)`                |
-| `days_of_week`   | INTEGER[]    | No       | Array of day numbers (0 = Sunday, 6 = Saturday) |
-| `effective_from` | DATE         | No       | Date rule takes effect                          |
-| `effective_to`   | DATE         | Yes      | Date rule ends                                  |
-| `is_default`     | BOOLEAN      | No       | Default `true`                                  |
-| `created_at`     | TIMESTAMPTZ  | No       | Creation timestamp                              |
-| `updated_at`     | TIMESTAMPTZ  | No       | Modification timestamp                          |
-
-##### Table 6.3.2: `public_holidays`
-
-| Column          | Type         | Nullable | Constraints & Description                          |
-| --------------- | ------------ | -------- | -------------------------------------------------- |
-| `id`            | UUID         | No       | Primary Key                                        |
-| `calendar_year` | INTEGER      | No       | e.g. `2026`                                        |
-| `name`          | VARCHAR(150) | No       | Holiday title (e.g. `National Day`, `Eid Al Fitr`) |
-| `holiday_date`  | DATE         | No       | Exact holiday date                                 |
-| `description`   | VARCHAR(255) | Yes      | Additional notes                                   |
-| `created_at`    | TIMESTAMPTZ  | No       | Creation timestamp                                 |
-| `updated_at`    | TIMESTAMPTZ  | No       | Modification timestamp                             |
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `employee_id` | UUID | No | FK ➔ `employees(id)` ON DELETE CASCADE |
+| `normal_hourly_rate`| NUMERIC(10,2) | No | Remuneration per regular hour |
+| `ot_hourly_rate` | NUMERIC(10,2) | No | Remuneration per overtime hour |
+| `effective_from` | DATE | No | Start date of rate validity |
+| `effective_to` | DATE | Yes | End date (`NULL` = ongoing active rate) |
+| `change_reason` | VARCHAR(255) | Yes | e.g. `Annual Increment`, `Grade Revision` |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
 
 **Indexes:**
-
-- `CREATE UNIQUE INDEX idx_holiday_date ON public_holidays (holiday_date);`
-
-#### 6.4 API Endpoints
-
-- `GET /api/v1/calendar/weekly-off` — Retrieve active weekly off configuration.
-- `POST /api/v1/calendar/weekly-off` — Configure standard weekly off days.
-- `GET /api/v1/calendar/holidays?year=2026` — List public holidays for a year.
-- `POST /api/v1/calendar/holidays` — Add public holiday.
-- `DELETE /api/v1/calendar/holidays/:id` — Remove public holiday.
-
-#### 6.5 Permissions
-
-- `calendar:read`, `calendar:create`, `calendar:update`, `calendar:delete`
+- `CREATE INDEX idx_emp_hourly_rates_timeline ON employee_hourly_rates (employee_id, effective_from, effective_to);`
 
 ---
 
-### Module 7: Salary Components Master
+### Table 7: `client_billing_rates` (Commercial Invoicing Revenue)
+*Governs rates billed to Clients for work executed. Project-specific rates take precedence over client-wide rates.*
 
-#### 7.1 Business Purpose
-
-Defines standard wage components (earnings and deductions) used in employee compensation structures (Basic, Housing, Transport, Allowances, Deductions). Configures compliance attributes for WPS (Wages Protection System) reporting.
-
-#### 7.2 Module Boundary
-
-- Backend: `backend/src/modules/salary-component/`
-- Contracts: `packages/contracts/src/salary-component/`
-- Frontend: `frontend/src/app/features/salary-component/`
-
-#### 7.3 Database Entity: `salary_components`
-
-| Column           | Type         | Nullable | Constraints & Description                                               |
-| ---------------- | ------------ | -------- | ----------------------------------------------------------------------- |
-| `id`             | UUID         | No       | Primary Key                                                             |
-| `code`           | VARCHAR(32)  | No       | Unique code (e.g. `BASIC`, `HRA`, `TRANS`, `OTHER_ALLOW`)               |
-| `name`           | VARCHAR(100) | No       | Display name (e.g. `Basic Salary`)                                      |
-| `type`           | VARCHAR(16)  | No       | Enum: `earning`, `deduction`                                            |
-| `is_fixed`       | BOOLEAN      | No       | `true` for fixed monthly recurring items; `false` for variable          |
-| `is_wps_basic`   | BOOLEAN      | No       | Flag marking this component as Basic Salary for WPS SIF generation      |
-| `is_wps_housing` | BOOLEAN      | No       | Flag marking this component as Housing Allowance for WPS SIF generation |
-| `is_active`      | BOOLEAN      | No       | Default `true`                                                          |
-| `created_at`     | TIMESTAMPTZ  | No       | Creation timestamp                                                      |
-| `updated_at`     | TIMESTAMPTZ  | No       | Modification timestamp                                                  |
-
-#### 7.4 Seed Requirements
-
-Initial seeders will supply standard base components:
-
-1. `BASIC` — Basic Salary (Earning, `is_wps_basic = true`)
-2. `HOUSING` — Housing Allowance (Earning, `is_wps_housing = true`)
-3. `TRANSPORT` — Transport Allowance (Earning)
-4. `OTHER_ALLOW` — Other Allowances (Earning)
-
-#### 7.5 API Endpoints
-
-- `GET /api/v1/salary-components` — List all components.
-- `POST /api/v1/salary-components` — Create custom component.
-- `PUT /api/v1/salary-components/:id` — Update component configuration.
-
-#### 7.6 Permissions
-
-- `salary-components:read`, `salary-components:create`, `salary-components:update`
-
----
-
-### Module 8: Employee Hourly Rates (Effective-Dated)
-
-#### 8.1 Business Purpose
-
-Tracks the exact normal hourly rate and overtime hourly rate for an employee over time. When attendance and OT are calculated for a pay cycle, the engine queries the rates effective on each respective workday.
-
-#### 8.2 Module Boundary
-
-- Backend: `backend/src/modules/hourly-rate/`
-- Contracts: `packages/contracts/src/hourly-rate/`
-- Frontend: `frontend/src/app/features/employee/components/hourly-rate-history/`
-
-#### 8.3 Database Entity: `employee_hourly_rates`
-
-| Column               | Type          | Nullable | Constraints & Description                                   |
-| -------------------- | ------------- | -------- | ----------------------------------------------------------- |
-| `id`                 | UUID          | No       | Primary Key                                                 |
-| `employee_id`        | UUID          | No       | Foreign Key ➔ `employees(id)` ON DELETE CASCADE             |
-| `normal_hourly_rate` | NUMERIC(10,2) | No       | Standard rate per hour                                      |
-| `ot_hourly_rate`     | NUMERIC(10,2) | No       | Overtime rate per hour (or standard OT multiplier rate)     |
-| `effective_from`     | DATE          | No       | Date this rate schedule becomes active                      |
-| `effective_to`       | DATE          | Yes      | Date this rate schedule expires (`NULL` = currently active) |
-| `reason_for_change`  | VARCHAR(255)  | Yes      | e.g. `Annual Increment`, `Promotion`, `Initial Setup`       |
-| `created_at`         | TIMESTAMPTZ   | No       | Creation timestamp                                          |
-| `updated_at`         | TIMESTAMPTZ   | No       | Modification timestamp                                      |
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `client_id` | UUID | No | FK ➔ `clients(id)` ON DELETE CASCADE |
+| `project_id` | UUID | Yes | FK ➔ `projects(id)` ON DELETE CASCADE (`NULL` = Client-wide default rate card) |
+| `designation_id`| UUID | No | FK ➔ `designations(id)` ON DELETE RESTRICT |
+| `normal_billing_rate`| NUMERIC(10,2) | No | Billed rate per normal hour |
+| `ot_billing_rate` | NUMERIC(10,2) | No | Billed rate per overtime hour |
+| `effective_from` | DATE | No | Start date of billing rate validity |
+| `effective_to` | DATE | Yes | End date (`NULL` = ongoing active rate) |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
 
 **Indexes:**
-
-- `CREATE INDEX idx_emp_rates_active ON employee_hourly_rates (employee_id, effective_from, effective_to);`
-
-#### 8.4 Effective-Dating Business Rules
-
-- At any date `T`, an employee has exactly one active hourly rate record.
-- Rate updates close the prior open record as of `effective_from - 1 day`.
-- Point-in-time lookup service: `getHourlyRatesForDate(employeeId: string, date: Date): { normalRate, otRate }`.
-
-#### 8.5 API Endpoints
-
-- `GET /api/v1/employees/:id/hourly-rates` — Retrieve full historical timeline of employee rates.
-- `POST /api/v1/employees/:id/hourly-rates` — Establish a new rate schedule effective from a given date.
-
-#### 8.6 Permissions
-
-- `hourly-rates:read`, `hourly-rates:create`, `hourly-rates:update`
+- `CREATE INDEX idx_client_billing_rates_lookup ON client_billing_rates (client_id, project_id, designation_id, effective_from, effective_to);`
 
 ---
 
-## 4. Entity Relationship Diagram (Phase 1 Additions)
+### Table 8: `shifts` (Work Shift Master)
+*No grace periods or unconfirmed penalty rules.*
+
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `code` | VARCHAR(32) | No | Unique code (e.g. `SH-DAY-8H`, `SH-NIGHT-10H`) |
+| `name` | VARCHAR(100) | No | Display name |
+| `start_time` | TIME | No | Shift start (e.g. `07:00:00`) |
+| `end_time` | TIME | No | Shift end (e.g. `16:00:00`) |
+| `break_minutes` | INTEGER | No | Scheduled break minutes (default 60) |
+| `work_hours` | NUMERIC(4,2) | No | Net scheduled working hours (e.g. 8.00) |
+| `is_night_shift` | BOOLEAN | No | Crosses midnight indicator |
+| `is_active` | BOOLEAN | No | Default `true` |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+
+---
+
+### Table 9: `employee_shift_assignments` (Roster Timeline)
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `employee_id` | UUID | No | FK ➔ `employees(id)` ON DELETE CASCADE |
+| `shift_id` | UUID | No | FK ➔ `shifts(id)` ON DELETE RESTRICT |
+| `effective_from` | DATE | No | Roster start date |
+| `effective_to` | DATE | Yes | Roster end date (`NULL` = ongoing) |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+
+**Indexes:**
+- `CREATE INDEX idx_emp_shift_timeline ON employee_shift_assignments (employee_id, effective_from, effective_to);`
+
+---
+
+### Table 10: `weekly_off_configs` (Calendar Weekend Settings)
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `name` | VARCHAR(100) | No | e.g. `Standard Weekend (Sunday)` |
+| `days_of_week` | INTEGER[] | No | Array of off days (0 = Sunday, 6 = Saturday) |
+| `effective_from` | DATE | No | Start date |
+| `effective_to` | DATE | Yes | End date |
+| `is_default` | BOOLEAN | No | Default configuration flag |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+
+---
+
+### Table 11: `public_holidays` (Statutory Holidays)
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `calendar_year` | INTEGER | No | Calendar year (e.g. `2026`) |
+| `name` | VARCHAR(150) | No | Name of public holiday |
+| `holiday_date` | DATE | No | Unique holiday date |
+| `description` | VARCHAR(255) | Yes | Notes |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+
+---
+
+### Table 12: `salary_components` (Wage Component Master)
+*Configuration-driven earnings and deductions for salaried employees.*
+
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `code` | VARCHAR(32) | No | Unique code (e.g. `BASIC`, `HRA`, `TA`, `DA`, `MEDICAL`) |
+| `name` | VARCHAR(100) | No | Component name |
+| `type` | VARCHAR(16) | No | Enum: `earning`, `deduction` |
+| `calculation_type`| VARCHAR(16) | No | Enum: `fixed_amount`, `percentage` |
+| `percentage_basis_component_id`| UUID | Yes | FK ➔ `salary_components(id)` (e.g. HRA calculated as % of Basic) |
+| `is_recurring` | BOOLEAN | No | Monthly recurring vs. one-off |
+| `is_wps_basic` | BOOLEAN | No | UAE WPS Basic salary flag |
+| `is_wps_housing` | BOOLEAN | No | UAE WPS Housing allowance flag |
+| `is_active` | BOOLEAN | No | Default `true` |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+
+---
+
+### Table 13: `employee_salary_structures` (Salaried Employee Component Package)
+*Distinct from `employee_hourly_rates`. Governs fixed/percentage compensation for monthly salaried employees.*
+
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | UUID | No | Primary Key |
+| `employee_id` | UUID | No | FK ➔ `employees(id)` ON DELETE CASCADE |
+| `component_id` | UUID | No | FK ➔ `salary_components(id)` ON DELETE RESTRICT |
+| `amount_or_percentage`| NUMERIC(10,2)| No | Monthly fixed currency amount or percentage value |
+| `effective_from` | DATE | No | Start date of package |
+| `effective_to` | DATE | Yes | End date (`NULL` = ongoing package) |
+| `created_at` | TIMESTAMPTZ | No | Timestamp |
+| `updated_at` | TIMESTAMPTZ | No | Timestamp |
+
+**Indexes:**
+- `CREATE INDEX idx_emp_salary_struct_timeline ON employee_salary_structures (employee_id, component_id, effective_from, effective_to);`
+
+---
+
+## 4. Entity Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
-    users ||--o| employees : "associates optional login"
-    clients ||--o{ projects : "owns"
-
-    employees ||--o{ employee_assignments : "has assignment timeline"
-    clients ||--o{ employee_assignments : "hosts"
-    projects ||--o{ employee_assignments : "deployed at"
-
-    shifts ||--o{ employee_shift_assignments : "scheduled"
-    employees ||--o{ employee_shift_assignments : "assigned"
-
-    employees ||--o{ employee_hourly_rates : "has rate history"
-
-    weekly_off_configs {
+    DESIGNATIONS ||--o{ EMPLOYEE_ASSIGNMENTS : "specifies role"
+    DESIGNATIONS ||--o{ CLIENT_BILLING_RATES : "rate category"
+    
+    USERS ||--o| EMPLOYEES : "optional self-service login"
+    
+    CLIENTS ||--o{ PROJECTS : "commissions"
+    CLIENTS ||--o{ CLIENT_BILLING_RATES : "client rates"
+    PROJECTS ||--o{ CLIENT_BILLING_RATES : "site-specific rates"
+    
+    EMPLOYEES ||--o{ EMPLOYEE_ASSIGNMENTS : "deployed in"
+    CLIENTS ||--o{ EMPLOYEE_ASSIGNMENTS : "contracted client"
+    PROJECTS ||--o{ EMPLOYEE_ASSIGNMENTS : "assigned site"
+    
+    EMPLOYEES ||--o{ EMPLOYEE_HOURLY_RATES : "remunerated by"
+    
+    SHIFTS ||--o{ EMPLOYEE_SHIFT_ASSIGNMENTS : "scheduled"
+    EMPLOYEES ||--o{ EMPLOYEE_SHIFT_ASSIGNMENTS : "rostered"
+    
+    SALARY_COMPONENTS ||--o{ EMPLOYEE_SALARY_STRUCTURES : "composed of"
+    SALARY_COMPONENTS ||--o{ SALARY_COMPONENTS : "percentage basis"
+    EMPLOYEES ||--o{ EMPLOYEE_SALARY_STRUCTURES : "monthly salary package"
+    
+    WEEKLY_OFF_CONFIGS {
         uuid id PK
         string name
         int[] days_of_week
         date effective_from
         date effective_to
+        boolean is_default
     }
-
-    public_holidays {
+    
+    PUBLIC_HOLIDAYS {
         uuid id PK
         int calendar_year
         string name
         date holiday_date
     }
-
-    salary_components {
-        uuid id PK
-        string code UK
-        string name
-        string type
-        boolean is_wps_basic
-        boolean is_wps_housing
-    }
 ```
 
 ---
 
-## 5. Implementation Sequence for Phase 1
+## 5. Universal Effective-Dating Lookup Patterns & Test Suite
 
-Execution will proceed in strict dependency order:
+All effective-dated tables (`employee_assignments`, `employee_hourly_rates`, `client_billing_rates`, `employee_shift_assignments`, `weekly_off_configs`, `employee_salary_structures`) use a unified temporal management service.
 
-1. **Step 1: Contracts Definition (`packages/contracts`)**
-   - Define all TypeScript interfaces, DTOs, and validation models for Employees, Clients, Projects, Assignments, Shifts, Calendar, Salary Components, and Hourly Rates.
-   - Run `npm run build:contracts`.
+### 5.1 SQL Query Specification
+```sql
+SELECT *
+FROM {table_name}
+WHERE {entity_foreign_key} = :entityId
+  AND effective_from <= :targetDate
+  AND (effective_to IS NULL OR effective_to >= :targetDate)
+ORDER BY effective_from DESC
+LIMIT 1;
+```
 
-2. **Step 2: Database Migration (`database/migrations/`)**
-   - Create migration `20260909000001-create-phase1-masters.ts` defining all 10 tables, foreign key constraints, and temporal indexes.
-   - Author seeders for initial `salary_components` and default `weekly_off_configs`.
-   - Seed new permissions into `permissions` table and map them to `super_admin` and `hr_admin`.
-   - Run `npm run db:migrate` and `npm run db:seed`.
-
-3. **Step 3: Backend Domain Modules Scaffolding**
-   - Scaffold models, services, controllers, and routes for:
-     - `client/` and `project/`
-     - `salary-component/`
-     - `shift/` and `calendar/`
-     - `employee/`, `assignment/`, and `hourly-rate/` (including transaction-managed effective-dating logic)
-   - Mount routes into `app.ts` under `/api/v1/`.
-
-4. **Step 4: Backend Automated Tests**
-   - Unit tests for effective-dating interval logic and overlapping prevention.
-   - Integration tests via Supertest verifying CRUD operations, RBAC enforcement, and audit trail generation for all Phase 1 endpoints.
-
-5. **Step 5: Frontend UI Modules Scaffolding**
-   - Core API services for each master.
-   - Management pages in Angular:
-     - Clients & Projects Management
-     - Shift & Calendar Management
-     - Salary Components Management
-     - Employee Directory, Profile, Assignment Timeline, and Hourly Rate History.
-
-6. **Step 6: End-to-End Verification & Documentation**
-   - Verify all root npm scripts: `npm run build`, `npm run test`, `npm run lint`.
-   - Update API documentation (`docs/api/`) and schema documentation (`docs/database/`).
+### 5.2 Mandatory Test Matrix for Effective-Dating Lookups
+Every effective-dated module is tested against the following 7 boundary test cases:
+1. **Exact Start Date (`targetDate = effective_from`):** Record must resolve successfully.
+2. **Exact End Date (`targetDate = effective_to`):** Record must resolve successfully on the final active day.
+3. **Date Prior to Start (`targetDate < effective_from`):** Resolution returns null / error; cannot match a future record.
+4. **Date After Closed End (`targetDate > effective_to`):** Resolution returns null / error; cannot match an expired record.
+5. **Overlapping Interval Insertion Rejection:** Attempting to insert a record spanning an already-occupied interval throws a `ValidationError` (`OVERLAPPING_EFFECTIVE_INTERVAL`).
+6. **Future Scheduled Slices:** Scheduling an upcoming rate change (e.g. effective next month) must not affect resolution on today's date.
+7. **Historical Lookups:** Retroactive payroll/billing calculations must correctly resolve the historical slice that was active on the specified past work date.
 
 ---
 
-_Phase 1 Plan completed. Work is paused awaiting your review and approval before implementation._
+## 6. Implementation Sequence for Phase 1
+
+1. **Contracts Package (`@blue-royal/contracts`):**
+   - Define TypeScript interfaces, request/response DTOs, and Zod schemas for all 13 tables.
+   - Define point-in-time rate resolution contracts.
+   - Compile contracts to `dist/`.
+2. **Database Workspace (`database/`):**
+   - Author migration `20260909000001-create-phase1-masters.ts` creating all 13 tables, foreign keys, constraints, and temporal indexes.
+   - Author seeders for default `designations`, initial `salary_components` (`BASIC`, `HRA`, `TRANSPORT`), default `weekly_off_configs`, and UAE public holidays.
+   - Seed granular permissions (`designations:*`, `employees:*`, `clients:*`, `projects:*`, `assignments:*`, `rates:*`, `shifts:*`, `salary_components:*`).
+   - Run `npm run db:migrate` and `npm run db:seed`.
+3. **Backend Service Layer (`backend/src/modules/`):**
+   - Implement Sequelize models for all 13 tables.
+   - Implement `EffectiveDateService` for interval validation, auto-closing prior records, and point-in-time lookups.
+   - Implement `BillingRateResolutionService` implementing the Project ➔ Client-wide fallback flow.
+   - Implement domain modules with controllers, routes, RBAC guards, and transaction handlers.
+4. **Automated Testing Suite (`backend/tests/`):**
+   - Comprehensive test suite covering the 7 boundary test cases for effective-dated lookups.
+   - Four-rate resolution test verifying project-specific, fallback, and missing billing rate flows.
+   - CRUD and RBAC integration tests for all 13 modules.
+5. **Angular Standalone Frontend (`frontend/src/app/`):**
+   - UI views for Designations, Clients, Projects, Shifts, Calendar, Salary Components, and Employee Management with Assignment, Pay Rate, and Salary Structure timelines.
+6. **Full Verification:**
+   - Execute `npm run build`, `npm run test`, `npm run lint`.

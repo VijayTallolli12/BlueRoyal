@@ -5,11 +5,12 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 import { ApiSuccessResponse, HealthCheckResponse } from '@blue-royal/contracts';
+import { MastersHubComponent } from '../masters/masters-hub.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MastersHubComponent],
   template: `
     <div class="dashboard-shell">
       <header class="app-header">
@@ -63,6 +64,8 @@ import { ApiSuccessResponse, HealthCheckResponse } from '@blue-royal/contracts';
             </div>
           </div>
         </div>
+
+        <app-masters-hub></app-masters-hub>
       </main>
     </div>
   `,

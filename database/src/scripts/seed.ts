@@ -37,11 +37,7 @@ const CONFIRMED_ROLES: RoleSeed[] = [
 const BASELINE_PERMISSIONS: PermissionSeed[] = [
   // Authentication & System
   { code: 'system:health', description: 'Access system health check metrics', module: 'system' },
-  {
-    code: 'system:configure',
-    description: 'Configure system settings and parameters',
-    module: 'system',
-  },
+  { code: 'system:configure', description: 'Configure system settings and parameters', module: 'system' },
   // Users & Identity
   { code: 'users:read', description: 'View user accounts and profiles', module: 'users' },
   { code: 'users:create', description: 'Create new user accounts', module: 'users' },
@@ -52,6 +48,96 @@ const BASELINE_PERMISSIONS: PermissionSeed[] = [
   { code: 'roles:assign', description: 'Assign roles to user accounts', module: 'roles' },
   // Audit Logs
   { code: 'audit:read', description: 'View system audit trails and access logs', module: 'audit' },
+
+  // Phase 1: Designations
+  { code: 'designations:read', description: 'View job designations', module: 'designations' },
+  { code: 'designations:create', description: 'Create job designations', module: 'designations' },
+  { code: 'designations:update', description: 'Update job designations', module: 'designations' },
+  { code: 'designations:delete', description: 'Delete job designations', module: 'designations' },
+
+  // Phase 1: Employees
+  { code: 'employees:read', description: 'View employee records', module: 'employees' },
+  { code: 'employees:create', description: 'Register new employee profiles', module: 'employees' },
+  { code: 'employees:update', description: 'Update employee biographical details', module: 'employees' },
+  { code: 'employees:delete', description: 'Deactivate or delete employee records', module: 'employees' },
+
+  // Phase 1: Clients
+  { code: 'clients:read', description: 'View commercial client profiles', module: 'clients' },
+  { code: 'clients:create', description: 'Register new commercial clients', module: 'clients' },
+  { code: 'clients:update', description: 'Update commercial client details', module: 'clients' },
+  { code: 'clients:delete', description: 'Deactivate commercial clients', module: 'clients' },
+
+  // Phase 1: Projects
+  { code: 'projects:read', description: 'View client projects and job sites', module: 'projects' },
+  { code: 'projects:create', description: 'Create new client projects', module: 'projects' },
+  { code: 'projects:update', description: 'Update client project details', module: 'projects' },
+  { code: 'projects:delete', description: 'Deactivate client projects', module: 'projects' },
+
+  // Phase 1: Employee Assignments
+  { code: 'assignments:read', description: 'View employee deployment assignments', module: 'assignments' },
+  { code: 'assignments:create', description: 'Deploy employee to project with designation', module: 'assignments' },
+  { code: 'assignments:update', description: 'Modify employee project deployment', module: 'assignments' },
+
+  // Phase 1: Rates (Hourly Pay Rates & Client Billing Rates)
+  { code: 'rates:read', description: 'View employee pay rates and client billing rates', module: 'rates' },
+  { code: 'rates:create', description: 'Configure pay rates or client billing rates', module: 'rates' },
+  { code: 'rates:update', description: 'Update pay rates or client billing rates', module: 'rates' },
+
+  // Phase 1: Shifts & Rostering
+  { code: 'shifts:read', description: 'View shift timings and roster assignments', module: 'shifts' },
+  { code: 'shifts:create', description: 'Create work shifts or roster assignments', module: 'shifts' },
+  { code: 'shifts:update', description: 'Update work shifts or roster assignments', module: 'shifts' },
+  { code: 'shifts:delete', description: 'Deactivate work shifts', module: 'shifts' },
+
+  // Phase 1: Company Calendar & Holidays (Company Configurable)
+  { code: 'calendar:read', description: 'View weekly off settings and company holidays', module: 'calendar' },
+  { code: 'calendar:create', description: 'Configure weekly off or public holidays', module: 'calendar' },
+  { code: 'calendar:update', description: 'Update weekly off or public holidays', module: 'calendar' },
+  { code: 'calendar:delete', description: 'Remove public holidays', module: 'calendar' },
+
+  // Phase 1: Salary Components & Monthly Structures
+  { code: 'salary:read', description: 'View salary components and compensation packages', module: 'salary' },
+  { code: 'salary:create', description: 'Create salary components and employee salary structures', module: 'salary' },
+  { code: 'salary:update', description: 'Update salary components and employee salary structures', module: 'salary' },
+];
+
+const DEFAULT_DESIGNATIONS = [
+  { code: 'DES-FOREMAN', title: 'Site Foreman', description: 'On-site construction and operations supervisor' },
+  { code: 'DES-ELEC', title: 'Electrician', description: 'Certified electrical systems technician' },
+  { code: 'DES-PLUMB', title: 'Plumber', description: 'Plumbing and piping technician' },
+  { code: 'DES-CARP', title: 'Carpenter', description: 'Carpentry and woodwork craftsman' },
+  { code: 'DES-ENG', title: 'Site Engineer', description: 'Field engineering and quality controller' },
+  { code: 'DES-HELPER', title: 'General Helper', description: 'General site support and labor assistant' },
+];
+
+const DEFAULT_SALARY_COMPONENTS = [
+  {
+    code: 'BASIC',
+    name: 'Basic Salary',
+    type: 'earning',
+    calculationType: 'fixed_amount',
+    isRecurring: true,
+    isWpsBasic: true,
+    isWpsHousing: false,
+  },
+  {
+    code: 'HRA',
+    name: 'House Rent Allowance',
+    type: 'earning',
+    calculationType: 'fixed_amount',
+    isRecurring: true,
+    isWpsBasic: false,
+    isWpsHousing: true,
+  },
+  {
+    code: 'TRANSPORT',
+    name: 'Transport Allowance',
+    type: 'earning',
+    calculationType: 'fixed_amount',
+    isRecurring: true,
+    isWpsBasic: false,
+    isWpsHousing: false,
+  },
 ];
 
 async function seed(): Promise<void> {
@@ -74,8 +160,8 @@ async function seed(): Promise<void> {
       );
     }
 
-    // 2. Seed Baseline Permissions
-    console.log('Seeding baseline permissions...');
+    // 2. Seed Baseline & Phase 1 Permissions
+    console.log('Seeding permissions...');
     for (const p of BASELINE_PERMISSIONS) {
       await sequelize.query(
         `INSERT INTO permissions (id, code, description, module, created_at, updated_at)
@@ -118,30 +204,39 @@ async function seed(): Promise<void> {
       }
     }
 
-    // HR Admin gets user management, role viewing, audit reading, health
+    // HR Admin gets operational permissions
     if (hrAdminRole) {
-      const hrCodes = [
-        'system:health',
-        'users:read',
-        'users:create',
-        'users:update',
-        'roles:read',
-        'roles:assign',
-        'audit:read',
+      const hrModules = [
+        'system',
+        'users',
+        'roles',
+        'audit',
+        'designations',
+        'employees',
+        'clients',
+        'projects',
+        'assignments',
+        'rates',
+        'shifts',
+        'calendar',
+        'salary',
       ];
-      for (const perm of allPermissions.filter((p) => hrCodes.includes(p.code))) {
-        await sequelize.query(
-          `INSERT INTO role_permissions (role_id, permission_id, created_at)
-           VALUES (:roleId, :permissionId, NOW())
-           ON CONFLICT DO NOTHING;`,
-          { replacements: { roleId: hrAdminRole.id, permissionId: perm.id }, type: QueryTypes.RAW },
-        );
+      for (const perm of allPermissions) {
+        const [mod] = perm.code.split(':');
+        if (hrModules.includes(mod) && perm.code !== 'system:configure') {
+          await sequelize.query(
+            `INSERT INTO role_permissions (role_id, permission_id, created_at)
+             VALUES (:roleId, :permissionId, NOW())
+             ON CONFLICT DO NOTHING;`,
+            { replacements: { roleId: hrAdminRole.id, permissionId: perm.id }, type: QueryTypes.RAW },
+          );
+        }
       }
     }
 
-    // Employee gets basic health/status
+    // Employee gets self-service reading permissions
     if (employeeRole) {
-      const empCodes = ['system:health'];
+      const empCodes = ['system:health', 'calendar:read', 'shifts:read'];
       for (const perm of allPermissions.filter((p) => empCodes.includes(p.code))) {
         await sequelize.query(
           `INSERT INTO role_permissions (role_id, permission_id, created_at)
@@ -191,6 +286,54 @@ async function seed(): Promise<void> {
         { replacements: { userId: adminUserId, roleId: superAdminRole.id }, type: QueryTypes.RAW },
       );
     }
+
+    // 5. Seed Default Designations Master
+    console.log('Seeding default designations...');
+    for (const d of DEFAULT_DESIGNATIONS) {
+      await sequelize.query(
+        `INSERT INTO designations (id, code, title, description, is_active, created_at, updated_at)
+         VALUES (gen_random_uuid(), :code, :title, :description, true, NOW(), NOW())
+         ON CONFLICT (code) DO UPDATE SET
+           title = EXCLUDED.title,
+           description = EXCLUDED.description,
+           updated_at = NOW();`,
+        { replacements: d, type: QueryTypes.RAW },
+      );
+    }
+
+    // 6. Seed Default Salary Components
+    console.log('Seeding default salary components...');
+    for (const sc of DEFAULT_SALARY_COMPONENTS) {
+      await sequelize.query(
+        `INSERT INTO salary_components (id, code, name, type, calculation_type, is_recurring, is_wps_basic, is_wps_housing, is_active, created_at, updated_at)
+         VALUES (gen_random_uuid(), :code, :name, :type, :calculationType, :isRecurring, :isWpsBasic, :isWpsHousing, true, NOW(), NOW())
+         ON CONFLICT (code) DO UPDATE SET
+           name = EXCLUDED.name,
+           type = EXCLUDED.type,
+           calculation_type = EXCLUDED.calculation_type,
+           is_recurring = EXCLUDED.is_recurring,
+           is_wps_basic = EXCLUDED.is_wps_basic,
+           is_wps_housing = EXCLUDED.is_wps_housing,
+           updated_at = NOW();`,
+        { replacements: sc, type: QueryTypes.RAW },
+      );
+    }
+
+    // 7. Seed Default Weekly Off (Sunday)
+    console.log('Seeding default weekly off config...');
+    const existingWeeklyOff = await sequelize.query<{ id: string }>(
+      'SELECT id FROM weekly_off_configs WHERE is_default = true;',
+      { type: QueryTypes.SELECT },
+    );
+    if (existingWeeklyOff.length === 0) {
+      await sequelize.query(
+        `INSERT INTO weekly_off_configs (id, name, days_of_week, effective_from, is_default, created_at, updated_at)
+         VALUES (gen_random_uuid(), 'Standard Sunday Weekend', ARRAY[0], '2020-01-01', true, NOW(), NOW());`,
+        { type: QueryTypes.RAW },
+      );
+    }
+
+    // NOTE: Public holidays are NOT seeded here. The public_holidays table is company-configured.
 
     console.log('=== Database Seeding Completed Successfully ===\n');
   } catch (error) {

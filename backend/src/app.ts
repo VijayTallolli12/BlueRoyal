@@ -9,6 +9,7 @@ import { correlationIdMiddleware } from './core/middleware/correlation-id.middle
 import { errorHandlerMiddleware } from './core/middleware/error-handler.middleware';
 import { healthRouter } from './modules/health/health.routes';
 import { authRouter } from './modules/auth/auth.routes';
+import masterRouter from './modules/masters/routes/master.routes';
 
 export function createApp(): Express {
   const app = express();
@@ -36,6 +37,7 @@ export function createApp(): Express {
   // Domain Routers under versioned prefix
   app.use(env.API_PREFIX, healthRouter);
   app.use(`${env.API_PREFIX}/auth`, authRouter);
+  app.use(env.API_PREFIX, masterRouter);
 
   // 404 handler for undefined routes
   app.use((req, res, _next) => {

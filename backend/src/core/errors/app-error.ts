@@ -26,6 +26,18 @@ export class AppError extends Error {
 
     Error.captureStackTrace(this, this.constructor);
   }
+
+  public static badRequest(message: string, details?: ErrorDetail[]): AppError {
+    return new AppError(message, 400, 'BAD_REQUEST', true, details);
+  }
+
+  public static notFound(message: string): AppError {
+    return new NotFoundError(message);
+  }
+
+  public static conflict(message: string): AppError {
+    return new ConflictError(message);
+  }
 }
 
 export class ValidationError extends AppError {
@@ -55,11 +67,5 @@ export class NotFoundError extends AppError {
 export class ConflictError extends AppError {
   constructor(message = 'Resource conflict') {
     super(message, 409, 'CONFLICT', true);
-  }
-}
-
-export class InternalServerError extends AppError {
-  constructor(message = 'Internal server error') {
-    super(message, 500, 'INTERNAL_SERVER_ERROR', false);
   }
 }
