@@ -46,6 +46,11 @@ User.init(
       defaultValue: true,
       field: 'is_active',
     },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'deleted_at',
+    },
   },
   {
     sequelize,

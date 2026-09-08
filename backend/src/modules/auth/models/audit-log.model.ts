@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../../../core/database/sequelize';
-import { BaseModel, baseModelAttributes } from '../../../core/database/base.model';
+import { BaseModel } from '../../../core/database/base.model';
 
 export class AuditLog extends BaseModel {
   declare public actorId: string | null;
@@ -16,7 +16,18 @@ export class AuditLog extends BaseModel {
 
 AuditLog.init(
   {
-    ...baseModelAttributes,
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+      field: 'created_at',
+    },
     actorId: {
       type: DataTypes.UUID,
       allowNull: true,

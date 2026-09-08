@@ -7,7 +7,6 @@ export abstract class BaseModel<
   declare public id: string;
   declare public createdAt: Date;
   declare public updatedAt: Date;
-  declare public deletedAt: Date | null;
 }
 
 export const baseModelAttributes = {
@@ -28,10 +27,5 @@ export const baseModelAttributes = {
     allowNull: false,
     defaultValue: DataTypes.NOW,
     field: 'updated_at',
-  },
-  deletedAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'deleted_at',
   },
 };
