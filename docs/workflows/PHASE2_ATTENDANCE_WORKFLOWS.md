@@ -1,22 +1,22 @@
-# Blue Royal HRMS — Phase 2 Attendance End-to-End Business Workflows
+# Blue Royal HRMS — Phase 2 Attendance End-to-End Business Workflows (Revised)
 
-**Document ID:** `DOC-WF-PHASE2-ATT-001`  
-**Date:** 2026-09-08  
+**Document ID:** `DOC-WF-PHASE2-ATT-002`  
+**Date:** 2026-09-09  
 **Scope:** Specification and Operational Blueprint for 10 Core Attendance Business Workflows  
 **Governing Documents:** `Master.md`, `FINAL_ARCHITECTURE.md`, `docs/architecture/PHASE2_ATTENDANCE_ARCHITECTURE.md`  
-**Status:** **Architectural Planning — Pending Review & Sign-Off**  
+**Status:** **Architectural Workflows — Revised per Confirmed Business Rules**  
 
 ---
 
 ## 1. Overview & Workflow Lifecycle
 
-Phase 2 establishes the end-to-end operational lifecycle for monthly timekeeping, from initial monthly draft generation to locked payroll input:
+Phase 2 establishes the end-to-end operational lifecycle for monthly timekeeping, from initial monthly draft generation to locked payroll input, utilizing strictly confirmed business roles (`Super Admin`, `HR Admin`, `Employee`):
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                ATTENDANCE OPERATIONAL LIFECYCLE                                         │
 │                                                                                                         │
-│  [ WF-1: Period Init ]                                                                                  │
+│  [ WF-1: Period Init (Eligible Workers) ]                                                               │
 │           │                                                                                             │
 │           ▼                                                                                             │
 │  ┌─────────────────┐       [ WF-3: Excel Import ]                                                       │
@@ -24,13 +24,13 @@ Phase 2 establishes the end-to-end operational lifecycle for monthly timekeeping
 │  └────────┬────────┘                                 │                                                  │
 │           │                                          │                                                  │
 │           ├─────────────────► [ WF-2: Direct Grid Entry & Live Derivation ]                             │
-│           │                   [ WF-4: Shift, Weekly-Off & Holiday Math ]                                │
+│           │                   [ WF-4: Shift, Weekly-Off & Holiday Math (Zero Assumed Shift) ]           │
 │           │                                                                                             │
 │           ▼                                                                                             │
-│  [ WF-5: Anomaly Flagging & HR Review ]                                                                 │
+│  [ WF-5: Anomaly Flagging & Missing Shift Resolution ]                                                  │
 │           │                                                                                             │
 │           ▼                                                                                             │
-│  [ WF-6: Submission & Approval ]                                                                        │
+│  [ WF-6: Submission & Approval (by HR Admin / Super Admin) ]                                            │
 │           │                                                                                             │
 │           ▼                                                                                             │
 │  ┌─────────────────┐                                                                                    │
@@ -38,7 +38,7 @@ Phase 2 establishes the end-to-end operational lifecycle for monthly timekeeping
 │  └────────┬────────┘                                                                                    │
 │           │                                                                                             │
 │           ▼                                                                                             │
-│  [ WF-7: Attendance Locking ]                                                                           │
+│  [ WF-7: Attendance Locking (by HR Admin / Super Admin) ]                                               │
 │           │                                                                                             │
 │           ▼                                                                                             │
 │  ┌─────────────────┐                                                                                    │
@@ -59,162 +59,165 @@ Phase 2 establishes the end-to-end operational lifecycle for monthly timekeeping
 
 ## 2. Detailed End-to-End Workflows
 
-### Workflow 1: Monthly Attendance Sheet Initialization (Draft Creation)
-- **Business Purpose:** Establish the operational container for a given calendar month (e.g. `'2026-03'`) covering all eligible active workers.
-- **Actor:** HR Admin / Operations Lead (`attendance:create`).
-- **Trigger:** Start of the monthly timekeeping cycle or first working day of the month.
+### Workflow 1: Monthly Attendance Sheet Initialization (Eligible Workers Only)
+- **Business Purpose:** Establish the operational container for a given calendar month (e.g. `'2026-03'`) covering strictly active, contractually eligible workers.
+- **Actor:** HR Admin / Super Admin (`attendance:create`).
 - **Step-by-Step Flow:**
-  1. HR navigates to `/attendance` and clicks **"+ Initialize Month"**.
+  1. HR Admin navigates to `/attendance` and clicks **"+ Initialize Month"**.
   2. Selects Year and Month (`2026-03`).
-  3. The system checks whether `attendance_periods` already has an entry for `'2026-03'`. If so, returns `409 Conflict`.
-  4. The system queries all active employees where `date_of_joining <= 2026-03-31` and `deleted_at IS NULL`.
+  3. System checks whether `attendance_periods` already exists for `'2026-03'`. If so, returns `409 Conflict`.
+  4. **Eligibility Filtering:** System queries active employees who overlap with the month:
+     $$\text{date\_of\_joining} \le 2026\text{-}03\text{-}31 \quad \text{AND} \quad (\text{contract\_end\_date IS NULL OR } \ge 2026\text{-}03\text{-}01) \quad \text{AND} \quad (\text{deleted\_at IS NULL OR } \ge 2026\text{-}03\text{-}01)$$
   5. Inserts a new `attendance_periods` row with `status = 'draft'`.
-  6. Generates skeleton daily records in `attendance_records` for all active workers for days $1 \dots N$ (e.g. 31 days) with `actual_hours = 0.00`, resolving `day_type` (`weekly_off`, `public_holiday`, or `regular_workday`) based on effective master rules.
-  7. Returns the initialized period envelope with summary counts.
-- **Outcome:** Clean monthly grid ready for manual entry or Excel upload.
+  6. **Daily Pre-Generation per Worker:** For each calendar day $D$ ($1 \dots 31$):
+     - If $D < \text{date\_of\_joining}$ OR ($D > \text{contract\_end\_date}$ for contract workers): day is marked as **ineligible / inactive** (zero hours, disabled cell).
+     - If eligible: creates skeleton row in `attendance_records` with `actual_hours = 0.00`, resolves `day_type` (`weekly_off`, `public_holiday`, or `regular_workday`), and freezes historical snapshots of `client_id`, `project_id`, `designation_id`, and `shift_id` on date $D$.
+  7. Returns initialized period with active worker headcount and total day count.
 
 ---
 
 ### Workflow 2: Daily Actual-Hours Direct Entry & Grid Calculation
 - **Business Purpose:** Enable HR timekeepers to enter daily actual hours worked directly into the interactive monthly grid.
-- **Actor:** HR Admin (`attendance:create`).
+- **Actor:** HR Admin / Super Admin (`attendance:create`).
 - **Step-by-Step Flow:**
   1. HR selects Period (`2026-03`), Client, and Project in the filter bar.
   2. The UI renders the monthly matrix with employee rows and day columns ($1 \dots 31$).
   3. HR clicks into an editable cell (e.g., Worker BR-001 on Day 15) and enters `10.5`.
-  4. The frontend performs client-side validation (`0.00 <= hours <= 24.00`).
-  5. The debounced auto-save triggers `PUT /api/v1/attendance/records/batch` sending `[{ employeeId, workDate: '2026-03-15', actualHours: 10.5 }]`.
-  6. The backend executes `runInTransaction`:
+  4. Frontend performs client-side validation (`0.00 <= hours <= 24.00`).
+  5. Debounced auto-save triggers `PUT /api/v1/attendance/records/batch` sending `[{ employeeId, workDate: '2026-03-15', actualHours: 10.5 }]`.
+  6. Backend executes `runInTransaction`:
      - Verifies `attendance_periods.status == 'draft'`.
-     - Resolves employee shift on `2026-03-15` (e.g. 8h shift).
-     - Resolves day type (Regular Workday).
-     - Calculates: `regular_hours = 8.00`, `ot_hours = 2.50`, `is_absent = false`.
-     - Updates `attendance_records` row and updates row totals.
-  7. The frontend updates cell feedback: Regular: `8.0h`, OT: `+2.5h`, Row Total updated.
-- **Error Handling:** Negative values or characters trigger instant red inline warning without submitting to the API.
+     - Checks worker eligibility on that date.
+     - Resolves employee shift and day type.
+     - Calculates: `regular_hours` and `ot_hours`.
+     - Updates `attendance_records` and recalibrates monthly totals.
+  7. Frontend updates cell visual feedback: Regular: `8.0h`, OT: `+2.5h`, Row Total updated.
 
 ---
 
 ### Workflow 3: Excel Attendance Sheet Import
-- **Business Purpose:** Support high-volume bulk attendance uploads from site timekeepers who maintain Excel sheets.
-- **Actor:** HR Admin (`attendance:import`).
+- **Business Purpose:** Support bulk attendance uploads from site timekeepers who maintain Excel sheets.
+- **Actor:** HR Admin / Super Admin (`attendance:import`).
 - **Step-by-Step Flow:**
-  1. HR clicks **"Download Excel Template"** (`GET /api/v1/attendance/export-template?periodCode=2026-03`). The downloaded `.xlsx` file contains pre-filled employee codes, names, current designations, and calendar day columns.
+  1. HR clicks **"Download Excel Template"** (`GET /api/v1/attendance/export-template?periodCode=2026-03`). The `.xlsx` file contains pre-filled employee codes, names, designations, and calendar day columns.
   2. Site supervisors populate daily actual hours in the file.
   3. HR opens the **"Import Excel"** modal on `/attendance` and drops the `.xlsx` file.
-  4. The client uploads the file to `POST /api/v1/attendance/import` with `multipart/form-data`.
+  4. Client uploads to `POST /api/v1/attendance/import` with `multipart/form-data`.
   5. **Backend Ingestion Pipeline:**
      - Checks period status is `draft`.
      - Parses sheet rows with Excel streaming parser.
      - **Dry-Run Validation Pass:**
-       - Verifies all employee codes exist in `employees`.
+       - Verifies all employee codes exist.
        - Validates all hours are numeric between `0.00` and `24.00`.
-       - Verifies no dates occur before employee's `date_of_joining`.
+       - Verifies no dates occur before `date_of_joining` or after `contract_end_date`.
      - If ANY validation errors are found:
        - Aborts database insertion.
-       - Returns `422 Unprocessable Entity` with comprehensive error details array (row number, employee code, day, invalid value, failure reason).
-       - Frontend displays an interactive error table allowing HR to review and fix the spreadsheet.
+       - Returns `422 Unprocessable Entity` with error details array (row number, employee code, day, invalid value, failure reason).
+       - Frontend displays diagnostic error table.
      - If NO validation errors are found:
        - Opens database transaction.
-       - Performs bulk upsert of `attendance_records`.
-       - Computes regular hours and OT hours for all records.
+       - Bulk upserts `attendance_records`.
+       - Derives regular hours and OT hours.
        - Records `ATTENDANCE_IMPORTED` in audit log.
-       - Commits transaction and returns summary: `{ importedRows: 250, totalHours: 42500 }`.
+       - Commits transaction and returns summary.
   6. Grid refreshes automatically with newly imported values.
 
 ---
 
-### Workflow 4: Point-in-Time Working Hour & OT Derivation
+### Workflow 4: Point-in-Time Working Hour & OT Derivation (Strict Shift Rule)
 - **Business Purpose:** Authoritatively determine Regular Hours and Overtime Hours based on the employee's applicable shift, weekly rest schedule, and public holiday calendar effective on each exact date.
 - **Execution:** Backend domain service (`AttendanceCalculationService`).
-- **Rule Hierarchy:**
+- **Strict Rule Hierarchy:**
   1. **Public Holiday Check:**
      - Query `public_holidays` for `work_date`.
      - If holiday: `day_type = 'public_holiday'`.
      - All worked hours $\rightarrow$ `ot_hours = actual_hours`, `regular_hours = 0.00`.
+     - If $\text{actual\_hours} == 0.00 \rightarrow \text{is\_absent} = \text{false}$ (statutory rest day).
   2. **Weekly Off Check:**
      - Query `weekly_off_configs` effective on `work_date`.
-     - If day of week matches (e.g. Sunday): `day_type = 'weekly_off'`.
+     - If day of week matches: `day_type = 'weekly_off'`.
      - All worked hours $\rightarrow$ `ot_hours = actual_hours`, `regular_hours = 0.00`.
-  3. **Regular Workday Check:**
+     - If $\text{actual\_hours} == 0.00 \rightarrow \text{is\_absent} = \text{false}$ (weekly rest day).
+  3. **Regular Workday Check (Strict Shift Rule):**
      - `day_type = 'regular_workday'`.
      - Query `employee_shift_assignments` effective on `work_date`.
-     - If shift exists with standard hours $S$:
-       - If $\text{actual\_hours} \le S$: $\text{regular\_hours} = \text{actual\_hours}, \quad \text{ot\_hours} = 0.00$.
-       - If $\text{actual\_hours} > S$: $\text{regular\_hours} = S, \quad \text{ot\_hours} = \text{actual\_hours} - S$.
-     - If no shift assigned: Flags anomaly `MISSING_SHIFT_ASSIGNMENT`, applies standard 8.00h fallback.
-  4. **Zero-Work Distinction:**
-     - If $\text{actual\_hours} == 0.00$ on Public Holiday or Weekly Off: $\text{is\_absent} = \text{false}$.
-     - If $\text{actual\_hours} == 0.00$ on Regular Workday: $\text{is\_absent} = \text{true}$ (unless approved leave in Phase 3).
+     - **If Shift Exists ($S_{\text{hours}}$):**
+       - If $\text{actual\_hours} == 0.00$: `regular_hours = 0.00`, `ot_hours = 0.00`, `is_absent = true`.
+       - If $\text{actual\_hours} \le S_{\text{hours}}$: `regular_hours = actual_hours`, `ot_hours = 0.00`, `is_absent = false`.
+       - If $\text{actual\_hours} > S_{\text{hours}}$: `regular_hours = S_hours`, `ot_hours = actual_hours - S_hours`, `is_absent = false`.
+     - **If NO Shift Assigned (Zero-Assumption Rule):**
+       - **DO NOT ASSUME 8.00 HOURS.**
+       - Keep `actual_hours`.
+       - Set `regular_hours = 0.00`, `ot_hours = 0.00` (unresolved calculation state).
+       - Flag anomaly `MISSING_SHIFT_ASSIGNMENT`.
+       - **Approval Blocking Gate:** System will reject period submission/approval until a shift is assigned for this worker on this date.
 
 ---
 
 ### Workflow 5: Attendance Review & Anomaly Flagging
 - **Business Purpose:** Identify human error, missing logs, potential labor violations, and deployment gaps before submitting attendance.
-- **Actor:** HR Admin / Reviewer (`attendance:read`).
+- **Actor:** HR Admin / Super Admin (`attendance:read`).
 - **Automated Flags Generated by Engine:**
-  - **`EXCESSIVE_HOURS`:** Worker logged $> 16.00$ hours in a single calendar day (safety/labor compliance check).
-  - **`MISSING_SHIFT_ASSIGNMENT`:** Worker has no shift roster record active on the work date.
+  - **`MISSING_SHIFT_ASSIGNMENT` (BLOCKING):** Worker has no shift roster record active on the work date. Must be resolved before approval.
+  - **`EXCESSIVE_HOURS`:** Worker logged $> 16.00$ hours in a single calendar day (safety/compliance check).
   - **`UNASSIGNED_ON_WORK_DATE`:** Worker has no active project deployment on the work date.
-  - **`PRE_JOINING_WORK_LOGGED`:** Hours entered for a date prior to the employee's official `date_of_joining`.
-  - **`CONSECUTIVE_DAYS_WARNING`:** Worker logged $> 12$ consecutive working days without a rest day (UAE Labor Law check).
+  - **`OUTSIDE_CONTRACT_WINDOW`:** Attempted hour logging outside joining or contract dates.
 - **UI Presentation:**
   - Filter by **"Show Anomalies Only"** toggle on the grid.
-  - Warning icons rendered on flagged cells with descriptive hover tooltips.
-  - Anomaly summary banner: *"5 workers have unassigned shifts. 2 entries have excessive hours."*
+  - Red warning badges on flagged cells with descriptive hover tooltips.
+  - Anomaly summary banner with direct count of unresolved shifts.
 
 ---
 
-### Workflow 6: Attendance Submission & Approval Workflow
-- **Business Purpose:** Enforce a strict dual-control governance gate between timekeeping entry and management approval.
+### Workflow 6: Attendance Submission & Approval Workflow (HR Admin Final Authority)
+- **Business Purpose:** Enforce management verification before freezing monthly timekeeping.
 - **Actors:**
-  - Submitter: HR Admin (`attendance:submit`).
-  - Approver: Operations Manager / HR Lead (`attendance:approve`).
+  - Submitter: HR Admin / Super Admin (`attendance:submit`).
+  - Approver: HR Admin / Super Admin (`attendance:approve`).
+  *(HR Admin is the confirmed final approver; no invented roles).*
 - **Step-by-Step Flow:**
-  1. Once data entry is verified and anomalies resolved, HR Admin clicks **"Submit for Approval"**.
-  2. Dialog prompts for optional submission remarks.
-  3. Calls `POST /api/v1/attendance/periods/:id/submit`.
-  4. Backend verifies period status is `draft`.
+  1. HR Admin verifies data entry and resolves all `MISSING_SHIFT_ASSIGNMENT` anomalies.
+  2. HR Admin clicks **"Submit for Approval"**.
+  3. System validates that `0` blocking anomalies exist. If any missing shifts remain, aborts with `422: Cannot submit attendance with unresolved missing shifts`.
+  4. Calls `POST /api/v1/attendance/periods/:id/submit`.
   5. Transitions `status` to `'submitted'`, sets `submitted_by = actorId`, `submitted_at = NOW()`.
   6. Dispatches audit event `ATTENDANCE_PERIOD_SUBMITTED`.
-  7. Grid becomes **read-only** for timekeepers.
-  8. Approver logs in, reviews summary totals, checks flagged anomalies, and clicks **"Approve Attendance"**.
-  9. Calls `POST /api/v1/attendance/periods/:id/approve`.
-  10. Transitions `status` to `'approved'`, sets `approved_by = actorId`, `approved_at = NOW()`.
-  11. Dispatches audit event `ATTENDANCE_PERIOD_APPROVED`.
+  7. HR Admin reviews the submitted period summary and clicks **"Approve Attendance"**.
+  8. Calls `POST /api/v1/attendance/periods/:id/approve`.
+  9. Transitions `status` to `'approved'`, sets `approved_by = actorId`, `approved_at = NOW()`.
+  10. Dispatches audit event `ATTENDANCE_PERIOD_APPROVED`.
 
 ---
 
 ### Workflow 7: Attendance Locking & Payroll Readiness Gate
-- **Business Purpose:** Immutably freeze the approved attendance period to guarantee data integrity during payroll calculation and statutory WPS file generation.
-- **Actor:** Payroll Officer / HR Director (`attendance:lock`).
+- **Business Purpose:** Immutably freeze the approved attendance period to guarantee data integrity during payroll calculation.
+- **Actor:** HR Admin / Super Admin (`attendance:lock`).
 - **Step-by-Step Flow:**
   1. Once approved, the **"Lock Attendance"** button becomes active.
-  2. HR Director clicks **"Lock Attendance"**.
-  3. Modal warning appears: *"Locking March 2026 will freeze all worker attendance. Only Super Admin can unlock this period with formal justification. Proceed?"*
+  2. HR Admin clicks **"Lock Attendance"**.
+  3. Confirmation dialog confirms intent: *"Locking March 2026 will freeze all worker attendance for payroll processing. Proceed?"*
   4. Calls `POST /api/v1/attendance/periods/:id/lock`.
   5. Backend verifies status is `'approved'`.
   6. Transitions `status` to `'locked'`, sets `locked_by = actorId`, `locked_at = NOW()`.
   7. Dispatches audit event `ATTENDANCE_PERIOD_LOCKED`.
-  8. **Payroll Readiness:** Phase 4 Payroll Engine checks `attendance_periods.status == 'locked'` before allowing payroll batch creation.
+  8. **Payroll Gate:** Phase 4 Payroll Engine verifies `attendance_periods.status == 'locked'` before generating payroll batches.
 
 ---
 
 ### Workflow 8: Controlled Attendance Correction & Unlock Workflow
 - **Business Purpose:** Permit authorized corrections to a locked attendance period while strictly preventing silent or untracked changes.
-- **Actor:** Super Admin / HR Director (`attendance:unlock`).
+- **Actor:** HR Admin / Super Admin (`attendance:unlock`).
 - **Step-by-Step Flow:**
-  1. A site supervisor identifies an error in locked attendance (e.g. 5 workers were incorrectly marked absent on Day 20).
-  2. HR Director clicks **"Request Unlock / Correction"**.
-  3. Dialog requires a mandatory, detailed justification (`unlockReason`, minimum 15 characters, e.g. *"Correcting Day 20 site overtime for Tower A electrical crew as per approved site supervisor timesheet revision"*).
+  1. Site supervisor or payroll identifies a required retroactive correction on a locked period.
+  2. HR Admin clicks **"Request Unlock / Correction"**.
+  3. Dialog requires a mandatory justification (`unlockReason`, minimum 15 characters).
   4. Calls `POST /api/v1/attendance/periods/:id/unlock` with `{ unlockReason }`.
-  5. Backend verifies user has `attendance:unlock` permission.
-  6. Transitions period `status` back to `'draft'`.
-  7. Sets `unlocked_by = actorId`, `unlocked_at = NOW()`, `unlock_reason = unlockReason`.
-  8. Records high-priority audit event `ATTENDANCE_PERIOD_UNLOCKED`.
-  9. HR enters corrected hours in the grid.
-  10. When saving modified cells, backend inserts rows into `attendance_audit_logs` storing `old_value`, `new_value`, `change_reason`, and `actor_id`.
-  11. Period must be re-submitted (WF-6), re-approved (WF-6), and re-locked (WF-7) before downstream payroll processing.
+  5. Transitions period `status` back to `'draft'`.
+  6. Sets `unlocked_by = actorId`, `unlocked_at = NOW()`, `unlock_reason = unlockReason`.
+  7. Records audit event `ATTENDANCE_PERIOD_UNLOCKED`.
+  8. HR edits the necessary cells in the grid.
+  9. For every modified cell, backend inserts a row into `attendance_audit_logs` storing `old_value`, `new_value`, `change_reason`, and `actor_id`.
+  10. Period must be re-submitted (WF-6), re-approved (WF-6), and re-locked (WF-7) before downstream payroll processing.
 
 ---
 
@@ -224,15 +227,9 @@ Phase 2 establishes the end-to-end operational lifecycle for monthly timekeeping
 - **Step-by-Step Flow:**
   1. Employee logs in and navigates to `/attendance/my-attendance`.
   2. Calls `GET /api/v1/attendance/my-attendance?month=2026-03`.
-  3. Backend extracts authenticated user ID (`req.user.id`), locates their linked `employee_id`, and queries `attendance_records`.
+  3. Backend extracts authenticated user ID (`req.user.id`), locates linked `employee_id`, and queries `attendance_records`.
   4. **Strict Isolation:** Enforces that employees can ONLY access their own records (`WHERE employee_id = :myEmployeeId`).
-  5. UI displays an employee-friendly calendar/timesheet view:
-     - Date, Day of Week.
-     - Shift Name & Operating Hours.
-     - Logged Actual Hours.
-     - Regular Hours vs. OT Hours breakdown.
-     - Status badges: Present, Rest Day, Public Holiday, Overtime.
-     - Monthly summary card: Total Hours Worked, Total OT Hours Accumulated.
+  5. UI displays personal timesheet table: Date, Day of Week, Shift Name & Hours, Logged Hours, Regular Hours, OT Hours, Status badges (Present, Rest Day, Holiday, OT).
   6. Read-only: Zero input fields or edit actions rendered.
 
 ---

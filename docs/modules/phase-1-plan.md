@@ -163,12 +163,20 @@ export interface ResolvedBillingRate {
 | `nationality` | VARCHAR(64) | No | Country of citizenship |
 | `email` | VARCHAR(255) | Yes | Primary email |
 | `phone_number` | VARCHAR(32) | Yes | Primary contact phone |
-| `date_of_joining` | DATE | No | Joining date |
+| `date_of_joining` | DATE | No | Official company joining date |
+| `employment_type` | VARCHAR(20) | No | Enum: `full_time`, `contract`. Default `full_time` |
+| `contract_end_date`| DATE | Yes | Mandatory when `employment_type = 'contract'`; NULL for `full_time` |
 | `probation_end_date`| DATE | Yes | Probation completion target |
 | `status` | VARCHAR(32) | No | Enum: `active`, `on_leave`, `probation`, `terminated`, `resigned`. Default `probation` |
 | `created_at` | TIMESTAMPTZ | No | Timestamp |
 | `updated_at` | TIMESTAMPTZ | No | Timestamp |
 | `deleted_at` | TIMESTAMPTZ | Yes | Soft delete |
+
+> [!NOTE]
+> **Employment Lifecycle & Contract Dates:**  
+> - **Full-Time Employees:** `employment_type = 'full_time'`, `contract_end_date = NULL` (open-ended employment).  
+> - **Contract Employees:** `employment_type = 'contract'`, `contract_end_date` is mandatory and must satisfy `contract_end_date >= date_of_joining`.  
+> - Monthly attendance sheet generation uses these dates to strictly determine active worker eligibility for each calendar day in the period.
 
 ---
 
