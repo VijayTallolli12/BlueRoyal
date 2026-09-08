@@ -1,0 +1,33 @@
+{
+  "name": "@blue-royal/frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Blue Royal HRMS Angular Frontend",
+  "scripts": {
+    "ng": "ng",
+    "dev": "ng serve --port 4200",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "echo \"Frontend test placeholder - unit tests run via karma/jasmine or node test runner\""
+  },
+  "dependencies": {
+    "@angular/animations": "^19.1.0",
+    "@angular/common": "^19.1.0",
+    "@angular/compiler": "^19.1.0",
+    "@angular/core": "^19.1.0",
+    "@angular/forms": "^19.1.0",
+    "@angular/platform-browser": "^19.1.0",
+    "@angular/router": "^19.1.0",
+    "@blue-royal/contracts": "*",
+    "rxjs": "^7.8.1",
+    "tslib": "^2.6.2",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^19.1.0",
+    "@angular/cli": "^19.1.0",
+    "@angular/compiler-cli": "^19.1.0",
+    "@types/node": "^22.13.9",
+    "typescript": "~5.7.3"
+  }
+}

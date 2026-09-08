@@ -1,0 +1,15 @@
+{
+  "name": "@blue-royal/contracts",
+  "version": "1.0.0",
+  "description": "Shared API contracts, DTOs, and response types for Blue Royal HRMS",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: blue_royal_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blue_royal_hrms_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d blue_royal_hrms_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Dedicated migration runner: run explicitly via 'docker compose run --rm migration'
+  migration:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.migration
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: blue_royal_hrms_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgrespassword
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
+volumes:
+  postgres_data:
