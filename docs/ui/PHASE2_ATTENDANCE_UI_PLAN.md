@@ -69,7 +69,7 @@ AttendanceFeatureModule (Standalone Components)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  BLUE ROYAL HRMS   │  Dashboard  │  Masters  │  Attendance  │  Leaves  │  Payroll             [ HR Administrator ] ▼   │
+│  BLUE ROYAL HRMS   │  Dashboard  │  Masters  │  Attendance  │  Leaves  │  Payroll             [ HR Admin ] ▼           │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  ATTENDANCE MANAGEMENT — MARCH 2026                                              [ Status: DRAFT ]                      │
 │                                                                                                                        │

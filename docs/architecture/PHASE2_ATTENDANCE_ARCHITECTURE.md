@@ -55,16 +55,23 @@ The **Attendance Module** in Blue Royal HRMS is the authoritative operational re
 4. **Day-Type Derivation Hierarchy:**
    - **Public Holiday Worked:** All hours worked are classified as **OT Hours** (`regular_hours = 0.00`, `ot_hours = actual_hours`).
    - **Weekly Off Worked:** All hours worked are classified as **OT Hours** (`regular_hours = 0.00`, `ot_hours = actual_hours`).
-   - **Public Holiday without Work:** Statutory rest day, **not an absence** (`regular_hours = 0.00`, `ot_hours = 0.00`, `is_absent = false`).
-   - **Weekly Off without Work:** Weekly rest day, **not an absence** (`regular_hours = 0.00`, `ot_hours = 0.00`, `is_absent = false`).
+   - **Public Holiday without Work:** Company-configured holiday rest day, **not an absence** (`regular_hours = 0.00`, `ot_hours = 0.00`, `is_absent = false`).
+   - **Weekly Off without Work:** Scheduled weekly rest day, **not an absence** (`regular_hours = 0.00`, `ot_hours = 0.00`, `is_absent = false`).
    - **Regular Workday:**
      - $\text{actual\_hours} \le S_{\text{hours}}$: `regular_hours = actual_hours`, `ot_hours = 0.00`.
      - $\text{actual\_hours} > S_{\text{hours}}$: `regular_hours = S_hours`, `ot_hours = actual_hours - S_hours`.
      - $\text{actual\_hours} == 0.00$: Unexcused absence (`is_absent = true`), unless later covered by approved leave.
-5. **No Assumed Shift Fallback (Strict Shift Rule):** If an employee has no shift assigned on a work date, the engine **DOES NOT** assume 8.00 hours. It flags `MISSING_SHIFT_ASSIGNMENT`, retains `actual_hours`, leaves `regular_hours = 0.00` and `ot_hours = 0.00` in an unresolved state, and **blocks period approval and locking** until HR resolves the shift.
-6. **Confirmed System Roles Only:** System uses **strictly** the confirmed roles: `Super Admin`, `HR Admin`, `Employee`. HR Admin is the primary and final approver of attendance.
-7. **Strict Lifecycle Gates:** Attendance records progress through: `draft` ➔ `submitted` ➔ `approved` ➔ `locked`. Only locked attendance may be processed by Payroll.
-8. **Controlled Reopen / Correction Workflow:** Once locked, records cannot be silently mutated. Unlocking requires high-privilege authorization (`attendance:unlock`), a mandatory audit justification, and generates immutable before/after audit entries.
+5. **Strict Shift Assignment Rule (Zero Calculation without Shift):** If an employee has no effective shift assigned on a work date:
+   - The engine flags `MISSING_SHIFT_ASSIGNMENT`.
+   - Retains raw `actual_hours`.
+   - Sets `regular_hours = 0.00` and `ot_hours = 0.00` (calculation unresolved).
+   - **Mandatory Approval Gate:** Blocks period submission, approval, and locking until HR assigns an effective shift.
+6. **Confirmed System Roles Only:** System uses **strictly** the confirmed roles:
+   - `HR Admin`: Primary operational attendance authority and final approver (enters, imports, submits, approves, locks, and unlocks).
+   - `Super Admin`: Administrative and override authority.
+   - `Employee`: Read-only self-view of personal timesheet.
+7. **Strict Attendance Lifecycle:** Attendance records progress strictly through: `DRAFT` ➔ `SUBMITTED` ➔ `APPROVED` ➔ `LOCKED`. Only locked attendance may be processed by Phase 4 Payroll.
+8. **Controlled Reopen / Unlock Workflow:** Once locked, records cannot be silently modified. Unlocking (`attendance:unlock`) requires a mandatory audit justification, returns the period to `DRAFT`, generates immutable audit entries, and requires re-submission, re-approval, and re-locking before payroll consumption.
 9. **Employee Read-Only Self-View:** Employees can inspect their personal daily attendance, shift details, and approval statuses, but have zero edit or self-logging privileges.
 
 ---
@@ -346,10 +353,24 @@ Phase 2 introduces **3 new tables**:
            Ready for Phase 4 Payroll
 ```
 
-### Approval & Lock Validation Gates
-1. **Zero Unresolved Shift Gate:** An attendance period **cannot be approved or locked** if any record contains `MISSING_SHIFT_ASSIGNMENT`. All shifts must be configured first.
-2. **Single HR Admin Approver:** `HR Admin` is the primary, confirmed business role authorized to approve and lock attendance. The same HR Admin or a peer HR Admin can perform submission and approval.
-3. **Lock Enforcement:** Once in `locked` status, all write endpoints (`PUT /batch`, `POST /import`) immediately reject modifications with `409 Conflict: Attendance period is locked`.
+### Operational Role Authority & Lifecycle Gates
+1. **Normal Operational Flow (HR Admin):**
+   - **HR Admin** creates/initializes the draft period, enters actual hours, and imports Excel sheets.
+   - **HR Admin** submits the period (`attendance:submit`).
+   - **HR Admin** performs final review and approves the period (`attendance:approve`).
+   - **HR Admin** locks the period (`attendance:lock`) to freeze it for Phase 4 Payroll.
+2. **Administrative Override (Super Admin):**
+   - **Super Admin** possesses full system authority and can perform any lifecycle transition as an administrative override where necessary.
+3. **Mandatory Shift Gating:**
+   - Period submission, approval, and locking are strictly blocked if any active record contains `MISSING_SHIFT_ASSIGNMENT`. All shifts must be assigned before proceeding.
+4. **Lock Enforcement:**
+   - Once in `LOCKED` status, all write endpoints (`PUT /batch`, `POST /import`) immediately reject modifications with `409 Conflict: Attendance period is locked`.
+5. **Controlled Reopen (Unlock):**
+   - A locked period can be reopened only via `POST /api/v1/attendance/periods/:id/unlock` by `HR Admin` (normal operational authority) or `Super Admin` (override authority).
+   - Requires a mandatory justification string ($\ge 15$ characters).
+   - Records an immutable system audit event (`ATTENDANCE_PERIOD_UNLOCKED`).
+   - Transitions period `status` back to `DRAFT`.
+   - Before consumption by Phase 4 Payroll, the reopened period must be re-submitted, re-approved, and re-locked.
 
 ---
 
