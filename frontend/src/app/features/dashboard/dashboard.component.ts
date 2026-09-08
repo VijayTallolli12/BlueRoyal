@@ -18,9 +18,15 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
           <h1>Blue Royal HRMS</h1>
           <span class="badge">Phase 2 Attendance</span>
           <nav class="nav-links">
-            <a routerLink="/dashboard" routerLinkActive="active" class="nav-btn">Masters Hub</a>
-            <a routerLink="/attendance" class="nav-btn">Attendance & Overtime Hub</a>
-            <a routerLink="/attendance/my-attendance" class="nav-btn">My Attendance</a>
+            @if (authService.hasPermission('designations:read')) {
+              <a routerLink="/dashboard" routerLinkActive="active" class="nav-btn">Masters Hub</a>
+            }
+            @if (authService.hasPermission('attendance:read')) {
+              <a routerLink="/attendance" routerLinkActive="active" class="nav-btn">Attendance & Overtime Hub</a>
+            }
+            @if (authService.hasPermission('attendance:self_read')) {
+              <a routerLink="/attendance/my-attendance" routerLinkActive="active" class="nav-btn">My Attendance</a>
+            }
           </nav>
         </div>
         <div class="user-meta">
@@ -70,7 +76,22 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
           </div>
         </div>
 
-        <app-masters-hub></app-masters-hub>
+        @if (authService.hasPermission('designations:read')) {
+          <app-masters-hub></app-masters-hub>
+        } @else if (authService.hasPermission('attendance:self_read')) {
+          <div class="card mt-4">
+            <h2>Employee Self-Service Portal</h2>
+            <p class="desc">
+              Welcome to the Blue Royal Employee Portal. You can access and review your monthly attendance,
+              overtime hours, and work schedule.
+            </p>
+            <div class="portal-cta">
+              <a routerLink="/attendance/my-attendance" class="btn-portal">
+                📅 View My Attendance & Overtime
+              </a>
+            </div>
+          </div>
+        }
       </main>
     </div>
   `,
@@ -204,6 +225,24 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
       .status-degraded {
         background: #fef9c3;
         color: #854d0e;
+      }
+      .btn-portal {
+        display: inline-block;
+        margin-top: 1rem;
+        background: #1e3a8a;
+        color: #ffffff;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        transition: background 0.15s ease;
+      }
+      .btn-portal:hover {
+        background: #1d4ed8;
+      }
+      .mt-4 {
+        margin-top: 1.5rem;
       }
     `,
   ],

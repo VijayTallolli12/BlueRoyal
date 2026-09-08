@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { permissionGuard } from './core/guards/permission.guard';
 
 export const routes: Routes = [
   {
@@ -19,7 +20,8 @@ export const routes: Routes = [
   },
   {
     path: 'attendance',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'attendance:read' },
     loadComponent: () =>
       import('./features/attendance/attendance-sheet.component').then(
         (m) => m.AttendanceSheetComponent,
@@ -27,7 +29,8 @@ export const routes: Routes = [
   },
   {
     path: 'attendance/my-attendance',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'attendance:self_read' },
     loadComponent: () =>
       import('./features/attendance/my-attendance.component').then((m) => m.MyAttendanceComponent),
   },

@@ -44,9 +44,11 @@ function getOrGeneratePassword(config: DemoAccountConfig): string {
   if (envVal && envVal.trim().length >= 8) {
     return envVal.trim();
   }
-  // Generate secure high-entropy development password if not specified in environment
-  const randomSuffix = crypto.randomBytes(4).toString('hex');
-  return `${config.defaultPasswordPrefix}#${randomSuffix}!2026`;
+  // Standard presentation-ready development credentials
+  if (config.roleName === 'super_admin') return 'SuperAdmin@2026!';
+  if (config.roleName === 'hr_admin') return 'HrAdmin@2026!';
+  if (config.roleName === 'employee') return 'Employee@2026!';
+  return `${config.defaultPasswordPrefix}#2026!`;
 }
 
 export async function seedDemoUsers(): Promise<Record<string, { role: string; email: string; password: string }>> {

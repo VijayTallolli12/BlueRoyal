@@ -6,17 +6,17 @@ import { seedDemoUsers } from '../../../database/src/scripts/seed-demo-users';
 describe('Demo Accounts Authentication & RBAC Verification', () => {
   const app = createApp();
 
-  const superAdminPassword = 'Demo#SuperAdmin$2026!Secure';
-  const hrAdminPassword = 'Demo#HrAdmin$2026!Secure';
-  const employeePassword = 'Demo#Employee$2026!Secure';
+  const superAdminPassword = 'SuperAdmin@2026!';
+  const hrAdminPassword = 'HrAdmin@2026!';
+  const employeePassword = 'Employee@2026!';
 
   beforeAll(async () => {
     await sequelize.authenticate();
 
-    // Set test passwords in environment
-    process.env.DEMO_SUPERADMIN_PASSWORD = superAdminPassword;
-    process.env.DEMO_HRADMIN_PASSWORD = hrAdminPassword;
-    process.env.DEMO_EMPLOYEE_PASSWORD = employeePassword;
+    // Clear any test overrides to test default presentation credentials
+    delete process.env.DEMO_SUPERADMIN_PASSWORD;
+    delete process.env.DEMO_HRADMIN_PASSWORD;
+    delete process.env.DEMO_EMPLOYEE_PASSWORD;
 
     // Run the idempotent seeder
     await seedDemoUsers();

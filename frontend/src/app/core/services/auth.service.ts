@@ -93,6 +93,12 @@ export class AuthService {
     return user.permissions.includes(permissionCode);
   }
 
+  public hasRole(roleName: string): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    return user.roles.includes(roleName);
+  }
+
   private restoreSession(): void {
     const token = this.getAccessToken();
     if (token) {
