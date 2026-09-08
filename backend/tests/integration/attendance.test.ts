@@ -26,6 +26,23 @@ describe('Phase 2 Attendance & Overtime Engine Integration Tests', () => {
   beforeAll(async () => {
     await sequelize.authenticate();
 
+    // Clean up stale period from prior test runs if exists
+    const stalePeriod = await AttendancePeriod.findOne({ where: { periodCode: testPeriodCode } });
+    if (stalePeriod) {
+      await AttendanceAuditLog.destroy({
+        where: {
+          attendanceRecordId: (
+            await AttendanceRecord.findAll({
+              where: { attendancePeriodId: stalePeriod.id },
+              attributes: ['id'],
+            })
+          ).map((r) => r.id),
+        },
+      });
+      await AttendanceRecord.destroy({ where: { attendancePeriodId: stalePeriod.id } });
+      await AttendancePeriod.destroy({ where: { id: stalePeriod.id } });
+    }
+
     // 1. Resolve seeded admin user
     const adminUser = await User.findOne({ where: { email: 'admin@blueroyal.com' } });
     if (!adminUser) throw new Error('Admin user not seeded');

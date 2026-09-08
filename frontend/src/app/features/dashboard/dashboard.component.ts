@@ -16,7 +16,7 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
       <header class="app-header">
         <div class="brand">
           <h1>Blue Royal HRMS</h1>
-          <span class="badge">Phase 2 Attendance</span>
+          <span class="badge">Phase 3 Leave & Attendance</span>
           <nav class="nav-links">
             @if (authService.hasPermission('designations:read')) {
               <a routerLink="/dashboard" routerLinkActive="active" class="nav-btn">Masters Hub</a>
@@ -24,8 +24,14 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
             @if (authService.hasPermission('attendance:read')) {
               <a routerLink="/attendance" routerLinkActive="active" class="nav-btn">Attendance & Overtime Hub</a>
             }
+            @if (authService.hasPermission('leave:read')) {
+              <a routerLink="/leave" routerLinkActive="active" class="nav-btn">Leave Management Hub</a>
+            }
             @if (authService.hasPermission('attendance:self_read')) {
               <a routerLink="/attendance/my-attendance" routerLinkActive="active" class="nav-btn">My Attendance</a>
+            }
+            @if (authService.hasPermission('leave:self_read')) {
+              <a routerLink="/leave/my-leave" routerLinkActive="active" class="nav-btn">My Leave</a>
             }
           </nav>
         </div>
@@ -85,9 +91,12 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
               Welcome to the Blue Royal Employee Portal. You can access and review your monthly attendance,
               overtime hours, and work schedule.
             </p>
-            <div class="portal-cta">
+            <div class="portal-cta" style="display: flex; gap: 1rem; flex-wrap: wrap;">
               <a routerLink="/attendance/my-attendance" class="btn-portal">
                 📅 View My Attendance & Overtime
+              </a>
+              <a routerLink="/leave/my-leave" class="btn-portal" style="background: #0d9488;">
+                🌴 My Leave Requests & Entitlements
               </a>
             </div>
           </div>

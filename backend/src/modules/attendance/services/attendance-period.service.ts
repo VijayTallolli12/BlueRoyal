@@ -13,6 +13,7 @@ import { Client } from '../../masters/models/client.model';
 import { Project } from '../../masters/models/project.model';
 import { Designation } from '../../masters/models/designation.model';
 import { Shift } from '../../masters/models/shift.model';
+import { LeaveRequest } from '../../leave/models/leave-request.model';
 import {
   AttendanceCalculationService,
   EmployeeEligibilityContext,
@@ -124,6 +125,16 @@ export class AttendancePeriodService {
         transaction: t,
       });
 
+      // Fetch approved leaves overlapping this period
+      const approvedLeaves = await LeaveRequest.findAll({
+        where: {
+          status: 'APPROVED',
+          startDate: { [Op.lte]: endDate },
+          endDate: { [Op.gte]: startDate },
+        },
+        transaction: t,
+      });
+
       const recordsToCreate: any[] = [];
 
       for (const emp of employees) {
@@ -145,11 +156,16 @@ export class AttendancePeriodService {
             t,
           );
 
+          const isOnLeave = approvedLeaves.some(
+            (l) => l.employeeId === emp.id && date >= l.startDate && date <= l.endDate,
+          );
+
           // Initial calculation for 0 actual hours
           const calc = AttendanceCalculationService.calculateHours({
             actualHours: 0.0,
             dayType,
             shiftWorkHours: pitContext.shiftWorkHours,
+            isOnLeave,
           });
 
           recordsToCreate.push({
@@ -165,7 +181,7 @@ export class AttendancePeriodService {
             regularHours: calc.regularHours,
             otHours: calc.otHours,
             isAbsent: calc.isAbsent,
-            isOnLeave: false,
+            isOnLeave,
             hasAnomaly: calc.hasAnomaly,
             anomalyReason: calc.anomalyReason,
             remarks: null,

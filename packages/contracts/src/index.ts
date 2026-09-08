@@ -12,3 +12,4 @@ export * from './shift/shift';
 export * from './calendar/calendar';
 export * from './salary/salary';
 export * from './attendance/attendance';
+export * from './leave/leave';

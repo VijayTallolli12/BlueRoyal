@@ -147,6 +147,15 @@ export class AttendanceCalculationService {
 
     // Phase 3 integration hook: Leave handling
     if (isOnLeave) {
+      if (actualHours > 0) {
+        return {
+          regularHours: 0.0,
+          otHours: 0.0,
+          isAbsent: false,
+          hasAnomaly: true,
+          anomalyReason: 'CONFLICT_LEAVE_WORK_LOGGED',
+        };
+      }
       return {
         regularHours: 0.0,
         otHours: 0.0,

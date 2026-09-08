@@ -35,6 +35,20 @@ export const routes: Routes = [
       import('./features/attendance/my-attendance.component').then((m) => m.MyAttendanceComponent),
   },
   {
+    path: 'leave',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'leave:read' },
+    loadComponent: () =>
+      import('./features/leave/leave-hub.component').then((m) => m.LeaveHubComponent),
+  },
+  {
+    path: 'leave/my-leave',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'leave:self_read' },
+    loadComponent: () =>
+      import('./features/leave/my-leave.component').then((m) => m.MyLeaveComponent),
+  },
+  {
     path: '**',
     redirectTo: 'dashboard',
   },

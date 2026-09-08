@@ -109,6 +109,22 @@ const BASELINE_PERMISSIONS: PermissionSeed[] = [
   { code: 'attendance:lock', description: 'Lock approved attendance periods for payroll processing', module: 'attendance' },
   { code: 'attendance:unlock', description: 'Unlock locked attendance periods with justification', module: 'attendance' },
   { code: 'attendance:self_read', description: 'View own attendance history and status', module: 'attendance' },
+
+  // Phase 3: Leave Management & Entitlements
+  { code: 'leave_types:read', description: 'View leave type catalogs', module: 'leave' },
+  { code: 'leave_types:create', description: 'Create new leave types', module: 'leave' },
+  { code: 'leave_types:update', description: 'Update leave type rules', module: 'leave' },
+  { code: 'leave_types:delete', description: 'Deactivate leave types', module: 'leave' },
+  { code: 'leave_balances:read', description: 'View employee leave balances', module: 'leave' },
+  { code: 'leave_balances:manage', description: 'Allocate or adjust employee leave balances', module: 'leave' },
+  { code: 'leave:read', description: 'View enterprise leave requests', module: 'leave' },
+  { code: 'leave:create', description: 'Create leave request on behalf of employee', module: 'leave' },
+  { code: 'leave:approve', description: 'Approve submitted leave requests', module: 'leave' },
+  { code: 'leave:reject', description: 'Reject submitted leave requests', module: 'leave' },
+  { code: 'leave:cancel', description: 'Cancel approved or pending leave requests', module: 'leave' },
+  { code: 'leave:self_read', description: 'View own leave balances and requests', module: 'leave' },
+  { code: 'leave:self_create', description: 'Submit own leave request', module: 'leave' },
+  { code: 'leave:self_cancel', description: 'Cancel own pending leave request', module: 'leave' },
 ];
 
 const DEFAULT_DESIGNATIONS = [
@@ -231,6 +247,7 @@ async function seed(): Promise<void> {
         'calendar',
         'salary',
         'attendance',
+        'leave',
       ];
       for (const perm of allPermissions) {
         const [mod] = perm.code.split(':');
@@ -247,7 +264,16 @@ async function seed(): Promise<void> {
 
     // Employee gets self-service reading permissions
     if (employeeRole) {
-      const empCodes = ['system:health', 'calendar:read', 'shifts:read', 'attendance:self_read'];
+      const empCodes = [
+        'system:health',
+        'calendar:read',
+        'shifts:read',
+        'attendance:self_read',
+        'leave_types:read',
+        'leave:self_read',
+        'leave:self_create',
+        'leave:self_cancel',
+      ];
       for (const perm of allPermissions.filter((p) => empCodes.includes(p.code))) {
         await sequelize.query(
           `INSERT INTO role_permissions (role_id, permission_id, created_at)
@@ -341,6 +367,68 @@ async function seed(): Promise<void> {
         `INSERT INTO weekly_off_configs (id, name, days_of_week, effective_from, is_default, created_at, updated_at)
          VALUES (gen_random_uuid(), 'Standard Sunday Weekend', ARRAY[0], '2020-01-01', true, NOW(), NOW());`,
         { type: QueryTypes.RAW },
+      );
+    }
+
+    // 8. Seed Default Leave Types
+    console.log('Seeding default leave types...');
+    const defaultLeaveTypes = [
+      {
+        code: 'ANNUAL',
+        name: 'Annual Leave',
+        description: 'Standard paid annual vacation leave',
+        isPaid: true,
+        defaultDaysPerYear: 30.0,
+        requiresAttachment: false,
+        deductWorkingDaysOnly: true,
+        allowDuringProbation: false,
+      },
+      {
+        code: 'SICK',
+        name: 'Medical / Sick Leave',
+        description: 'Leave for medical conditions and recovery with medical certificate',
+        isPaid: true,
+        defaultDaysPerYear: 15.0,
+        requiresAttachment: true,
+        deductWorkingDaysOnly: true,
+        allowDuringProbation: true,
+      },
+      {
+        code: 'UNPAID',
+        name: 'Unpaid Leave',
+        description: 'Approved leave without pay',
+        isPaid: false,
+        defaultDaysPerYear: 0.0,
+        requiresAttachment: false,
+        deductWorkingDaysOnly: true,
+        allowDuringProbation: true,
+      },
+      {
+        code: 'EMERGENCY',
+        name: 'Emergency / Compassionate Leave',
+        description: 'Short-term urgent or compassionate leave',
+        isPaid: true,
+        defaultDaysPerYear: 5.0,
+        requiresAttachment: false,
+        deductWorkingDaysOnly: true,
+        allowDuringProbation: true,
+      },
+    ];
+
+    for (const lt of defaultLeaveTypes) {
+      await sequelize.query(
+        `INSERT INTO leave_types (id, code, name, description, is_paid, default_days_per_year, requires_attachment, deduct_working_days_only, allow_during_probation, is_active, created_at, updated_at)
+         VALUES (gen_random_uuid(), :code, :name, :description, :isPaid, :defaultDaysPerYear, :requiresAttachment, :deductWorkingDaysOnly, :allowDuringProbation, true, NOW(), NOW())
+         ON CONFLICT (code) DO UPDATE SET
+           name = EXCLUDED.name,
+           description = EXCLUDED.description,
+           is_paid = EXCLUDED.is_paid,
+           default_days_per_year = EXCLUDED.default_days_per_year,
+           requires_attachment = EXCLUDED.requires_attachment,
+           deduct_working_days_only = EXCLUDED.deduct_working_days_only,
+           allow_during_probation = EXCLUDED.allow_during_probation,
+           updated_at = NOW();`,
+        { replacements: lt, type: QueryTypes.RAW },
       );
     }
 

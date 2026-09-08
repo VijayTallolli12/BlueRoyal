@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/db';

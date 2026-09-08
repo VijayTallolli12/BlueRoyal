@@ -40,7 +40,7 @@ This document serves as the **single source of truth** for implementation progre
 | **Phase 0** | System Foundation, Auth, RBAC, Database & Audit Engine | 2 | ✅ Complete | Foundation fully verified & signed off |
 | **Phase 1** | Organization Masters, Assignments, Dual-Stream Rates & Rostering | 8 | ✅ Complete | Masters & 4-rate resolution verified & signed off |
 | **Phase 2** | Attendance, Excel Import & Overtime Calculation Engine | 1 | ✅ Complete | Attendance lifecycle, calculation engine & UI verified |
-| **Phase 3** | Leave Management & UAE Labor Law Entitlements | 1 | ⬜ Not Started | Scheduled for Phase 3 |
+| **Phase 3** | Leave Management & UAE Labor Law Entitlements | 1 | ✅ Complete | Leave balances, requests, attendance live sync, & ESS/Admin UI verified |
 | **Phase 4** | Payroll Processing Engine, WPS & Statutory Compliance | 1 | ⬜ Not Started | Scheduled for Phase 4 |
 | **Phase 5** | Employee Documents Management & Expiry Alerts | 1 | ⬜ Not Started | Scheduled for Phase 5 |
 | **Phase 6** | Final Settlements, Gratuity, Leave Salary & Air Tickets | 1 | ⬜ Not Started | Scheduled for Phase 6 |
@@ -65,7 +65,7 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
 | **1.8 Calendar & Company Holidays** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **1.9 Salary Components & Structures** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **2.1 Attendance & Overtime Engine** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
-| **3.1 Leave Entitlement & Requests** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
+| **3.1 Leave Entitlement & Requests** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **4.1 Payroll Engine & WPS Generation** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
 | **5.1 Documents & Compliance Hub** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
 | **6.1 End of Service Settlement & Gratuity** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
@@ -136,6 +136,47 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
   - Unit test suite: `backend/tests/unit/attendance-calculator.test.ts` (10 tests covering all calculation rules, strict missing shift anomaly, weekend/holiday OT, and contract eligibility). ✅ Complete
   - Integration test suite: `backend/tests/integration/attendance.test.ts` (9 tests verifying end-to-end period generation, grid API, anomaly blocking, shift resolution, lifecycle transitions, locked rejection, unlock protocol, Excel dry-run/import, and employee self-view). ✅ Complete
 
+### Phase 3: Leave Management & Employee Entitlements
+- [x] **Shared Contracts (`@blue-royal/contracts`):** Complete DTOs, request/response models, and enums for `LeaveTypeDto`, `EmployeeLeaveBalanceDto`, `LeaveRequestDto`, `CreateLeaveRequestDto`, `ReviewLeaveRequestDto`, `CancelLeaveRequestDto`, `LeaveBalanceAdjustmentDto`, and `EmployeeLeaveOverviewDto`. ✅ Complete
+- [x] **Database Migration & Schema (`20260911000001-create-phase3-leave.ts`):**
+  - `leave_types`: Configurable catalog (`ANNUAL`, `SICK`, `UNPAID`, `EMERGENCY`) with `is_paid`, `requires_approval`, `allow_during_probation`, `deduct_working_days_only`, and active flag.
+  - `employee_leave_balances`: Annual employee entitlement store (`allocated_days`, `used_days`, `pending_days`, `remaining_days`) with compound unique index `(employee_id, leave_type_id, year)`.
+  - `leave_requests`: Immutable request lifecycle tracking (`request_number`, `start_date`, `end_date`, `total_days`, `status`, `approved_by`, `rejected_by`, `cancellation_reason`, etc.).
+  - Foreign key integrity, check constraints, and performance indexes. Verified rollback and forward migration. ✅ Complete
+- [x] **Database Seeders & RBAC Permissions (`database/src/scripts/seed.ts`):**
+  - Added 13 atomic permissions (`leave:read`, `leave:create`, `leave:update`, `leave:delete`, `leave:approve`, `leave:reject`, `leave:cancel`, `leave:adjust_balance`, `leave:self_read`, `leave:self_request`, `leave:self_cancel`, `leave_types:read`, `leave_types:manage`).
+  - Total system permissions: 49. Mapped strictly to confirmed roles (`super_admin`, `hr_admin`, `employee`). Zero invented roles.
+  - Default leave types seeded: Annual (30 days), Sick (15 days), Unpaid (30 days), Emergency (5 days). ✅ Complete
+- [x] **Calculation & Validation Engine (`LeaveCalculationService`):**
+  - Working days calculation excluding calendar weekly offs and declared company public holidays when configured.
+  - Overlap validation: strictly prevents overlapping leave intervals for the same employee.
+  - Employment contract validation: validates against employee's `dateOfJoining` and `contractEndDate`.
+  - Probation period enforcement: rejects leave types where `allowDuringProbation = false` if employee is within 180-day probation. ✅ Complete
+- [x] **Attendance Integration & Live Sync Hook (`AttendanceLeaveSyncService`):**
+  - Direct atomic synchronization with Phase 2 Attendance: sets `is_on_leave = true` on approved leave days.
+  - Conflict detection: `AttendanceCalculationService.calculateHours` flags `CONFLICT_LEAVE_WORK_LOGGED` anomaly if actual hours are logged on an approved leave day.
+  - Period reversion: automatically reverts `SUBMITTED` or `APPROVED` attendance periods back to `DRAFT` if a leave request is approved or cancelled within that period, enforcing re-review.
+  - Audit logs: writes full cell audit records in `attendance_audit_logs`.
+  - Monthly period pre-generation: `AttendancePeriodService.createPeriod` checks approved leave on period generation and flags `is_on_leave = true`. ✅ Complete
+- [x] **Lifecycle & Leave Request Service (`LeaveRequestService`):**
+  - Request submission with atomic pending balance deduction (`pending_days += totalDays`, `remaining_days -= totalDays`).
+  - HR Review: Approve (`pending_days -= totalDays`, `used_days += totalDays`, syncs to attendance) or Reject (mandatory `review_notes`, restores pending balance).
+  - Employee Self-Cancellation: Pending requests can be cancelled directly by the requesting employee.
+  - HR/Admin Cancellation/Revocation: Approved requests can be cancelled by HR Admin/Super Admin with mandatory reason, restoring balance and reverting `is_on_leave` in attendance records.
+  - Audit logging: All mutations log to `audit_logs` with before/after payloads and correlation IDs. ✅ Complete
+- [x] **Frontend Employee Self-Service (`MyLeaveComponent`):**
+  - Annual entitlement balance cards (Allocated, Used, Pending, Remaining) with visual progress bars.
+  - Interactive request submission modal with automatic working-day estimation and dynamic balance validation.
+  - Request history table with status badges and one-click self-cancellation for pending requests. ✅ Complete
+- [x] **Frontend HR Leave Management Hub (`LeaveHubComponent`):**
+  - Global KPI summary cards (Pending Approvals, Total Approved Leaves, Employees on Leave Today).
+  - Request review drawer/modal with one-click approval and rejection with mandatory justification note.
+  - Leave allocation modal for managing annual quotas per employee.
+  - Filter by leave type, employee, and status. ✅ Complete
+- [x] **Automated Test Coverage:**
+  - Unit test suite: `backend/tests/unit/leave-calculator.test.ts` (7 tests covering date generation, working days, probation restrictions, contract boundaries, and attendance hook conflict flag). ✅ Complete
+  - Integration test suite: `backend/tests/integration/leave.test.ts` (11 tests verifying end-to-end self-service submission, overlap rejection 409, balance exhaustion 422, HR approval, attendance live sync, audit logs, rejection with mandatory note, self-cancellation, admin revocation, and 401/403 RBAC). ✅ Complete
+
 ---
 
 ## 5. End-to-End Business Workflows
@@ -147,23 +188,25 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
 | **WF-3: Dual-Stream Rate Setup & Billing Resolution** | Set Employee Hourly Rate (Payroll Cost) ➔ Set Client Billing Rate (Commercial Revenue) ➔ Run Point-in-Time Resolution Engine on Work Date | ✅ Complete | Verified in `tests/integration/rate-resolution.test.ts` & `tests/integration/masters.test.ts` |
 | **WF-4: Shift Scheduling & Work Calendar** | Define Shift Hours ➔ Assign Employee to Shift Timeline ➔ Configure Weekly Offs & Public Holidays | ✅ Complete | Verified in `tests/integration/masters.test.ts` & `docs/workflows/PHASE1_WORKFLOWS.md` |
 | **WF-5: Attendance Tracking & Overtime Engine** | Monthly Period Pre-Generation ➔ Daily Actual Hours / Excel Import ➔ Strict Shift Calculation ➔ Anomaly Resolution ➔ Submit ➔ Approve ➔ Lock ➔ Controlled Unlock | ✅ Complete | Verified in `tests/unit/attendance-calculator.test.ts` & `tests/integration/attendance.test.ts` |
-| **WF-6: Monthly Payroll Calculation & WPS SIF** | Timesheet / Salary Structure ➔ Deductions/Additions ➔ Net Pay ➔ WPS SIF File Generation | ⬜ Not Started | Scheduled for Phase 4 |
-| **WF-7: End-of-Service Final Settlement** | Resignation/Termination ➔ Gratuity Calculation ➔ Unused Leave Encashment ➔ Air Ticket ➔ Settlement Voucher | ⬜ Not Started | Scheduled for Phase 6 |
+| **WF-6: Employee Leave Lifecycle & Attendance Synchronization** | Quota Allocation ➔ ESS Request Submission ➔ Overlap & Probation Check ➔ Balance Reservation ➔ HR Review & Approval ➔ Attendance Live Sync (`is_on_leave`) ➔ Cancellation / Revocation | ✅ Complete | Verified in `tests/unit/leave-calculator.test.ts` & `tests/integration/leave.test.ts` & `docs/workflows/PHASE3_LEAVE_WORKFLOWS.md` |
+| **WF-7: Monthly Payroll Calculation & WPS SIF** | Timesheet / Salary Structure ➔ Deductions/Additions ➔ Net Pay ➔ WPS SIF File Generation | ⬜ Not Started | Scheduled for Phase 4 |
+| **WF-8: End-of-Service Final Settlement** | Resignation/Termination ➔ Gratuity Calculation ➔ Unused Leave Encashment ➔ Air Ticket ➔ Settlement Voucher | ⬜ Not Started | Scheduled for Phase 6 |
 
 ---
 
 ## 6. Latest Verification & Build Evidence (2026-09-09)
 
 - **Database Migrations (`npm run db:status`):**
-  - Total Executed: 4 (`20260908000001-create-foundation-tables.ts`, `20260909000001-create-phase1-masters.ts`, `20260910000001-add-employment-contract-dates-to-employees.ts`, `20260910000002-create-phase2-attendance.ts`)
+  - Total Executed: 5 (`20260908000001-create-foundation-tables.ts`, `20260909000001-create-phase1-masters.ts`, `20260910000001-add-employment-contract-dates-to-employees.ts`, `20260910000002-create-phase2-attendance.ts`, `20260911000001-create-phase3-leave.ts`)
   - Total Pending: 0
 - **Database Seeding (`npm run db:seed`):**
   - Confirmed roles seeded: `super_admin`, `hr_admin`, `employee`
-  - Granular permissions mapped: 36 permissions (including 8 Phase 2 attendance permissions)
-  - Default master seed data: 6 designations, 3 salary components, default weekly off
+  - Granular permissions mapped: 49 permissions (including 13 Phase 3 leave permissions)
+  - Default master seed data: 6 designations, 3 salary components, default weekly off, 4 default leave types
 - **Automated Tests (`npm run test:backend`):**
-  - Test Suites: 9 passed, 9 total
-  - Tests: 54 passed, 54 total (including 10 attendance calculator unit tests and 9 attendance lifecycle integration tests)
+  - Test Suites: 12 passed, 12 total
+  - Tests: 80 passed, 80 total (0 failures, 100% green)
+  - Suites include: auth, health, masters, effective-date, rate-resolution, attendance-calculator, attendance, leave-calculator, leave, validation-middleware, app-error.
 - **Monorepo Build (`npm run build`):**
   - `@blue-royal/contracts`: 0 errors
   - `@blue-royal/database`: 0 errors
@@ -173,4 +216,23 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
   - 0 errors, 0 warnings
 - **Version Control (`git status`):**
   - Clean working state, fully synchronized across all workspaces.
+
+---
+
+## 7. Phase 3: Leave Management Requirements Reconciliation & Neutral Assumptions
+
+Per project instructions, unconfirmed statutory rules are **not** hardcoded into application code. The following ambiguities have been identified and resolved using the safest neutral models:
+
+1. **Statutory Pro-Rata Accrual vs Annual Allocation:**
+   - *Ambiguity:* Master.md and existing documentation do not define whether leave must accrue monthly pro-rata (e.g. 2.5 days/month) or be granted as an upfront annual credit.
+   - *Safe Neutral Model:* The system provides explicit annual `employee_leave_balances` records (`allocated_days`, `used_days`, `pending_days`, `remaining_days`) allowing company HR to configure or allocate balances per employee per year without forcing an assumed formula.
+2. **Weekend & Public Holiday Intersections (Calendar vs Working Days):**
+   - *Ambiguity:* In UAE practice, some contracts treat annual leave strictly as consecutive calendar days, while others deduct only scheduled working days.
+   - *Safe Neutral Model:* The `leave_types` catalog includes a configurable flag `deduct_working_days_only: BOOLEAN DEFAULT true`. The day calculation engine checks calendar weekly offs and public holidays accordingly.
+3. **Probation Period Restrictions:**
+   - *Ambiguity:* Whether an employee in probation can request unpaid or compassionate leave.
+   - *Safe Neutral Model:* Configurable `allow_during_probation: BOOLEAN DEFAULT false` on `leave_types`. Unpaid leave or emergency leave can be configured to permit probation requests, while Annual Leave defaults to restricting them.
+4. **Approval Authority:**
+   - *Rule:* Master.md and project governance confirm **only 3 roles** (`super_admin`, `hr_admin`, `employee`).
+   - *Implementation:* Zero middle-management roles are introduced. `hr_admin` serves as the operational reviewer and final approver. `super_admin` possesses administrative override capabilities.
 
