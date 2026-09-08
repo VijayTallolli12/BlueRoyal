@@ -5,6 +5,7 @@ import { sendSuccess } from '../../../core/utils/response.util';
 import { AppError } from '../../../core/errors/app-error';
 import { EffectiveDateService } from '../../../core/services/effective-date.service';
 import { runInTransaction } from '../../../core/database/transactions';
+import { AuditService } from '../../../core/audit/audit.service';
 
 export class SalaryController {
   // 1. Salary Component Masters
@@ -53,6 +54,18 @@ export class SalaryController {
         isWpsHousing: isWpsHousing || false,
         isActive: isActive !== undefined ? isActive : true,
       });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'SALARY_COMPONENT_CREATED',
+        resourceType: 'SalaryComponent',
+        resourceId: comp.id,
+        newValues: comp.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, comp, 201);
     } catch (err) {
       next(err);
@@ -99,7 +112,7 @@ export class SalaryController {
           t,
         );
 
-        return EmployeeSalaryStructure.create(
+        const struct = await EmployeeSalaryStructure.create(
           {
             employeeId,
             componentId,
@@ -109,6 +122,20 @@ export class SalaryController {
           },
           { transaction: t },
         );
+
+        await AuditService.recordEvent({
+          actorId: req.user?.id,
+          actorIp: req.ip || req.socket.remoteAddress,
+          actorUserAgent: req.headers['user-agent'],
+          action: 'SALARY_STRUCTURE_CONFIGURED',
+          resourceType: 'EmployeeSalaryStructure',
+          resourceId: struct.id,
+          newValues: struct.toJSON(),
+          correlationId: req.headers['x-correlation-id'] as string,
+          transaction: t,
+        });
+
+        return struct;
       });
 
       sendSuccess(req, res, result, 201);

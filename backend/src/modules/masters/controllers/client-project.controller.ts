@@ -3,6 +3,7 @@ import { Client } from '../models/client.model';
 import { Project } from '../models/project.model';
 import { sendSuccess } from '../../../core/utils/response.util';
 import { AppError } from '../../../core/errors/app-error';
+import { AuditService } from '../../../core/audit/audit.service';
 
 export class ClientController {
   public static async list(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -48,6 +49,18 @@ export class ClientController {
         billingAddress,
         isActive: isActive !== undefined ? isActive : true,
       });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'CLIENT_CREATED',
+        resourceType: 'Client',
+        resourceId: item.id,
+        newValues: item.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, item, 201);
     } catch (err) {
       next(err);
@@ -68,7 +81,21 @@ export class ClientController {
           throw AppError.conflict(`Client code ${code} already exists`);
         }
       }
+      const oldValues = item.toJSON();
       await item.update({ code, name, contactPerson, contactEmail, contactPhone, billingAddress, isActive });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'CLIENT_UPDATED',
+        resourceType: 'Client',
+        resourceId: item.id,
+        oldValues,
+        newValues: item.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, item);
     } catch (err) {
       next(err);
@@ -82,7 +109,20 @@ export class ClientController {
       if (!item) {
         throw AppError.notFound(`Client with ID ${id} not found`);
       }
+      const oldValues = item.toJSON();
       await item.destroy();
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'CLIENT_DELETED',
+        resourceType: 'Client',
+        resourceId: id,
+        oldValues,
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, { message: 'Client deleted successfully' });
     } catch (err) {
       next(err);
@@ -143,6 +183,18 @@ export class ProjectController {
         endDate,
         status: status || 'active',
       });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'PROJECT_CREATED',
+        resourceType: 'Project',
+        resourceId: item.id,
+        newValues: item.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, item, 201);
     } catch (err) {
       next(err);
@@ -169,7 +221,21 @@ export class ProjectController {
           throw AppError.conflict(`Project code ${code} already exists`);
         }
       }
+      const oldValues = item.toJSON();
       await item.update({ clientId, code, name, siteLocation, startDate, endDate, status });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'PROJECT_UPDATED',
+        resourceType: 'Project',
+        resourceId: item.id,
+        oldValues,
+        newValues: item.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, item);
     } catch (err) {
       next(err);
@@ -183,7 +249,20 @@ export class ProjectController {
       if (!item) {
         throw AppError.notFound(`Project with ID ${id} not found`);
       }
+      const oldValues = item.toJSON();
       await item.destroy();
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'PROJECT_DELETED',
+        resourceType: 'Project',
+        resourceId: id,
+        oldValues,
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, { message: 'Project deleted successfully' });
     } catch (err) {
       next(err);

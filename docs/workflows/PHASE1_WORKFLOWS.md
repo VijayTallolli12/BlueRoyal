@@ -15,6 +15,9 @@ The 12 core Phase 1 foundational workflows have been implemented and verified en
 - **Authoritative Designation History:** Employee designation is derived dynamically from their effective-dated assignment timeline, eliminating conflicting sources of truth.
 - **Transactional Interval Management:** Assignment, pay rate, billing rate, and salary structure intervals automatically prevent overlaps and auto-close open-ended predecessor records within database transactions.
 
+> [!IMPORTANT]
+> **Security & Authentication Note:** Use locally configured development credentials. Never commit, log, or hardcode shared or production credentials in workflows or tests.
+
 ---
 
 ## 2. Detailed Verification of the 12 Phase 1 Workflows

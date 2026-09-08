@@ -6,6 +6,7 @@ import { sendSuccess } from '../../../core/utils/response.util';
 import { AppError } from '../../../core/errors/app-error';
 import { EffectiveDateService } from '../../../core/services/effective-date.service';
 import { runInTransaction } from '../../../core/database/transactions';
+import { AuditService } from '../../../core/audit/audit.service';
 
 export class ShiftController {
   // 1. Shift Masters
@@ -34,6 +35,18 @@ export class ShiftController {
         isNightShift: isNightShift || false,
         isActive: isActive !== undefined ? isActive : true,
       });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'SHIFT_CREATED',
+        resourceType: 'Shift',
+        resourceId: shift.id,
+        newValues: shift.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, shift, 201);
     } catch (err) {
       next(err);
@@ -80,7 +93,7 @@ export class ShiftController {
           t,
         );
 
-        return EmployeeShiftAssignment.create(
+        const assignment = await EmployeeShiftAssignment.create(
           {
             employeeId,
             shiftId,
@@ -89,6 +102,20 @@ export class ShiftController {
           },
           { transaction: t },
         );
+
+        await AuditService.recordEvent({
+          actorId: req.user?.id,
+          actorIp: req.ip || req.socket.remoteAddress,
+          actorUserAgent: req.headers['user-agent'],
+          action: 'SHIFT_ROSTER_ASSIGNED',
+          resourceType: 'EmployeeShiftAssignment',
+          resourceId: assignment.id,
+          newValues: assignment.toJSON(),
+          correlationId: req.headers['x-correlation-id'] as string,
+          transaction: t,
+        });
+
+        return assignment;
       });
 
       sendSuccess(req, res, result, 201);

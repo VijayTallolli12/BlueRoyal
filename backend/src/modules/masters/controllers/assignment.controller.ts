@@ -8,6 +8,7 @@ import { sendSuccess } from '../../../core/utils/response.util';
 import { AppError } from '../../../core/errors/app-error';
 import { EffectiveDateService } from '../../../core/services/effective-date.service';
 import { runInTransaction } from '../../../core/database/transactions';
+import { AuditService } from '../../../core/audit/audit.service';
 
 export class AssignmentController {
   public static async list(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -85,7 +86,7 @@ export class AssignmentController {
           t,
         );
 
-        return EmployeeAssignment.create(
+        const assignment = await EmployeeAssignment.create(
           {
             employeeId,
             clientId,
@@ -97,6 +98,20 @@ export class AssignmentController {
           },
           { transaction: t },
         );
+
+        await AuditService.recordEvent({
+          actorId: req.user?.id,
+          actorIp: req.ip || req.socket.remoteAddress,
+          actorUserAgent: req.headers['user-agent'],
+          action: 'ASSIGNMENT_CREATED',
+          resourceType: 'EmployeeAssignment',
+          resourceId: assignment.id,
+          newValues: assignment.toJSON(),
+          correlationId: req.headers['x-correlation-id'] as string,
+          transaction: t,
+        });
+
+        return assignment;
       });
 
       sendSuccess(req, res, result, 201);
@@ -116,7 +131,21 @@ export class AssignmentController {
       if (effectiveTo && effectiveTo < item.effectiveFrom) {
         throw AppError.badRequest('effectiveTo cannot be earlier than effectiveFrom');
       }
+      const oldValues = item.toJSON();
       await item.update({ effectiveTo, remarks });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'ASSIGNMENT_UPDATED',
+        resourceType: 'EmployeeAssignment',
+        resourceId: item.id,
+        oldValues,
+        newValues: item.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, item);
     } catch (err) {
       next(err);

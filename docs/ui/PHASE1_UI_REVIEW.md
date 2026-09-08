@@ -10,7 +10,15 @@
 
 ## 1. Executive Summary
 
-Phase 1 provides an interactive, unified management portal (`MastersHubComponent`) embedded directly inside the authenticated dashboard. It allows HR Administrators and Operations Managers to view, register, schedule, and resolve all foundational organizational entities:
+Phase 1 provides an interactive, unified management portal (`MastersHubComponent`) embedded directly inside the authenticated dashboard. 
+
+> [!NOTE]
+> **Consolidated Hub Notice:** `MastersHubComponent` is a temporary consolidated Phase 1 UI designed to enable rapid administrative testing, verification, and demonstration across all 8 master domains in a single coherent workspace. As business modules mature in subsequent phases, dedicated standalone feature routes (e.g., `/employees`, `/clients`, `/assignments`, `/rates`) will replace this consolidated hub.
+
+> [!IMPORTANT]
+> **Security & Authentication Note:** Use locally configured development credentials. Never commit, log, or document real or shared credentials.
+
+The Masters Hub allows HR Administrators and Operations Managers to view, register, schedule, and resolve all foundational organizational entities:
 
 - **Designations** (Roles catalog)
 - **Clients & Projects** (Customer entities and job site locations)
@@ -228,9 +236,27 @@ Phase 1 provides an interactive, unified management portal (`MastersHubComponent
 
 ---
 
-## 3. UI Limitations & UX Polish Recommendations for HR Admin
+## 3. UI Limitations & UX Backlog
 
-1. **Client-Project Cascading Filter:** In the Assignment form, selecting a Client currently updates the available Project dropdown. However, clearing the Client selection should gracefully reset the project selection.
-2. **Table Pagination & Search:** Currently, tables display all fetched rows. For organizations with >100 employees, client-side pagination (10/25/50 per page) and search filtering by employee name/code will significantly enhance daily usability.
-3. **Confirmation Modals for Deactivations:** Deactivation/delete actions should prompt with a standardized modal dialog confirming intent before soft-deleting.
-4. **Active Navigation Indicator:** Top-level dashboard tab indicator is clearly highlighted with `#1a365d` and white text, providing clear visual orientation.
+The following items are officially cataloged in the UX backlog for implementation as dedicated module views are created:
+
+### UX Backlog Items
+1. **Assignment Transfer Confirmation Modal:**
+   - *Problem:* When assigning an employee who already has an ongoing deployment, the system automatically auto-closes the prior assignment record on `effectiveFrom - 1 day`.
+   - *Backlog Action:* Introduce a confirmation modal dialog before submitting: *"Employee BR-001 currently has an active deployment to [Client / Project]. Assigning to [New Project] on [Date] will close the existing deployment as of [Date - 1]. Proceed?"*
+
+2. **Table Pagination, Search, and Filtering:**
+   - *Problem:* Phase 1 renders lists directly in responsive tables. While sufficient for master reference data, employee and assignment tables for enterprise workforces (>100 workers) require rapid search and pagination.
+   - *Backlog Action:* Add a searchable text filter (by employee code, full name, nationality) and client-side or server-side pagination controls (10, 25, 50, 100 rows per page).
+
+3. **Bulk Client Billing-Rate Import (CSV / Excel):**
+   - *Problem:* Subcontracting and manpower rate cards typically involve dozens of designations per client/project. Configuring them one-by-one via form input is labor-intensive.
+   - *Backlog Action:* Design and implement a bulk CSV/spreadsheet import workflow with pre-validation of client codes, project codes, and designation codes. *(Deferred to Phase 2/3 UI polish; do NOT implement now)*.
+
+4. **Transition to Dedicated Feature Routes:**
+   - *Problem:* The consolidated `MastersHubComponent` combines all 8 master domains into a single tabbed container.
+   - *Backlog Action:* Deconstruct the consolidated hub into dedicated child routes (e.g. `/masters/employees`, `/masters/clients`, `/masters/assignments`, `/masters/rates`) with shared navigational breadcrumbs and deep linking.
+
+5. **Client-Project Cascading Filter Reset:**
+   - *Problem:* In the Assignment form, clearing or changing the selected Client should immediately reset the Project dropdown to avoid mismatched project submissions.
+   - *Backlog Action:* Add explicit reset handling on client selection change.

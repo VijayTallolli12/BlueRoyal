@@ -10,6 +10,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { EffectiveDateService } from '../../../core/services/effective-date.service';
 import { BillingRateResolutionService } from '../services/billing-rate-resolution.service';
 import { runInTransaction } from '../../../core/database/transactions';
+import { AuditService } from '../../../core/audit/audit.service';
 
 export class RateController {
   // 1. Employee Hourly Pay Rates (Labor Cost)
@@ -45,7 +46,7 @@ export class RateController {
           t,
         );
 
-        return EmployeeHourlyRate.create(
+        const rate = await EmployeeHourlyRate.create(
           {
             employeeId,
             normalHourlyRate,
@@ -56,6 +57,20 @@ export class RateController {
           },
           { transaction: t },
         );
+
+        await AuditService.recordEvent({
+          actorId: req.user?.id,
+          actorIp: req.ip || req.socket.remoteAddress,
+          actorUserAgent: req.headers['user-agent'],
+          action: 'EMPLOYEE_HOURLY_RATE_CONFIGURED',
+          resourceType: 'EmployeeHourlyRate',
+          resourceId: rate.id,
+          newValues: rate.toJSON(),
+          correlationId: req.headers['x-correlation-id'] as string,
+          transaction: t,
+        });
+
+        return rate;
       });
 
       sendSuccess(req, res, result, 201);
@@ -123,7 +138,7 @@ export class RateController {
           t,
         );
 
-        return ClientBillingRate.create(
+        const rate = await ClientBillingRate.create(
           {
             clientId,
             projectId: projectId || null,
@@ -135,6 +150,20 @@ export class RateController {
           },
           { transaction: t },
         );
+
+        await AuditService.recordEvent({
+          actorId: req.user?.id,
+          actorIp: req.ip || req.socket.remoteAddress,
+          actorUserAgent: req.headers['user-agent'],
+          action: 'CLIENT_BILLING_RATE_CONFIGURED',
+          resourceType: 'ClientBillingRate',
+          resourceId: rate.id,
+          newValues: rate.toJSON(),
+          correlationId: req.headers['x-correlation-id'] as string,
+          transaction: t,
+        });
+
+        return rate;
       });
 
       sendSuccess(req, res, result, 201);

@@ -10,6 +10,7 @@ import { EffectiveDateService } from '../../../core/services/effective-date.serv
 import { EmployeeHourlyRate } from '../models/employee-hourly-rate.model';
 import { EmployeeSalaryStructure } from '../models/salary-component.model';
 import { SalaryComponent } from '../models/salary-component.model';
+import { AuditService } from '../../../core/audit/audit.service';
 
 export class EmployeeController {
   public static async list(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -179,6 +180,17 @@ export class EmployeeController {
         status: status || 'probation',
       });
 
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'EMPLOYEE_CREATED',
+        resourceType: 'Employee',
+        resourceId: emp.id,
+        newValues: emp.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, emp, 201);
     } catch (err) {
       next(err);
@@ -208,6 +220,7 @@ export class EmployeeController {
         status,
       } = req.body;
 
+      const oldValues = emp.toJSON();
       await emp.update({
         userId,
         firstName,
@@ -223,6 +236,18 @@ export class EmployeeController {
         status,
       });
 
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'EMPLOYEE_UPDATED',
+        resourceType: 'Employee',
+        resourceId: emp.id,
+        oldValues,
+        newValues: emp.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, emp);
     } catch (err) {
       next(err);
@@ -236,7 +261,20 @@ export class EmployeeController {
       if (!emp) {
         throw AppError.notFound(`Employee with ID ${id} not found`);
       }
+      const oldValues = emp.toJSON();
       await emp.destroy();
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'EMPLOYEE_DEACTIVATED',
+        resourceType: 'Employee',
+        resourceId: id,
+        oldValues,
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, { message: 'Employee deactivated successfully' });
     } catch (err) {
       next(err);

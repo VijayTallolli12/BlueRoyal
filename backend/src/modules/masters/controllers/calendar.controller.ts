@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { WeeklyOffConfig, PublicHoliday } from '../models/calendar.model';
 import { sendSuccess } from '../../../core/utils/response.util';
 import { AppError } from '../../../core/errors/app-error';
+import { AuditService } from '../../../core/audit/audit.service';
 
 export class CalendarController {
   // 1. Weekly Off Configs
@@ -24,6 +25,18 @@ export class CalendarController {
         effectiveTo: effectiveTo || null,
         isDefault: isDefault || false,
       });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'WEEKLY_OFF_CONFIGURED',
+        resourceType: 'WeeklyOffConfig',
+        resourceId: config.id,
+        newValues: config.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, config, 201);
     } catch (err) {
       next(err);
@@ -59,6 +72,18 @@ export class CalendarController {
         holidayDate,
         description: description || null,
       });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'PUBLIC_HOLIDAY_CONFIGURED',
+        resourceType: 'PublicHoliday',
+        resourceId: item.id,
+        newValues: item.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, item, 201);
     } catch (err) {
       next(err);
@@ -70,7 +95,20 @@ export class CalendarController {
       const id = String(req.params.id);
       const item = await PublicHoliday.findByPk(id);
       if (!item) throw AppError.notFound(`Holiday ${id} not found`);
+      const oldValues = item.toJSON();
       await item.destroy();
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'PUBLIC_HOLIDAY_DELETED',
+        resourceType: 'PublicHoliday',
+        resourceId: id,
+        oldValues,
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
       sendSuccess(req, res, { message: 'Holiday deleted successfully' });
     } catch (err) {
       next(err);
