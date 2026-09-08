@@ -41,7 +41,7 @@ This document serves as the **single source of truth** for implementation progre
 | **Phase 1** | Organization Masters, Assignments, Dual-Stream Rates & Rostering | 8 | ✅ Complete | Masters & 4-rate resolution verified & signed off |
 | **Phase 2** | Attendance, Excel Import & Overtime Calculation Engine | 1 | ✅ Complete | Attendance lifecycle, calculation engine & UI verified |
 | **Phase 3** | Leave Management & UAE Labor Law Entitlements | 1 | ✅ Complete | Leave balances, requests, attendance live sync, & ESS/Admin UI verified |
-| **Phase 4** | Payroll Processing Engine, WPS & Statutory Compliance | 1 | ⬜ Not Started | Scheduled for Phase 4 |
+| **Phase 4** | Payroll Processing Engine, WPS & Statutory Compliance | 1 | 🟡 In Progress | Architectural specifications & workflows documented; awaiting implementation review |
 | **Phase 5** | Employee Documents Management & Expiry Alerts | 1 | ⬜ Not Started | Scheduled for Phase 5 |
 | **Phase 6** | Final Settlements, Gratuity, Leave Salary & Air Tickets | 1 | ⬜ Not Started | Scheduled for Phase 6 |
 
@@ -66,7 +66,7 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
 | **1.9 Salary Components & Structures** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **2.1 Attendance & Overtime Engine** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **3.1 Leave Entitlement & Requests** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
-| **4.1 Payroll Engine & WPS Generation** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
+| **4.1 Payroll Engine & WPS Generation** | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 🟡 In Progress |
 | **5.1 Documents & Compliance Hub** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
 | **6.1 End of Service Settlement & Gratuity** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
 
@@ -235,4 +235,29 @@ Per project instructions, unconfirmed statutory rules are **not** hardcoded into
 4. **Approval Authority:**
    - *Rule:* Master.md and project governance confirm **only 3 roles** (`super_admin`, `hr_admin`, `employee`).
    - *Implementation:* Zero middle-management roles are introduced. `hr_admin` serves as the operational reviewer and final approver. `super_admin` possesses administrative override capabilities.
+
+---
+
+## 8. Phase 4: Payroll Requirements Reconciliation & Neutral Assumptions
+
+Phase 4 architectural planning segregates all payroll business rules into three explicit categories to maintain 100% financial integrity and prevent inventing unconfirmed labor-law rules:
+
+### A. Explicitly Confirmed Rules
+1. **Dual-Stream Labor Cost Decoupling:** `employee_hourly_rates` and `employee_salary_structures` determine remuneration. Payroll rates must **NEVER** depend on or cross-derive from `client_billing_rates`.
+2. **Attendance Dependency:** Payroll engine strictly consumes attendance periods that have reached `LOCKED` status. Unlocked, draft, submitted, or approved attendance is strictly rejected.
+3. **Point-in-Time Effective Dating:** Rates and compensation packages must resolve using the exact interval (`effective_from` $\le \text{workDate} \le$ `effective_to`) active on each work date.
+4. **Three Confirmed Enterprise Roles:** `super_admin` (administrative override / unlock), `hr_admin` (run calculation, review, finalize), `employee` (read-only self-service payslips).
+
+### B. Technically Inferred Architecture
+1. **Monthly Period Alignment:** Payroll periods align 1:1 with Phase 2 calendar monthly attendance periods (`period_code` format `YYYY-MM`).
+2. **Deterministic Hourly Calculation:** Daily Regular Pay = `regular_hours * normal_hourly_rate`; Daily OT Pay = `ot_hours * ot_hourly_rate`. Line items recorded per date/rate slice.
+3. **Percentage Salary Components:** Evaluated strictly against declared `percentage_basis_component_id` (e.g. HRA % of BASIC).
+4. **Controlled Reopen / Unlock:** Unlocking a finalized period requires $\ge 15$ characters audit justification, returns period to `DRAFT`, requires recalculation, and generates immutable audit records.
+
+### C. Unconfirmed Business Questions (Zero-Assumption Neutral Safeguards)
+1. **Absence & Unpaid Leave Deductions:** Formula (e.g. `Gross / 30` vs `Basic / 30` vs `Gross / Working Days`) is not hardcoded. The engine tallies quantitative days in `payroll_items`, and deductions are driven explicitly by configured components or manual adjustments until formally confirmed.
+2. **Statutory Pension / GPSSA:** Zero automatic deductions assumed; applied only if configured in `salary_components`.
+3. **WPS SIF File Specifications:** Bank routing codes, employer MOHRE IDs, and file headers are isolated behind a future dedicated service contract.
+4. **Missing Financial Value Rule:** Never guess or fallback to 0.00 or an assumed rate. Missing rate **blocks** employee calculation and halts period finalization until HR configures the rate in Masters.
+
 
