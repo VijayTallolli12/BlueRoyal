@@ -10,6 +10,7 @@ import { errorHandlerMiddleware } from './core/middleware/error-handler.middlewa
 import { healthRouter } from './modules/health/health.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import masterRouter from './modules/masters/routes/master.routes';
+import attendanceRouter from './modules/attendance/routes/attendance.routes';
 
 export function createApp(): Express {
   const app = express();
@@ -38,6 +39,7 @@ export function createApp(): Express {
   app.use(env.API_PREFIX, healthRouter);
   app.use(`${env.API_PREFIX}/auth`, authRouter);
   app.use(env.API_PREFIX, masterRouter);
+  app.use(`${env.API_PREFIX}/attendance`, attendanceRouter);
 
   // 404 handler for undefined routes
   app.use((req, res, _next) => {

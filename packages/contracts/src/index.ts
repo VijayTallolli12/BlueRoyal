@@ -11,3 +11,4 @@ export * from './rate/rate';
 export * from './shift/shift';
 export * from './calendar/calendar';
 export * from './salary/salary';
+export * from './attendance/attendance';

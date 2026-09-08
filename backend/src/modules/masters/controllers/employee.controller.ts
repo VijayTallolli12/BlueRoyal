@@ -156,8 +156,15 @@ export class EmployeeController {
         phoneNumber,
         dateOfJoining,
         probationEndDate,
+        employmentType,
+        contractEndDate,
         status,
       } = req.body;
+
+      const finalEmploymentType = employmentType || 'full_time';
+      if (finalEmploymentType === 'contract' && !contractEndDate) {
+        throw AppError.badRequest('Contract end date is mandatory for contract employees');
+      }
 
       const existing = await Employee.findOne({ where: { employeeCode } });
       if (existing) {
@@ -177,6 +184,8 @@ export class EmployeeController {
         phoneNumber: phoneNumber || null,
         dateOfJoining,
         probationEndDate: probationEndDate || null,
+        employmentType: finalEmploymentType,
+        contractEndDate: contractEndDate || null,
         status: status || 'probation',
       });
 
@@ -217,8 +226,17 @@ export class EmployeeController {
         phoneNumber,
         dateOfJoining,
         probationEndDate,
+        employmentType,
+        contractEndDate,
         status,
       } = req.body;
+
+      const finalEmploymentType = employmentType !== undefined ? employmentType : emp.employmentType;
+      const finalContractEndDate = contractEndDate !== undefined ? contractEndDate : emp.contractEndDate;
+
+      if (finalEmploymentType === 'contract' && !finalContractEndDate) {
+        throw AppError.badRequest('Contract end date is mandatory for contract employees');
+      }
 
       const oldValues = emp.toJSON();
       await emp.update({
@@ -233,6 +251,8 @@ export class EmployeeController {
         phoneNumber,
         dateOfJoining,
         probationEndDate,
+        employmentType: finalEmploymentType,
+        contractEndDate: finalContractEndDate,
         status,
       });
 

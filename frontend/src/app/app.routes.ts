@@ -18,6 +18,20 @@ export const routes: Routes = [
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+    path: 'attendance',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/attendance/attendance-sheet.component').then(
+        (m) => m.AttendanceSheetComponent,
+      ),
+  },
+  {
+    path: 'attendance/my-attendance',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/attendance/my-attendance.component').then((m) => m.MyAttendanceComponent),
+  },
+  {
     path: '**',
     redirectTo: 'dashboard',
   },

@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 import { ApiSuccessResponse, HealthCheckResponse } from '@blue-royal/contracts';
@@ -10,13 +10,18 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, MastersHubComponent],
+  imports: [CommonModule, RouterModule, MastersHubComponent],
   template: `
     <div class="dashboard-shell">
       <header class="app-header">
         <div class="brand">
           <h1>Blue Royal HRMS</h1>
-          <span class="badge">Phase 0 Foundation</span>
+          <span class="badge">Phase 2 Attendance</span>
+          <nav class="nav-links">
+            <a routerLink="/dashboard" routerLinkActive="active" class="nav-btn">Masters Hub</a>
+            <a routerLink="/attendance" class="nav-btn">Attendance & Overtime Hub</a>
+            <a routerLink="/attendance/my-attendance" class="nav-btn">My Attendance</a>
+          </nav>
         </div>
         <div class="user-meta">
           @if (authService.currentUser(); as user) {
@@ -98,6 +103,24 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
         padding: 0.25rem 0.5rem;
         border-radius: 4px;
         font-size: 0.75rem;
+      }
+      .nav-links {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: 1.5rem;
+      }
+      .nav-btn {
+        color: #ffffff;
+        text-decoration: none;
+        padding: 0.4rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        background: rgba(255, 255, 255, 0.1);
+        transition: background 0.15s ease;
+      }
+      .nav-btn:hover, .nav-btn.active {
+        background: rgba(255, 255, 255, 0.25);
       }
       .user-meta {
         display: flex;

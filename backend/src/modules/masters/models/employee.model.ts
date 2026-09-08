@@ -16,6 +16,8 @@ export class Employee extends BaseModel {
   declare public phoneNumber: string | null;
   declare public dateOfJoining: string;
   declare public probationEndDate: string | null;
+  declare public employmentType: 'full_time' | 'contract';
+  declare public contractEndDate: string | null;
   declare public status: string;
   declare public deletedAt: Date | null;
 
@@ -86,6 +88,17 @@ Employee.init(
       type: DataTypes.DATEONLY,
       allowNull: true,
       field: 'probation_end_date',
+    },
+    employmentType: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'full_time',
+      field: 'employment_type',
+    },
+    contractEndDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: 'contract_end_date',
     },
     status: {
       type: DataTypes.STRING(32),

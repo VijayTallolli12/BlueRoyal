@@ -99,6 +99,16 @@ const BASELINE_PERMISSIONS: PermissionSeed[] = [
   { code: 'salary:read', description: 'View salary components and compensation packages', module: 'salary' },
   { code: 'salary:create', description: 'Create salary components and employee salary structures', module: 'salary' },
   { code: 'salary:update', description: 'Update salary components and employee salary structures', module: 'salary' },
+
+  // Phase 2: Attendance & Overtime
+  { code: 'attendance:read', description: 'View attendance periods and records', module: 'attendance' },
+  { code: 'attendance:create', description: 'Create attendance periods and records', module: 'attendance' },
+  { code: 'attendance:import', description: 'Import attendance records from Excel spreadsheet', module: 'attendance' },
+  { code: 'attendance:submit', description: 'Submit draft attendance periods for approval', module: 'attendance' },
+  { code: 'attendance:approve', description: 'Approve submitted attendance periods', module: 'attendance' },
+  { code: 'attendance:lock', description: 'Lock approved attendance periods for payroll processing', module: 'attendance' },
+  { code: 'attendance:unlock', description: 'Unlock locked attendance periods with justification', module: 'attendance' },
+  { code: 'attendance:self_read', description: 'View own attendance history and status', module: 'attendance' },
 ];
 
 const DEFAULT_DESIGNATIONS = [
@@ -220,6 +230,7 @@ async function seed(): Promise<void> {
         'shifts',
         'calendar',
         'salary',
+        'attendance',
       ];
       for (const perm of allPermissions) {
         const [mod] = perm.code.split(':');
@@ -236,7 +247,7 @@ async function seed(): Promise<void> {
 
     // Employee gets self-service reading permissions
     if (employeeRole) {
-      const empCodes = ['system:health', 'calendar:read', 'shifts:read'];
+      const empCodes = ['system:health', 'calendar:read', 'shifts:read', 'attendance:self_read'];
       for (const perm of allPermissions.filter((p) => empCodes.includes(p.code))) {
         await sequelize.query(
           `INSERT INTO role_permissions (role_id, permission_id, created_at)

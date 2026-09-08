@@ -38,6 +38,14 @@ export class AppError extends Error {
   public static conflict(message: string): AppError {
     return new ConflictError(message);
   }
+
+  public static unauthorized(message = 'Authentication required'): AppError {
+    return new AuthenticationError(message);
+  }
+
+  public static forbidden(message = 'Access denied: insufficient permissions'): AppError {
+    return new AuthorizationError(message);
+  }
 }
 
 export class ValidationError extends AppError {
