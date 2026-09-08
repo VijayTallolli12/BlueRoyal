@@ -2,9 +2,9 @@
 
 **Document ID:** `DOC-STATUS-001`  
 **Current Phase:** Phase 1: Core Foundation Masters & Dual-Stream Rate Infrastructure  
-**Current Module:** Phase 1 Verification & Sign-Off / Progress Tracking  
-**Current Task:** Establishing Progress Tracking System & Module Completeness Verification  
-**Overall Completion:** **33.3%** (5 of 15 Architectural Modules Verified Complete)  
+**Current Module:** Phase 1 UI & Business Workflow Review  
+**Current Task:** Phase 1 Workflows & UI Assessment Verification  
+**Overall Completion:** **40.0%** (6 of 15 Architectural Modules Verified Complete)  
 **Active Blockers:** None (🔴 0)  
 **Last Verified Date:** 2026-09-08  
 
@@ -40,8 +40,8 @@ This document serves as the **single source of truth** for implementation progre
 
 | Phase | Description | Modules | Status | Completion |
 |---|---|---|---|---|
-| **Phase 0** | System Foundation, Auth, RBAC, Database & Audit Engine | 2 | ✅ Complete | 100% |
-| **Phase 1** | Organization Masters, Assignments, Dual-Stream Rates & Rostering | 8 | 🟡 In Progress | 37.5% (3/8 Complete, 5/8 In Progress) |
+| **Phase 0** | System Foundation, Auth, RBAC, Database & Audit Engine | 2 | ✅ Complete | 100% (2/2 Complete) |
+| **Phase 1** | Organization Masters, Assignments, Dual-Stream Rates & Rostering | 8 | 🟡 In Progress | 50.0% (4/8 Complete, 4/8 In Progress) |
 | **Phase 2** | Attendance, Biometrics & Overtime Calculation Engine | 1 | ⬜ Not Started | 0% |
 | **Phase 3** | Leave Management & UAE Labor Law Entitlements | 1 | ⬜ Not Started | 0% |
 | **Phase 4** | Payroll Processing Engine, WPS & Statutory Compliance | 1 | ⬜ Not Started | 0% |
@@ -68,14 +68,14 @@ Each module is tracked across the 10 required architectural verification criteri
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **0.1 System Foundation & Health** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **0.2 Authentication & RBAC Engine** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
-| **1.1 Designation Master** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
-| **1.2 Client Master** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
-| **1.3 Project Master** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
+| **1.1 Designation Master** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
+| **1.2 Client Master** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
+| **1.3 Project Master** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **1.4 Employee Profile Master** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
 | **1.5 Employee Assignment (Effective-Dated)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
 | **1.6 Dual-Stream Rates & Billing Resolution** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
-| **1.7 Shift Master & Rostering** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
-| **1.8 Calendar & Company Holidays** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
+| **1.7 Shift Master & Rostering** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | ✅ | 🟡 In Progress |
+| **1.8 Calendar & Company Holidays** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | ✅ | 🟡 In Progress |
 | **1.9 Salary Components & Structures** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | 🟡 In Progress |
 | **2.1 Attendance & Overtime Engine** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
 | **3.1 Leave Entitlement & Requests** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
@@ -107,19 +107,19 @@ Each module is tracked across the 10 required architectural verification criteri
 - [x] **Authoritative Designation History:** Removed `designation_id` from `employees`; derived dynamically from active `employee_assignments`. ✅ Complete
 - [x] **Separation of Remuneration Schemas:** `employee_hourly_rates` (hourly work) vs `employee_salary_structures` (monthly salaried package). ✅ Complete
 - [x] **Frontend Masters Hub (`MastersHubComponent`):** Standalone Angular management hub with interactive tabs for all Phase 1 catalogs and real-time point-in-time billing rate resolution tester. ✅ Complete
-- [ ] **Audit Trail Integration on Phase 1 Mutations:** Direct `AuditService.recordEvent` integration on Phase 1 creation/update/deactivation endpoints. 🟡 In Progress
-- [ ] **Phase 1 Master CRUD Integration Tests:** Dedicated Supertest suites for each individual master endpoint (Designations, Clients, Projects, Shifts). 🟡 In Progress
+- [x] **Phase 1 Master Integration Test Suite:** Supertest suite in `backend/tests/integration/masters.test.ts` covering Designations, Clients, Projects, Shifts, and Holidays. ✅ Complete
+- [ ] **Audit Trail Integration on Mutations:** Direct audit log dispatching on assignment changes and salary adjustments. 🟡 In Progress
 
 ---
 
 ## 5. End-to-End Business Workflows
 
-| Workflow | Scope & Steps | Status | Verified Gates |
+| Workflow | Scope & Steps | Status | Verified Evidence |
 |---|---|---|---|
-| **WF-1: Authentication & Session Lifecycle** | Login ➔ JWT + Refresh Cookie ➔ Route RBAC Check ➔ Silent Refresh ➔ Logout | ✅ Complete | Verified in `tests/integration/auth.test.ts` & Frontend `auth.service.ts` |
-| **WF-2: Employee Onboarding & Project Deployment** | Create Employee ➔ Configure Designation ➔ Deploy via Effective-Dated Assignment ➔ Auto-Close Prior Assignment | 🟡 In Progress | Functional via API & Frontend; integration tests pending |
+| **WF-1: Authentication & Session Lifecycle** | Login ➔ JWT + Refresh Cookie ➔ Route RBAC Check ➔ Silent Refresh ➔ Logout | ✅ Complete | Verified in `tests/integration/auth.test.ts` |
+| **WF-2: Employee Onboarding & Project Deployment** | Create Employee ➔ Configure Designation ➔ Deploy via Effective-Dated Assignment ➔ Auto-Close Prior Assignment | 🟡 In Progress | Documented in `docs/workflows/PHASE1_WORKFLOWS.md` |
 | **WF-3: Dual-Stream Rate Setup & Billing Resolution** | Set Employee Hourly Rate (Payroll Cost) ➔ Set Client Billing Rate (Commercial Revenue) ➔ Run Point-in-Time Resolution Engine on Work Date | ✅ Complete | Verified in `tests/integration/rate-resolution.test.ts` |
-| **WF-4: Shift Scheduling & Work Calendar** | Define Shift Hours ➔ Assign Employee to Shift Timeline ➔ Configure Weekly Offs & Public Holidays | 🟡 In Progress | Database & API functional; integration tests pending |
+| **WF-4: Shift Scheduling & Work Calendar** | Define Shift Hours ➔ Assign Employee to Shift Timeline ➔ Configure Weekly Offs & Public Holidays | 🟡 In Progress | Documented in `docs/workflows/PHASE1_WORKFLOWS.md` |
 | **WF-5: Attendance Tracking & Overtime Engine** | Daily Clock-In/Out ➔ Shift Match ➔ Regular & OT Hours Calculation (UAE Labor Law) | ⬜ Not Started | Scheduled for Phase 2 |
 | **WF-6: Monthly Payroll Calculation & WPS SIF** | Timesheet / Salary Structure ➔ Deductions/Additions ➔ Net Pay ➔ WPS SIF File Generation | ⬜ Not Started | Scheduled for Phase 4 |
 | **WF-7: End-of-Service Final Settlement** | Resignation/Termination ➔ Gratuity Calculation ➔ Unused Leave Encashment ➔ Air Ticket ➔ Settlement Voucher | ⬜ Not Started | Scheduled for Phase 6 |
@@ -136,8 +136,8 @@ Each module is tracked across the 10 required architectural verification criteri
   - Granular permissions mapped: 28 permissions
   - Default master seed data: 6 designations, 3 salary components, default weekly off
 - **Automated Tests (`npm run test:backend`):**
-  - Test Suites: 6 passed, 6 total
-  - Tests: 24 passed, 24 total (including 7 effective-dating boundary tests & 4 rate resolution tests)
+  - Test Suites: 7 passed, 7 total
+  - Tests: 29 passed, 29 total (including 7 effective-dating boundary tests, 4 rate resolution tests, and 5 master CRUD tests)
 - **Monorepo Build (`npm run build`):**
   - `@blue-royal/contracts`: 0 errors
   - `@blue-royal/database`: 0 errors
@@ -146,4 +146,4 @@ Each module is tracked across the 10 required architectural verification criteri
 - **Code Linter (`npm run lint`):**
   - 0 errors, 0 warnings
 - **Version Control (`git status`):**
-  - Clean working tree, baseline commit `00b4d6d`
+  - Clean working tree, baseline commits `00b4d6d`, `594d626`
