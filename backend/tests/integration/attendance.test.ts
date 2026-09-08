@@ -29,7 +29,6 @@ describe('Phase 2 Attendance & Overtime Engine Integration Tests', () => {
     // 1. Resolve seeded admin user
     const adminUser = await User.findOne({ where: { email: 'admin@blueroyal.com' } });
     if (!adminUser) throw new Error('Admin user not seeded');
-    adminUserId = adminUser.id;
 
     adminToken = jwt.sign(
       { userId: adminUser.id, email: adminUser.email, roles: ['super_admin'] },
@@ -45,7 +44,6 @@ describe('Phase 2 Attendance & Overtime Engine Integration Tests', () => {
       lastName: 'Worker',
       isActive: true,
     });
-    employeeUserId = empUser.id;
 
     const empRole = await Role.findOne({ where: { name: 'employee' } });
     if (empRole) {

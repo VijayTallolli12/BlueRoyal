@@ -27,6 +27,7 @@
     "db:migrate": "npm run migrate --workspace=database",
     "db:migrate:undo": "npm run migrate:undo --workspace=database",
     "db:seed": "npm run seed --workspace=database",
+    "db:seed:demo": "npm run seed:demo --workspace=database",
     "db:status": "npm run status --workspace=database"
   },
   "devDependencies": {

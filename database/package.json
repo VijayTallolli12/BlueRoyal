@@ -9,7 +9,8 @@
     "migrate": "ts-node src/scripts/migrate.ts up",
     "migrate:undo": "ts-node src/scripts/migrate.ts down",
     "status": "ts-node src/scripts/migrate.ts status",
-    "seed": "ts-node src/scripts/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts",
+    "seed:demo": "ts-node src/scripts/seed-demo-users.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
