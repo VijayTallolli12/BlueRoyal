@@ -1,6 +1,7 @@
 export type EmployeeGender = 'male' | 'female' | 'other';
 export type EmployeeStatus = 'active' | 'on_leave' | 'probation' | 'terminated' | 'resigned';
 export type EmploymentType = 'full_time' | 'contract';
+export type RemunerationBasis = 'hourly' | 'salaried';
 
 export interface EmployeeDto {
   id: string;
@@ -16,6 +17,7 @@ export interface EmployeeDto {
   phoneNumber: string | null;
   dateOfJoining: string;
   employmentType: EmploymentType;
+  remunerationBasis: RemunerationBasis;
   contractEndDate: string | null;
   probationEndDate: string | null;
   status: EmployeeStatus;
@@ -52,6 +54,7 @@ export interface CreateEmployeeDto {
   phoneNumber?: string | null;
   dateOfJoining: string;
   employmentType?: EmploymentType;
+  remunerationBasis?: RemunerationBasis;
   contractEndDate?: string | null;
   probationEndDate?: string | null;
   status?: EmployeeStatus;
@@ -69,6 +72,7 @@ export interface UpdateEmployeeDto {
   phoneNumber?: string | null;
   dateOfJoining?: string;
   employmentType?: EmploymentType;
+  remunerationBasis?: RemunerationBasis;
   contractEndDate?: string | null;
   probationEndDate?: string | null;
   status?: EmployeeStatus;

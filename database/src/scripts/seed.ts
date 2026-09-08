@@ -125,6 +125,15 @@ const BASELINE_PERMISSIONS: PermissionSeed[] = [
   { code: 'leave:self_read', description: 'View own leave balances and requests', module: 'leave' },
   { code: 'leave:self_create', description: 'Submit own leave request', module: 'leave' },
   { code: 'leave:self_cancel', description: 'Cancel own pending leave request', module: 'leave' },
+
+  // Phase 4: Payroll Processing Engine
+  { code: 'payroll:read', description: 'View payroll periods, items and line breakdowns', module: 'payroll' },
+  { code: 'payroll:create', description: 'Create new payroll period linked to locked attendance', module: 'payroll' },
+  { code: 'payroll:calculate', description: 'Run payroll calculation engine, recalculations and adjustments', module: 'payroll' },
+  { code: 'payroll:review', description: 'Mark calculated payroll period as reviewed', module: 'payroll' },
+  { code: 'payroll:finalize', description: 'Finalize and immutably lock payroll period', module: 'payroll' },
+  { code: 'payroll:unlock', description: 'Unlock finalized payroll period (Super Admin only)', module: 'payroll' },
+  { code: 'payroll:self_read', description: 'View own finalized payroll records and payslips', module: 'payroll' },
 ];
 
 const DEFAULT_DESIGNATIONS = [
@@ -248,10 +257,11 @@ async function seed(): Promise<void> {
         'salary',
         'attendance',
         'leave',
+        'payroll',
       ];
       for (const perm of allPermissions) {
         const [mod] = perm.code.split(':');
-        if (hrModules.includes(mod) && perm.code !== 'system:configure') {
+        if (hrModules.includes(mod) && perm.code !== 'system:configure' && perm.code !== 'payroll:unlock') {
           await sequelize.query(
             `INSERT INTO role_permissions (role_id, permission_id, created_at)
              VALUES (:roleId, :permissionId, NOW())
@@ -273,6 +283,7 @@ async function seed(): Promise<void> {
         'leave:self_read',
         'leave:self_create',
         'leave:self_cancel',
+        'payroll:self_read',
       ];
       for (const perm of allPermissions.filter((p) => empCodes.includes(p.code))) {
         await sequelize.query(

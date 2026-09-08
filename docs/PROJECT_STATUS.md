@@ -1,8 +1,8 @@
 # Blue Royal HRMS — Project Implementation Status
 
 **Document ID:** `DOC-STATUS-001`  
-**Current Phase:** Phase 2: Attendance, Timesheet & Overtime Calculation Engine  
-**Current Status:** Phase 2 Complete & Fully Verified; Ready for Phase 3 Planning  
+**Current Phase:** Phase 4: Payroll Processing Engine & Financial Traceability  
+**Current Status:** Phase 4 Complete & Fully Verified; Ready for Phase 5 Planning  
 **Active Blockers:** None (🔴 0)  
 **Last Verified Date:** 2026-09-09  
 
@@ -41,7 +41,7 @@ This document serves as the **single source of truth** for implementation progre
 | **Phase 1** | Organization Masters, Assignments, Dual-Stream Rates & Rostering | 8 | ✅ Complete | Masters & 4-rate resolution verified & signed off |
 | **Phase 2** | Attendance, Excel Import & Overtime Calculation Engine | 1 | ✅ Complete | Attendance lifecycle, calculation engine & UI verified |
 | **Phase 3** | Leave Management & UAE Labor Law Entitlements | 1 | ✅ Complete | Leave balances, requests, attendance live sync, & ESS/Admin UI verified |
-| **Phase 4** | Payroll Processing Engine & Financial Traceability | 1 | 🟡 In Progress | Pre-implementation architecture, workflows, & UI specifications complete; WPS SIF deferred |
+| **Phase 4** | Payroll Processing Engine & Financial Traceability | 1 | ✅ Complete | Hourly/salaried engine, locked attendance gate, manual adjustments, audit, & UI verified |
 | **Phase 5** | Employee Documents Management & Expiry Alerts | 1 | ⬜ Not Started | Scheduled for Phase 5 |
 | **Phase 6** | Final Settlements, Gratuity, Leave Salary & Air Tickets | 1 | ⬜ Not Started | Scheduled for Phase 6 |
 
@@ -66,7 +66,7 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
 | **1.9 Salary Components & Structures** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **2.1 Attendance & Overtime Engine** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **3.1 Leave Entitlement & Requests** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
-| **4.1 Payroll Engine & Financial Traceability** | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 🟡 In Progress |
+| **4.1 Payroll Engine & Financial Traceability** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
 | **5.1 Documents & Compliance Hub** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
 | **6.1 End of Service Settlement & Gratuity** | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ Not Started |
 
@@ -177,6 +177,36 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
   - Unit test suite: `backend/tests/unit/leave-calculator.test.ts` (7 tests covering date generation, working days, probation restrictions, contract boundaries, and attendance hook conflict flag). ✅ Complete
   - Integration test suite: `backend/tests/integration/leave.test.ts` (11 tests verifying end-to-end self-service submission, overlap rejection 409, balance exhaustion 422, HR approval, attendance live sync, audit logs, rejection with mandatory note, self-cancellation, admin revocation, and 401/403 RBAC). ✅ Complete
 
+### Phase 4: Payroll Processing Engine & Financial Traceability
+- [x] **Shared Contracts (`@blue-royal/contracts`):** Complete DTOs, request/response models, and enums for `PayrollPeriodDto`, `PayrollItemDto`, `PayrollItemLineDto`, `PayrollItemDetailDto`, `CreatePayrollPeriodDto`, `AddPayrollAdjustmentDto`, `UnlockPayrollPeriodDto`, `EmployeePayslipDto`, and `RemunerationBasis`. ✅ Complete
+- [x] **Database Migration & Schema (`20260912000001-create-phase4-payroll.ts`):**
+  - Added `remuneration_basis` to `employees` (`VARCHAR(16) NOT NULL DEFAULT 'hourly'`).
+  - Created `payroll_periods`, `payroll_items`, and `payroll_item_lines` tables with indexes, foreign keys, and check constraints.
+  - Forward and backward rollback migrations verified. ✅ Complete
+- [x] **Database Seeders & RBAC Permissions (`database/src/scripts/seed.ts`):**
+  - Added 7 atomic permissions: `payroll:read`, `payroll:create`, `payroll:calculate`, `payroll:review`, `payroll:finalize`, `payroll:unlock`, `payroll:self_read`.
+  - Total system permissions: 56. Mapped strictly to confirmed roles (`super_admin`, `hr_admin`, `employee`). Zero invented roles.
+  - `payroll:unlock` granted strictly to `super_admin`. ✅ Complete
+- [x] **Calculation & Financial Engine (`PayrollCalculationService`):**
+  - Decoupled from client billing rates: computes strictly using employee compensation (`employee_hourly_rates`, `employee_salary_structures`).
+  - Authoritative basis: strictly driven by `employees.remuneration_basis` (`hourly` vs `salaried`).
+  - Hourly: calculates daily regular pay and overtime pay against active point-in-time rate slices.
+  - Salaried: evaluates fixed components and percentage-based components against declared base.
+  - Zero-assumption financial rule: missing rate/structure flags blocking issue (`has_blocking_issue = true`), halts review/finalization. Never guesses or defaults to 0.00.
+  - Manual adjustments: `payroll_item_lines` with `category = 'adjustment'`, `is_manual = true`, `adjustment_type: addition | deduction`, mandatory description $\ge 5$ chars. Adjustments are strictly preserved across recalculations. ✅ Complete
+- [x] **Lifecycle & Operational Service (`PayrollPeriodService`):**
+  - Locked Attendance Gate: strictly rejects calculating or creating payroll runs against unlocked attendance.
+  - Lifecycle: `DRAFT` $\rightarrow$ `CALCULATED` $\rightarrow$ `REVIEWED` $\rightarrow$ `FINALIZED`.
+  - Immutable finalized state: modifications and recalculations blocked.
+  - Controlled Unlock: Super Admin administrative override requiring $\ge 15$ characters audit justification, reverting run to `DRAFT` and recording full audit trail. ✅ Complete
+- [x] **Frontend Management & Employee Self-Service:**
+  - `PayrollHubComponent` (`/payroll`): KPI cards, period list, status badges, locked attendance selection, action buttons.
+  - `PayrollPeriodDetailComponent` (`/payroll/periods/:id`): Period details, items table with remuneration badges, anomaly warnings, item breakdown modal, adjustment creation and removal.
+  - `MyPayrollComponent` (`/payroll/my-payroll`): Employee self-service view, finalized payslip cards, detailed printable payslip view with attendance metrics and itemized breakdown. ✅ Complete
+- [x] **Automated Test Coverage:**
+  - Unit test suite: `backend/tests/unit/payroll-calculator.test.ts` (8 tests covering rounding, hourly logic, salaried packages, percentage components, and adjustment mathematics). ✅ Complete
+  - Integration test suite: `backend/tests/integration/payroll.test.ts` (10 tests covering period creation, locked attendance gate, hourly/salaried calculation, items list, breakdown inspection, manual adjustments addition/preservation/deletion, review transition, finalization immutability, employee self-service payslip, and Super Admin unlock). ✅ Complete
+
 ---
 
 ## 5. End-to-End Business Workflows
@@ -189,7 +219,7 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
 | **WF-4: Shift Scheduling & Work Calendar** | Define Shift Hours ➔ Assign Employee to Shift Timeline ➔ Configure Weekly Offs & Public Holidays | ✅ Complete | Verified in `tests/integration/masters.test.ts` & `docs/workflows/PHASE1_WORKFLOWS.md` |
 | **WF-5: Attendance Tracking & Overtime Engine** | Monthly Period Pre-Generation ➔ Daily Actual Hours / Excel Import ➔ Strict Shift Calculation ➔ Anomaly Resolution ➔ Submit ➔ Approve ➔ Lock ➔ Controlled Unlock | ✅ Complete | Verified in `tests/unit/attendance-calculator.test.ts` & `tests/integration/attendance.test.ts` |
 | **WF-6: Employee Leave Lifecycle & Attendance Synchronization** | Quota Allocation ➔ ESS Request Submission ➔ Overlap & Probation Check ➔ Balance Reservation ➔ HR Review & Approval ➔ Attendance Live Sync (`is_on_leave`) ➔ Cancellation / Revocation | ✅ Complete | Verified in `tests/unit/leave-calculator.test.ts` & `tests/integration/leave.test.ts` & `docs/workflows/PHASE3_LEAVE_WORKFLOWS.md` |
-| **WF-7: Monthly Payroll Calculation & WPS SIF** | Timesheet / Salary Structure ➔ Deductions/Additions ➔ Net Pay ➔ WPS SIF File Generation | ⬜ Not Started | Scheduled for Phase 4 |
+| **WF-7: Monthly Payroll Calculation & Audit Sign-Off** | Consume Locked Attendance ➔ Authoritative Remuneration Basis ➔ Point-in-Time Rates ➔ Zero-Assumption Blocking Gate ➔ Manual Adjustments ➔ Review ➔ Finalize ➔ ESS Payslips | ✅ Complete | Verified in `tests/unit/payroll-calculator.test.ts` & `tests/integration/payroll.test.ts` & `docs/workflows/PHASE4_PAYROLL_WORKFLOWS.md` |
 | **WF-8: End-of-Service Final Settlement** | Resignation/Termination ➔ Gratuity Calculation ➔ Unused Leave Encashment ➔ Air Ticket ➔ Settlement Voucher | ⬜ Not Started | Scheduled for Phase 6 |
 
 ---
@@ -197,16 +227,16 @@ Each module is tracked across the 8 specific verification dimensions plus the fo
 ## 6. Latest Verification & Build Evidence (2026-09-09)
 
 - **Database Migrations (`npm run db:status`):**
-  - Total Executed: 5 (`20260908000001-create-foundation-tables.ts`, `20260909000001-create-phase1-masters.ts`, `20260910000001-add-employment-contract-dates-to-employees.ts`, `20260910000002-create-phase2-attendance.ts`, `20260911000001-create-phase3-leave.ts`)
+  - Total Executed: 6 (`20260908000001-create-foundation-tables.ts`, `20260909000001-create-phase1-masters.ts`, `20260910000001-add-employment-contract-dates-to-employees.ts`, `20260910000002-create-phase2-attendance.ts`, `20260911000001-create-phase3-leave.ts`, `20260912000001-create-phase4-payroll.ts`)
   - Total Pending: 0
 - **Database Seeding (`npm run db:seed`):**
   - Confirmed roles seeded: `super_admin`, `hr_admin`, `employee`
-  - Granular permissions mapped: 49 permissions (including 13 Phase 3 leave permissions)
+  - Granular permissions mapped: 56 permissions (including 7 Phase 4 payroll permissions)
   - Default master seed data: 6 designations, 3 salary components, default weekly off, 4 default leave types
 - **Automated Tests (`npm run test:backend`):**
-  - Test Suites: 12 passed, 12 total
-  - Tests: 80 passed, 80 total (0 failures, 100% green)
-  - Suites include: auth, health, masters, effective-date, rate-resolution, attendance-calculator, attendance, leave-calculator, leave, validation-middleware, app-error.
+  - Test Suites: 14 passed, 14 total
+  - Tests: 98 passed, 98 total (0 failures, 100% green)
+  - Suites include: auth, health, masters, effective-date, rate-resolution, attendance-calculator, attendance, leave-calculator, leave, payroll-calculator, payroll, validation-middleware, app-error.
 - **Monorepo Build (`npm run build`):**
   - `@blue-royal/contracts`: 0 errors
   - `@blue-royal/database`: 0 errors

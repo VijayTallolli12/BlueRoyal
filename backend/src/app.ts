@@ -12,6 +12,7 @@ import { authRouter } from './modules/auth/auth.routes';
 import masterRouter from './modules/masters/routes/master.routes';
 import attendanceRouter from './modules/attendance/routes/attendance.routes';
 import leaveRouter from './modules/leave/routes/leave.routes';
+import { payrollRoutes } from './modules/payroll/routes/payroll.routes';
 
 export function createApp(): Express {
   const app = express();
@@ -42,6 +43,7 @@ export function createApp(): Express {
   app.use(env.API_PREFIX, masterRouter);
   app.use(`${env.API_PREFIX}/attendance`, attendanceRouter);
   app.use(`${env.API_PREFIX}/leave`, leaveRouter);
+  app.use(`${env.API_PREFIX}/payroll`, payrollRoutes);
 
   // 404 handler for undefined routes
   app.use((req, res, _next) => {

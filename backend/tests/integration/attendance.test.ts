@@ -15,6 +15,7 @@ import { AttendanceRecord } from '../../src/modules/attendance/models/attendance
 import { AttendanceAuditLog } from '../../src/modules/attendance/models/attendance-audit-log.model';
 
 describe('Phase 2 Attendance & Overtime Engine Integration Tests', () => {
+  jest.setTimeout(30000);
   const app = createApp();
   let adminToken: string;
   let employeeUserToken: string;

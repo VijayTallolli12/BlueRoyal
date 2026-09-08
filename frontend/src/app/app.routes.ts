@@ -49,6 +49,29 @@ export const routes: Routes = [
       import('./features/leave/my-leave.component').then((m) => m.MyLeaveComponent),
   },
   {
+    path: 'payroll',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'payroll:read' },
+    loadComponent: () =>
+      import('./features/payroll/payroll-hub.component').then((m) => m.PayrollHubComponent),
+  },
+  {
+    path: 'payroll/periods/:id',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'payroll:read' },
+    loadComponent: () =>
+      import('./features/payroll/payroll-period-detail.component').then(
+        (m) => m.PayrollPeriodDetailComponent,
+      ),
+  },
+  {
+    path: 'payroll/my-payroll',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'payroll:self_read' },
+    loadComponent: () =>
+      import('./features/payroll/my-payroll.component').then((m) => m.MyPayrollComponent),
+  },
+  {
     path: '**',
     redirectTo: 'dashboard',
   },

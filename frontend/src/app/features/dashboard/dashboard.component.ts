@@ -16,7 +16,7 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
       <header class="app-header">
         <div class="brand">
           <h1>Blue Royal HRMS</h1>
-          <span class="badge">Phase 3 Leave & Attendance</span>
+          <span class="badge">Phase 4 Payroll Processing</span>
           <nav class="nav-links">
             @if (authService.hasPermission('designations:read')) {
               <a routerLink="/dashboard" routerLinkActive="active" class="nav-btn">Masters Hub</a>
@@ -27,11 +27,17 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
             @if (authService.hasPermission('leave:read')) {
               <a routerLink="/leave" routerLinkActive="active" class="nav-btn">Leave Management Hub</a>
             }
+            @if (authService.hasPermission('payroll:read')) {
+              <a routerLink="/payroll" routerLinkActive="active" class="nav-btn">Payroll Hub</a>
+            }
             @if (authService.hasPermission('attendance:self_read')) {
               <a routerLink="/attendance/my-attendance" routerLinkActive="active" class="nav-btn">My Attendance</a>
             }
             @if (authService.hasPermission('leave:self_read')) {
               <a routerLink="/leave/my-leave" routerLinkActive="active" class="nav-btn">My Leave</a>
+            }
+            @if (authService.hasPermission('payroll:self_read')) {
+              <a routerLink="/payroll/my-payroll" routerLinkActive="active" class="nav-btn">My Payslips</a>
             }
           </nav>
         </div>
@@ -97,6 +103,9 @@ import { MastersHubComponent } from '../masters/masters-hub.component';
               </a>
               <a routerLink="/leave/my-leave" class="btn-portal" style="background: #0d9488;">
                 🌴 My Leave Requests & Entitlements
+              </a>
+              <a routerLink="/payroll/my-payroll" class="btn-portal" style="background: #4f46e5;">
+                💵 My Payslips & Remuneration
               </a>
             </div>
           </div>
