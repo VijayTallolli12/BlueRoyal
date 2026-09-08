@@ -2,7 +2,7 @@
 
 **System:** Blue Royal HRMS  
 **Module:** Phase 4 — Payroll Engine & Financial Integrity  
-**Status:** Workflow Specification (Ready for Review — No Implementation)  
+**Status:** Workflow Specification (Pre-Implementation Pass — Ready for Review)  
 **Baseline Standards:** `Master.md`, `FINAL_ARCHITECTURE.md`, `docs/PROJECT_STATUS.md`, `docs/architecture/PHASE4_PAYROLL_ARCHITECTURE.md`
 
 ---
@@ -17,16 +17,21 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
 │                                                                                        │
 │   1. CREATE PERIOD             2. RUN ENGINE                3. RESOLVE ANOMALIES       │
 │   HR Admin links               HR Admin triggers            If missing rate/config,    │
-│   LOCKED attendance            calculation across           block period; HR configures│
-│   period (`DRAFT`)             eligible employees           rate in Masters            │
+│   LOCKED attendance            calculation based on         block period; HR configures│
+│   period (`DRAFT`)             remuneration_basis           rate in Masters            │
 │          │                            │                               │                │
 │          ▼                            ▼                               ▼                │
 │   ┌──────────────┐             ┌──────────────┐             ┌────────────────────┐     │
 │   │    DRAFT     │ ──────────► │  CALCULATED  │ ◄────────── │ Recalculate Period │     │
 │   └──────────────┘             └──────┬───────┘             └────────────────────┘     │
-│                                       │                                                │
+│                                       │                               ▲                │
+│                                       ▼                               │                │
+│                                4. MANUAL ADJUSTMENTS                  │                │
+│                                HR Admin adds additions                │                │
+│                                or deductions with reason ─────────────┘                │
+│                                       │ (Preserved on Recalculate)                     │
 │                                       ▼                                                │
-│                                4. REVIEW SUMMARY                                       │
+│                                5. REVIEW SUMMARY                                       │
 │                                HR Admin inspects line                                  │
 │                                breakdowns & totals                                     │
 │                                       │                                                │
@@ -36,7 +41,7 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
 │                                └──────┬───────┘                                        │
 │                                       │                                                │
 │                                       ▼                                                │
-│                                5. FINALIZE RUN                                         │
+│                                6. FINALIZE RUN                                         │
 │                                HR Admin locks period;                                  │
 │                                payslips released to ESS                                │
 │                                       │                                                │
@@ -46,7 +51,7 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
 │                                └──────┬───────┘                                        │
 │                                       │                                                │
 │                                       ▼                                                │
-│                                6. CONTROLLED UNLOCK                                    │
+│                                7. CONTROLLED UNLOCK                                    │
 │                                Super Admin override                                    │
 │                                with >= 15 chars reason;                                │
 │                                reverts run to DRAFT                                    │
@@ -84,42 +89,78 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
 - **Standard Flow:**
   1. Backend initiates a database transaction.
   2. Retrieves all employees with records in the linked attendance period.
-  3. For each employee, identifies remuneration model (`hourly` vs `salaried`):
-     - **Hourly Processing:**
+  3. For each employee, queries `employee.remuneration_basis`:
+     - **Authoritative Branch 1: `remuneration_basis === 'hourly'`**
        - Pulls daily attendance records (`regular_hours`, `ot_hours`, `is_absent`, `is_on_leave`).
        - Resolves `employee_hourly_rates` active on each specific date using `EffectiveDateService`.
-       - If any rate is missing for a date where hours are recorded, creates `payroll_item` with `has_blocking_issue = true` and details in `blocking_reason`.
-       - Computes daily regular pay and overtime pay, generating itemized `payroll_item_lines`.
-     - **Salaried Processing:**
+       - If any rate is missing for a date where hours are recorded, creates `payroll_item` with `has_blocking_issue = true` and details in `blocking_reason = "Missing hourly rate on YYYY-MM-DD"`.
+       - Computes daily regular pay and overtime pay, generating itemized `payroll_item_lines` (`is_manual = false`).
+     - **Authoritative Branch 2: `remuneration_basis === 'salaried'`**
        - Retrieves active package from `employee_salary_structures` and `salary_components`.
+       - If no active structure exists, creates `payroll_item` with `has_blocking_issue = true` and `blocking_reason = "Missing active salary structure"`.
        - Resolves fixed amounts and dependent percentage components.
-       - Generates itemized `payroll_item_lines` for each earning and deduction.
-  4. Sums all earnings and deductions to derive `gross_pay` and `net_pay` per employee.
-  5. Aggregates period summary: `total_gross_pay`, `total_deductions`, `total_net_pay`, `employee_count`, `blocking_issues_count`.
-  6. If `blocking_issues_count == 0`: updates period status to `calculated`.
-  7. If `blocking_issues_count > 0`: keeps period in `draft` and flags blocking alerts in UI.
-  8. Commits transaction and records `PAYROLL_CALCULATED` in `audit_logs`.
+       - Generates itemized `payroll_item_lines` (`is_manual = false`) for each earning and deduction.
+  4. **Preserves Existing Manual Adjustments:** Any existing manual adjustments (`is_manual = true`) on the employee item are retained.
+  5. Sums all earnings, deductions, and adjustments to derive `gross_pay` and `net_pay` per employee.
+  6. Aggregates period summary: `total_gross_pay`, `total_deductions`, `total_net_pay`, `employee_count`, `blocking_issues_count`.
+  7. If `blocking_issues_count == 0`: updates period status to `calculated`.
+  8. If `blocking_issues_count > 0`: keeps period in `draft` and flags blocking alerts in UI.
+  9. Commits transaction and records `PAYROLL_CALCULATED` in `audit_logs`.
 - **Postconditions:** Full calculation breakdown stored in `payroll_items` and `payroll_item_lines`.
 
 ---
 
-### Workflow 3: Blocking Anomaly Resolution & Recalculation
+### Workflow 3: Manual Payroll Adjustments (Additions & Deductions)
+- **Actors:** `HR Admin`, `Super Admin`
+- **Preconditions:**
+  1. Period status is `draft` or `calculated`. (Forbidden if `finalized`).
+  2. Employee payroll item exists.
+- **Trigger:** HR Admin clicks *"Add Adjustment"* inside an employee's detail drawer.
+- **Standard Flow:**
+  1. HR Admin selects Adjustment Type:
+     - `addition` (e.g. site allowance, approved performance bonus, retroactive pay correction).
+     - `deduction` (e.g. advance salary recovery, equipment damage fee).
+  2. HR Admin enters:
+     - `amount`: Numeric value $> 0$.
+     - `description`: Mandatory justification detailing the operational reason ($\ge 5$ chars).
+  3. System validates input and persists to `payroll_item_lines`:
+     - `category = 'adjustment'`
+     - `is_manual = true`
+     - `adjustment_type = addition | deduction`
+     - `amount = amount`
+     - `description = description`
+     - `created_by = current_user.id`
+  4. System updates employee totals:
+     - If `addition`: `gross_pay += amount`, `net_pay = gross_pay - total_deductions`.
+     - If `deduction`: `total_deductions += amount`, `net_pay = gross_pay - total_deductions`.
+  5. Atomically re-sums period summary totals (`total_gross_pay`, `total_deductions`, `total_net_pay`).
+  6. Records `PAYROLL_ADJUSTMENT_CREATED` in `audit_logs` with before/after state.
+- **Deletion Flow:**
+  - Prior to finalization, HR Admin can delete an adjustment line.
+  - The line is removed, totals are re-summed, and `PAYROLL_ADJUSTMENT_DELETED` is logged.
+- **Recalculation Invariant:**
+  - If a batch recalculation (Workflow 2) is triggered, manual adjustments are **not** wiped; they remain intact and are added into the newly computed figures.
+- **Postconditions:** Adjustment is clearly reflected on the calculation breakdown and payslip.
+
+---
+
+### Workflow 4: Blocking Anomaly Resolution & Recalculation
 - **Actors:** `HR Admin`
 - **Preconditions:**
   1. Payroll calculation completed with `blocking_issues_count > 0`.
 - **Trigger:** HR Admin filters payroll items by *"Blocked / Incomplete"*.
 - **Standard Flow:**
   1. System highlights employees with blocking issues (e.g. *"Missing hourly rate on 2026-05-14"*).
-  2. HR Admin navigates to Masters Hub (`/masters`) and configures the missing `employee_hourly_rates` with effective dates covering the missing interval.
+  2. HR Admin navigates to Masters Hub (`/masters`) and configures the missing `employee_hourly_rates` or `employee_salary_structures` with effective dates covering the missing interval.
   3. HR Admin returns to Payroll Hub and clicks *"Recalculate Period"*.
-  4. Backend purges existing lines for the period and executes Workflow 2.
+  4. Backend refreshes system lines while preserving any manual adjustments (Workflow 2).
   5. The previously missing rates resolve successfully. `blocking_issues_count` drops to 0.
   6. Period status advances to `calculated`.
 - **Postconditions:** Zero unresolved anomalies exist; review step is unlocked.
 
 ---
 
-### Workflow 4: Review Payroll Items & Line-Item Traceability
+### Workflow 5: Review Payroll Items & Line-Item Traceability
 - **Actors:** `HR Admin`, `Super Admin`
 - **Preconditions:**
   1. Period status is `calculated` with `blocking_issues_count == 0`.
@@ -127,9 +168,10 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
 - **Standard Flow:**
   1. System renders employee list with Gross Pay, Deductions, and Net Pay.
   2. HR Admin clicks an employee to inspect the itemized drawer:
+     - **Remuneration Basis:** Displays authoritative scheme (`hourly` or `salaried`).
      - **Hours Breakdown:** Regular hours, OT hours, Leave days, Absences.
      - **Earnings Breakdown:** Itemized lines with rate, quantity, and computed amount.
-     - **Deductions Breakdown:** Configured deductions and statutory components.
+     - **Manual Adjustments:** Additions and deductions with reasons and author.
      - **Audit Trace:** Exact effective rate versions applied on each day.
   3. Once verified, HR Admin clicks *"Mark as Reviewed"*.
   4. Backend verifies `blocking_issues_count === 0` and advances status to `reviewed`.
@@ -138,7 +180,7 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
 
 ---
 
-### Workflow 5: Finalize Payroll & Authorize Payslips
+### Workflow 6: Finalize Payroll & Authorize Payslips
 - **Actors:** `HR Admin`, `Super Admin`
 - **Preconditions:**
   1. Period status is `reviewed`.
@@ -150,11 +192,12 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
   3. Backend updates status to `finalized`, sets `finalized_by` and `finalized_at`.
   4. Records `PAYROLL_FINALIZED` in `audit_logs`.
   5. Payslips become immediately visible to employees in Employee Self-Service (`/payroll/my-payroll`).
+  6. All subsequent modification attempts (including adding manual adjustments) are strictly blocked.
 - **Postconditions:** Payroll run is permanently locked against modifications.
 
 ---
 
-### Workflow 6: Controlled Unlock / Reversal for Administrative Corrections
+### Workflow 7: Controlled Unlock / Reversal for Administrative Corrections
 - **Actors:** `Super Admin` (administrative override only)
 - **Preconditions:**
   1. Period is `finalized`.
@@ -166,12 +209,12 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
   3. Backend updates period status back to `draft`, clears `finalized_at`, records `unlock_reason`, `unlocked_by`, and `unlocked_at`.
   4. Dispatches `PAYROLL_UNLOCKED` event to `audit_logs`.
   5. While in `draft`, payslips are hidden from Employee Self-Service.
-  6. Required data corrections are performed, followed by Recalculation (WF-2), Review (WF-4), and Re-Finalization (WF-5).
+  6. Required data corrections are performed, followed by Recalculation (WF-2), Review (WF-5), and Re-Finalization (WF-6).
 - **Postconditions:** Audit log permanently records who unlocked the run and why; integrity preserved.
 
 ---
 
-### Workflow 7: Employee Self-Service Payslip Viewing
+### Workflow 8: Employee Self-Service Payslip Viewing
 - **Actors:** `Employee`
 - **Preconditions:**
   1. Employee is authenticated with role `employee`.
@@ -185,5 +228,13 @@ The Phase 4 Payroll domain coordinates monthly financial disbursements across st
      - Header: Employee Name, Code, Designation, Month.
      - Summary Tiles: Gross Pay, Total Deductions, Net Payable.
      - Attendance Summary: Days Worked, Regular Hours, Overtime Hours, Leaves.
-     - Earnings & Deductions Tables: Itemized lines matching `payroll_item_lines`.
+     - Earnings, Deductions & Adjustments Tables: Itemized lines matching `payroll_item_lines`.
 - **Postconditions:** Employee receives transparent, read-only proof of remuneration.
+
+---
+
+### Workflow 9: WPS SIF Integration Boundary (Deferred to Phase 4.2)
+- **Status:** **Integration Boundary Specification Only (No Phase 4 Code)**
+- **Scope Clarification:**
+  - Production generation of the electronic Wage Protection System (WPS) Salary Information File (`.SIF`) is intentionally deferred until company-specific bank routing codes, MOHRE Employer IDs, and agent specifications are provided.
+  - Phase 4 delivers the clean, auditable financial dataset (`payroll_items`, `gross_pay`, `net_pay`, `employee.nationality`, `employee.employee_code`) which will feed directly into the future SIF exporter without requiring payroll recalculation.

@@ -2,7 +2,7 @@
 
 **System:** Blue Royal HRMS  
 **Module:** Phase 4 — Payroll Engine & Financial Integrity  
-**Status:** UI Design Plan (Ready for Review — No Implementation)  
+**Status:** UI Design Plan (Pre-Implementation Pass — Ready for Review)  
 **Baseline Standards:** `Master.md`, `FINAL_ARCHITECTURE.md`, `docs/PROJECT_STATUS.md`, `docs/architecture/PHASE4_PAYROLL_ARCHITECTURE.md`, `docs/workflows/PHASE4_PAYROLL_WORKFLOWS.md`
 
 ---
@@ -12,7 +12,7 @@
 The Phase 4 Payroll UI avoids dense spreadsheet-like interfaces and instead provides clear, structured financial views optimized for clarity, decision-making, and auditability:
 
 1. **Clean Separation of Concerns:**
-   - **HR / Management Hub (`/payroll`):** Operational dashboard for period setup, calculation execution, anomaly resolution, review, and finalization.
+   - **HR / Management Hub (`/payroll`):** Operational dashboard for period setup, calculation execution, anomaly resolution, manual adjustments, review, and finalization.
    - **Employee Self-Service (`/payroll/my-payroll`):** Transparent, readable payslips and earnings history for authenticated employees.
 2. **Deterministic Status Indicators:**
    - `DRAFT`: Gray badge (Initial or unlocked state).
@@ -20,9 +20,11 @@ The Phase 4 Payroll UI avoids dense spreadsheet-like interfaces and instead prov
    - `REVIEWED`: Yellow/Amber badge (Sign-off complete, ready for lock).
    - `FINALIZED`: Green badge (Locked and immutable).
 3. **Traceable Drill-Down:**
-   - Clicking an employee row opens a slide-over drawer displaying exact line items, rates, hours, and daily calculation breakdowns.
+   - Clicking an employee row opens a slide-over drawer displaying exact line items, rates, hours, manual adjustments, and daily calculation breakdowns.
 4. **Strict Guardrails:**
    - Action buttons (e.g. *Run Calculation*, *Mark as Reviewed*, *Finalize*) dynamically disable with explanatory tooltips whenever blocking anomalies exist.
+5. **WPS SIF Boundary:**
+   - UI does **not** include mock or incomplete WPS download buttons. WPS SIF generation will be integrated once bank/MOHRE file specifications are officially confirmed.
 
 ---
 
@@ -79,7 +81,7 @@ The Phase 4 Payroll UI avoids dense spreadsheet-like interfaces and instead prov
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  EMPLOYEE PAYROLL ITEMS                                                                                │
 │  ┌──────┬──────────────────┬────────────┬─────────────┬──────────┬──────────┬──────────┬────────┬───────┐  │
-│  │ Code │ Employee Name    │ Scheme     │ Reg / OT Hrs│ Gross    │ Deduct.  │ Net Pay  │ Status │ Action│  │
+│  │ Code │ Employee Name    │ Basis      │ Reg / OT Hrs│ Gross    │ Deduct.  │ Net Pay  │ Status │ Action│  │
 │  ├──────┼──────────────────┼────────────┼─────────────┼──────────┼──────────┼──────────┼────────┼───────┤  │
 │  │ E001 │ Ahmed Al-Falasi  │ Hourly     │ 176h / 24h  │ 8,400.00 │ 0.00     │ 8,400.00 │ Valid  │ View  │  │
 │  │ E002 │ John Smith       │ Salaried   │ Standard    │ 12,500.00│ 500.00   │ 12,000.00│ Valid  │ View  │  │
@@ -88,9 +90,9 @@ The Phase 4 Payroll UI avoids dense spreadsheet-like interfaces and instead prov
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Slide-Over Detail Drawer (Employee Calculation Line Breakdown)
+### 3.2 Slide-Over Detail Drawer (Line Breakdown & Manual Adjustments)
 When clicking *"View"* or an employee row, a slide-over panel displays:
-- **Header:** Employee Code, Full Name, Designation, Remuneration Scheme.
+- **Header:** Employee Code, Full Name, Designation, Authoritative `remuneration_basis` (`Hourly` / `Salaried`).
 - **Attendance Summary Tile:**
   - Actual Hours Logged, Regular Hours, Overtime Hours, Leave Days, Absences.
 - **Itemized Calculation Lines Table:**
@@ -99,9 +101,19 @@ When clicking *"View"* or an employee row, a slide-over panel displays:
   - `Rate` (AED 35.00)
   - `Quantity` (176.00)
   - `Amount` (AED 6,160.00)
-  - `Date / Basis` (Point-in-time rate validity interval)
+- **Manual Adjustments Management Section:**
+  - Header with `[ + Add Adjustment ]` button (visible if period is not finalized).
+  - Table of active adjustments:
+    | Type | Description / Reason | Amount | Added By | Action |
+    |---|---|---|---|---|
+    | Addition | Site remote location allowance | AED 500.00 | HR Admin | [ 🗑️ Delete ] |
+    | Deduction | Advance salary installment 1 | AED 1,000.00 | HR Admin | [ 🗑️ Delete ] |
+  - Clicking `[ + Add Adjustment ]` opens a modal:
+    - Type: Radio selector (`Addition (+)` | `Deduction (-)`)
+    - Amount: Numeric input ($> 0$)
+    - Justification Reason: Mandatory text area ($\ge 5$ characters)
 - **Net Calculation Box:**
-  $$\text{Gross Pay (AED 8,400.00)} - \text{Total Deductions (AED 0.00)} = \mathbf{\text{AED 8,400.00}}$$
+  $$\text{Gross Pay (AED 8,900.00)} - \text{Total Deductions (AED 1,000.00)} = \mathbf{\text{AED 7,900.00}}$$
 
 ---
 
@@ -119,12 +131,14 @@ When clicking *"View"* or an employee row, a slide-over panel displays:
 │  ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐  │
 │  │  Blue Royal Facilities Management LLC                                      Payslip: May 2026     │  │
 │  │  Employee: Ahmed Al-Falasi (BR-EMP-001)                Designation: Senior Electrician           │  │
+│  │  Basis: Hourly-Paid                                    Contract: Full-Time                       │  │
 │  ├──────────────────────────────────────────────────────────────────────────────────────────────────┤  │
 │  │  ATTENDANCE SUMMARY: 26 Days Worked  │  176.00 Regular Hours  │  24.00 Overtime Hours  │ 0 Absent │  │
 │  ├──────────────────────────────────────────────────────┬───────────────────────────────────────────┤  │
-│  │  EARNINGS                                            │  DEDUCTIONS                               │  │
-│  │  • Regular Pay (176h @ 35.00/h):        AED 6,160.00 │  • None Recorded                 AED 0.00 │  │
+│  │  EARNINGS & ADDITIONS                                │  DEDUCTIONS                               │  │
+│  │  • Regular Pay (176h @ 35.00/h):        AED 6,160.00 │  • Advance Recovery:             AED 500.00│  │
 │  │  • Overtime Pay (24h @ 45.00/h):        AED 1,080.00 │                                           │  │
+│  │  • Site Allowance (Adjustment):           AED 500.00 │                                           │  │
 │  ├──────────────────────────────────────────────────────┴───────────────────────────────────────────┤  │
 │  │  NET PAYABLE:  AED 7,240.00                                               [ 🖨️ Download / Print ] │  │
 │  └──────────────────────────────────────────────────────────────────────────────────────────────────┘  │
