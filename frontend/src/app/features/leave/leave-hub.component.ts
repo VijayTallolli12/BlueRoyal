@@ -134,14 +134,17 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                     <td class="actions-cell">
                       @if (r.status === 'PENDING') {
                         <button (click)="approveRequest(r)" class="btn btn-sm btn-success">
-                          Approve
+                          <span class="material-symbols-outlined icon-sm">check</span>
+                          <span>Approve</span>
                         </button>
                         <button (click)="openRejectModal(r)" class="btn btn-sm btn-danger">
-                          Reject
+                          <span class="material-symbols-outlined icon-sm">close</span>
+                          <span>Reject</span>
                         </button>
                       } @else if (r.status === 'APPROVED') {
                         <button (click)="openRevokeModal(r)" class="btn btn-sm btn-danger-outline">
-                          Revoke
+                          <span class="material-symbols-outlined icon-sm">undo</span>
+                          <span>Revoke</span>
                         </button>
                       } @else {
                         <span class="text-muted">—</span>
@@ -172,7 +175,8 @@ type ActiveTab = 'requests' | 'types' | 'balances';
               </select>
             </div>
             <button (click)="openAllocateModal()" class="btn btn-primary">
-              + Allocate / Adjust Balance
+              <span class="material-symbols-outlined icon-sm">add</span>
+              <span>Allocate / Adjust Balance</span>
             </button>
           </div>
 
@@ -229,7 +233,10 @@ type ActiveTab = 'requests' | 'types' | 'balances';
             <div>
               <h3>Configured Leave Types</h3>
             </div>
-            <button (click)="openCreateTypeModal()" class="btn btn-primary">+ Add Leave Type</button>
+            <button (click)="openCreateTypeModal()" class="btn btn-primary">
+              <span class="material-symbols-outlined icon-sm">add</span>
+              <span>Add Leave Type</span>
+            </button>
           </div>
 
           @if (loadingTypes()) {
@@ -546,7 +553,7 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         border-radius: var(--radius-lg);
       }
       .tab-btn {
-        padding: 0.4rem 0.875rem;
+        padding: 0.45rem 0.875rem;
         border-radius: var(--radius-md);
         font-size: 0.8125rem;
         font-weight: 500;
@@ -554,13 +561,26 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         border: 1px solid transparent;
         background: transparent;
         color: var(--text-secondary);
-        transition: all 0.15s ease;
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+      }
+      .tab-btn:hover {
+        background: var(--bg-surface-subtle);
+        color: var(--text-primary);
+        border-color: var(--border-default);
+        transform: translateY(-1px);
+      }
+      .tab-btn:active {
+        transform: translateY(0);
       }
       .tab-btn.active {
         background: var(--brand-50);
         color: var(--brand-700);
         border-color: var(--brand-200);
         font-weight: 600;
+        box-shadow: 0 1px 2px rgba(29, 78, 216, 0.1);
       }
       .panel {
         background: #ffffff;
@@ -672,39 +692,6 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       .actions-cell {
         display: flex;
         gap: 6px;
-      }
-      .btn {
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-      }
-      .btn-primary {
-        background: var(--color-info);
-        color: var(--color-surface);
-      }
-      .btn-secondary {
-        background: var(--color-border);
-        color: var(--color-text-primary);
-      }
-      .btn-success {
-        background: var(--color-success);
-        color: var(--color-surface);
-      }
-      .btn-danger {
-        background: var(--color-danger);
-        color: var(--color-surface);
-      }
-      .btn-danger-outline {
-        background: transparent;
-        border: 1px solid var(--color-danger);
-        color: var(--color-danger);
-      }
-      .btn-sm {
-        padding: 4px 8px;
-        font-size: 12px;
       }
       .empty-cell {
         text-align: center;

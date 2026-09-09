@@ -64,8 +64,9 @@ import { AuthService } from '../../core/services/auth.service';
                 class="btn-toggle-pwd"
                 (click)="showPassword.set(!showPassword())"
                 tabindex="-1"
+                aria-label="Toggle password visibility"
               >
-                {{ showPassword() ? 'Hide' : 'Show' }}
+                <span class="material-symbols-outlined icon-sm">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
               </button>
             </div>
           </div>
@@ -75,6 +76,7 @@ import { AuthService } from '../../core/services/auth.service';
               <span class="spinner-inline"></span>
               <span>Authenticating...</span>
             } @else {
+              <span class="material-symbols-outlined icon-sm">login</span>
               <span>Sign In to System</span>
             }
           </button>
@@ -82,7 +84,8 @@ import { AuthService } from '../../core/services/auth.service';
 
         <div class="auth-footer">
           <div class="system-security-note">
-            <span>🔒 Enterprise Grade Session Management • Role-Based Access</span>
+            <span class="material-symbols-outlined icon-sm">lock</span>
+            <span>Enterprise Grade Session Management • Role-Based Access</span>
           </div>
         </div>
       </div>
@@ -225,6 +228,9 @@ import { AuthService } from '../../core/services/auth.service';
     .system-security-note {
       font-size: 0.6875rem;
       color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
     }
   `]
 })

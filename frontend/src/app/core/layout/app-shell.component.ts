@@ -27,9 +27,16 @@ import { AuthService } from '../services/auth.service';
         <nav class="sidebar-nav">
           <div class="nav-section-title">CORE WORKSPACE</div>
           <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item" (click)="closeMobile()">
-            <span class="nav-icon">📊</span>
+            <span class="material-symbols-outlined nav-icon">dashboard</span>
             <span class="nav-label">Dashboard</span>
           </a>
+
+          @if (authService.hasPermission('designations:read')) {
+            <a routerLink="/masters" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+              <span class="material-symbols-outlined nav-icon">dataset</span>
+              <span class="nav-label">Master Catalogs</span>
+            </a>
+          }
 
           @if (authService.hasPermission('attendance:read') || authService.hasPermission('leave:read') || authService.hasPermission('payroll:read')) {
             <div class="nav-section-title">OPERATIONS & WORKFORCE</div>
@@ -37,21 +44,21 @@ import { AuthService } from '../services/auth.service';
 
           @if (authService.hasPermission('attendance:read')) {
             <a routerLink="/attendance" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
-              <span class="nav-icon">⏱️</span>
+              <span class="material-symbols-outlined nav-icon">schedule</span>
               <span class="nav-label">Attendance & OT</span>
             </a>
           }
 
           @if (authService.hasPermission('leave:read')) {
             <a routerLink="/leave" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
-              <span class="nav-icon">🌴</span>
+              <span class="material-symbols-outlined nav-icon">event_available</span>
               <span class="nav-label">Leave Approvals</span>
             </a>
           }
 
           @if (authService.hasPermission('payroll:read')) {
             <a routerLink="/payroll" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
-              <span class="nav-icon">💵</span>
+              <span class="material-symbols-outlined nav-icon">payments</span>
               <span class="nav-label">Payroll Processing</span>
             </a>
           }
@@ -62,21 +69,21 @@ import { AuthService } from '../services/auth.service';
 
           @if (authService.hasPermission('attendance:self_read')) {
             <a routerLink="/attendance/my-attendance" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
-              <span class="nav-icon">📅</span>
+              <span class="material-symbols-outlined nav-icon">calendar_month</span>
               <span class="nav-label">My Timesheet</span>
             </a>
           }
 
           @if (authService.hasPermission('leave:self_read')) {
             <a routerLink="/leave/my-leave" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
-              <span class="nav-icon">🏖️</span>
+              <span class="material-symbols-outlined nav-icon">beach_access</span>
               <span class="nav-label">My Leaves</span>
             </a>
           }
 
           @if (authService.hasPermission('payroll:self_read')) {
             <a routerLink="/payroll/my-payroll" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
-              <span class="nav-icon">📑</span>
+              <span class="material-symbols-outlined nav-icon">receipt_long</span>
               <span class="nav-label">My Payslips</span>
             </a>
           }
@@ -93,6 +100,7 @@ import { AuthService } from '../services/auth.service';
             </div>
           }
           <button class="btn-sidebar-logout" (click)="logout()" title="Sign Out">
+            <span class="material-symbols-outlined icon-sm">logout</span>
             <span>Sign Out</span>
           </button>
         </div>
@@ -103,7 +111,9 @@ import { AuthService } from '../services/auth.service';
         <!-- Top Navbar -->
         <header class="topbar">
           <div class="topbar-left">
-            <button class="mobile-toggle" (click)="toggleMobile()">☰</button>
+            <button class="mobile-toggle" (click)="toggleMobile()" aria-label="Toggle navigation menu">
+              <span class="material-symbols-outlined">menu</span>
+            </button>
             <div class="system-status-pill">
               <span class="status-indicator-dot"></span>
               <span>HRMS v1.0.0 Production Node</span>
@@ -233,9 +243,21 @@ import { AuthService } from '../services/auth.service';
     }
 
     .nav-icon {
-      font-size: 1rem;
-      width: 1.25rem;
-      text-align: center;
+      font-size: 1.25rem;
+      width: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      transition: color 0.15s ease;
+    }
+
+    .nav-item:hover .nav-icon {
+      color: #ffffff;
+    }
+
+    .nav-item.active .nav-icon {
+      color: #ffffff;
     }
 
     .sidebar-footer {
@@ -292,18 +314,27 @@ import { AuthService } from '../services/auth.service';
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: #cbd5e1;
-      padding: 0.4rem;
+      padding: 0.5rem;
       font-size: 0.75rem;
       font-weight: 500;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: background 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .btn-sidebar-logout:hover {
       background: rgba(239, 68, 68, 0.2);
-      border-color: rgba(239, 68, 68, 0.4);
+      border-color: rgba(239, 68, 68, 0.5);
       color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .btn-sidebar-logout:active {
+      transform: translateY(0);
     }
 
     /* Main Container & Topbar */

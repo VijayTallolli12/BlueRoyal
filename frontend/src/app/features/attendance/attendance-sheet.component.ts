@@ -47,7 +47,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
           </select>
 
           <button (click)="showCreatePeriodModal.set(true)" class="btn btn-secondary">
-            + New Period
+            <span class="material-symbols-outlined icon-sm">add</span>
+            <span>New Period</span>
           </button>
         </div>
       </div>
@@ -79,12 +80,14 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
 
           <div class="lifecycle-actions">
             <button (click)="onDownloadTemplate()" class="btn btn-outline">
-              📥 Download Excel Template
+              <span class="material-symbols-outlined icon-sm">download</span>
+              <span>Download Excel Template</span>
             </button>
 
             @if (period.status !== 'locked') {
               <button (click)="openImportModal()" class="btn btn-outline">
-                📤 Import Excel
+                <span class="material-symbols-outlined icon-sm">upload_file</span>
+                <span>Import Excel</span>
               </button>
             }
 
@@ -95,25 +98,29 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                 class="btn btn-primary"
                 [title]="(gridData()?.summary?.totalAnomalies || 0) > 0 ? 'Resolve all anomalies before submission' : 'Submit for approval'"
               >
-                Submit for Approval
+                <span class="material-symbols-outlined icon-sm">send</span>
+                <span>Submit for Approval</span>
               </button>
             }
 
             @if (period.status === 'submitted') {
               <button (click)="onApprovePeriod()" class="btn btn-success">
-                Approve Timesheet
+                <span class="material-symbols-outlined icon-sm">check_circle</span>
+                <span>Approve Timesheet</span>
               </button>
             }
 
             @if (period.status === 'approved') {
               <button (click)="onLockPeriod()" class="btn btn-warning">
-                🔒 Lock for Payroll
+                <span class="material-symbols-outlined icon-sm">lock</span>
+                <span>Lock for Payroll</span>
               </button>
             }
 
             @if (period.status === 'locked') {
               <button (click)="showUnlockModal.set(true)" class="btn btn-danger">
-                🔓 Request Unlock
+                <span class="material-symbols-outlined icon-sm">lock_open</span>
+                <span>Request Unlock</span>
               </button>
             }
           </div>
@@ -188,7 +195,10 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
             </label>
           </div>
 
-          <button (click)="loadGrid()" class="btn btn-secondary btn-sm">Refresh Grid</button>
+          <button (click)="loadGrid()" class="btn btn-secondary btn-sm">
+            <span class="material-symbols-outlined icon-sm">sync</span>
+            <span>Refresh Grid</span>
+          </button>
         </div>
 
         <!-- Attendance Matrix Grid -->
@@ -756,25 +766,6 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         border-radius: 9999px;
         font-size: 0.7rem;
       }
-      .btn {
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-      }
-      .btn-primary { background: var(--color-info); color: #fff; }
-      .btn-secondary { background: var(--color-text-muted); color: #fff; }
-      .btn-success { background: var(--color-success); color: #fff; }
-      .btn-warning { background: var(--color-warning); color: #fff; }
-      .btn-danger { background: var(--color-danger); color: #fff; }
-      .btn-outline {
-        background: transparent;
-        border: 1px solid var(--color-border);
-        color: var(--color-text-primary);
-      }
-      .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
       .modal-backdrop {
         position: fixed;
         inset: 0;

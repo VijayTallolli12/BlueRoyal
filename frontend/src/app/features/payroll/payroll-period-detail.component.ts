@@ -65,7 +65,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
           <div class="header-actions">
             @if (p.status !== 'finalized' && authService.hasPermission('payroll:calculate')) {
               <button class="btn btn-secondary" (click)="recalculate()" [disabled]="actionLoading()">
-                ⚡ Recalculate
+                <span class="material-symbols-outlined icon-sm">sync</span>
+                <span>Recalculate</span>
               </button>
             }
             @if (p.status === 'calculated' && authService.hasPermission('payroll:review')) {
@@ -75,17 +76,20 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                 [disabled]="p.blockingIssuesCount > 0 || actionLoading()"
                 title="Review requires 0 blocking issues"
               >
-                Sign-off Review
+                <span class="material-symbols-outlined icon-sm">verified</span>
+                <span>Sign-off Review</span>
               </button>
             }
             @if (p.status === 'reviewed' && authService.hasPermission('payroll:finalize')) {
               <button class="btn btn-success" (click)="finalize()" [disabled]="actionLoading()">
-                Finalize & Lock Run
+                <span class="material-symbols-outlined icon-sm">lock</span>
+                <span>Finalize & Lock Run</span>
               </button>
             }
             @if (p.status === 'finalized' && authService.hasRole('super_admin')) {
               <button class="btn btn-danger" (click)="openUnlockModal()" [disabled]="actionLoading()">
-                Unlock Run
+                <span class="material-symbols-outlined icon-sm">lock_open</span>
+                <span>Unlock Run</span>
               </button>
             }
           </div>
@@ -562,27 +566,6 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
       .badge-clean { color: var(--color-success); font-weight: 600; font-size: 12px; }
       .badge-manual { font-size: 11px; color: var(--color-warning); font-weight: 600; }
       .badge-system { font-size: 11px; color: var(--color-text-muted); }
-
-      .btn {
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .btn-sm { padding: 5px 10px; font-size: 12px; }
-      .btn-primary { background: var(--color-info); color: var(--color-surface); }
-      .btn-secondary { background: var(--color-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border); }
-      .btn-outline { background: transparent; color: var(--color-info); border: 1px solid #93c5fd; }
-      .btn-info { background: var(--color-info); color: var(--color-surface); }
-      .btn-success { background: var(--color-success); color: var(--color-surface); }
-      .btn-danger { background: var(--color-danger); color: var(--color-surface); }
 
       .alert {
         padding: 12px 16px;

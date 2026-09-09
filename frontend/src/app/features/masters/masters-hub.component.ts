@@ -79,8 +79,9 @@ type MasterTab =
         <div class="panel">
           <div class="panel-header">
             <h2>Designations Master Catalog</h2>
-            <button class="btn-primary" (click)="showNewDesignation = !showNewDesignation">
-              {{ showNewDesignation ? 'Cancel' : '+ Add Designation' }}
+            <button class="btn btn-primary" (click)="showNewDesignation = !showNewDesignation">
+              <span class="material-symbols-outlined icon-sm">{{ showNewDesignation ? 'close' : 'add' }}</span>
+              <span>{{ showNewDesignation ? 'Cancel' : 'Add Designation' }}</span>
             </button>
           </div>
 
@@ -90,7 +91,10 @@ type MasterTab =
                 <input type="text" [(ngModel)]="newDesCode" name="newDesCode" placeholder="Code (e.g. DES-PLUMB)" required />
                 <input type="text" [(ngModel)]="newDesTitle" name="newDesTitle" placeholder="Title (e.g. Master Plumber)" required />
                 <input type="text" [(ngModel)]="newDesDesc" name="newDesDesc" placeholder="Description" />
-                <button type="submit" class="btn-success">Save</button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check</span>
+                  <span>Save</span>
+                </button>
               </div>
             </form>
           }
@@ -123,8 +127,9 @@ type MasterTab =
         <div class="panel">
           <div class="panel-header">
             <h2>Employees (Core Biographical Profile)</h2>
-            <button class="btn-primary" (click)="showNewEmployee = !showNewEmployee">
-              {{ showNewEmployee ? 'Cancel' : '+ Register Employee' }}
+            <button class="btn btn-primary" (click)="showNewEmployee = !showNewEmployee">
+              <span class="material-symbols-outlined icon-sm">{{ showNewEmployee ? 'close' : 'add' }}</span>
+              <span>{{ showNewEmployee ? 'Cancel' : 'Register Employee' }}</span>
             </button>
           </div>
 
@@ -142,7 +147,10 @@ type MasterTab =
                 <input type="date" [(ngModel)]="newEmpDob" name="newEmpDob" placeholder="DOB" required />
                 <input type="text" [(ngModel)]="newEmpNat" name="newEmpNat" placeholder="Nationality" required />
                 <input type="date" [(ngModel)]="newEmpJoining" name="newEmpJoining" placeholder="Joining Date" required />
-                <button type="submit" class="btn-success">Register Employee</button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check</span>
+                  <span>Register Employee</span>
+                </button>
               </div>
             </form>
           }
@@ -193,8 +201,9 @@ type MasterTab =
         <div class="panel">
           <div class="panel-header">
             <h2>Clients Master</h2>
-            <button class="btn-primary" (click)="showNewClient = !showNewClient">
-              {{ showNewClient ? 'Cancel' : '+ Add Client' }}
+            <button class="btn btn-primary" (click)="showNewClient = !showNewClient">
+              <span class="material-symbols-outlined icon-sm">{{ showNewClient ? 'close' : 'add' }}</span>
+              <span>{{ showNewClient ? 'Cancel' : 'Add Client' }}</span>
             </button>
           </div>
 
@@ -204,7 +213,10 @@ type MasterTab =
                 <input type="text" [(ngModel)]="newClientCode" name="newClientCode" placeholder="Code (e.g. CLI-EMAAR)" required />
                 <input type="text" [(ngModel)]="newClientName" name="newClientName" placeholder="Client Legal Name" required />
                 <input type="text" [(ngModel)]="newClientContact" name="newClientContact" placeholder="Contact Person" />
-                <button type="submit" class="btn-success">Save Client</button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check</span>
+                  <span>Save Client</span>
+                </button>
               </div>
             </form>
           }
@@ -239,8 +251,9 @@ type MasterTab =
         <div class="panel">
           <div class="panel-header">
             <h2>Project Worksites</h2>
-            <button class="btn-primary" (click)="showNewProject = !showNewProject">
-              {{ showNewProject ? 'Cancel' : '+ Add Project' }}
+            <button class="btn btn-primary" (click)="showNewProject = !showNewProject">
+              <span class="material-symbols-outlined icon-sm">{{ showNewProject ? 'close' : 'add' }}</span>
+              <span>{{ showNewProject ? 'Cancel' : 'Add Project' }}</span>
             </button>
           </div>
 
@@ -255,8 +268,11 @@ type MasterTab =
                 </select>
                 <input type="text" [(ngModel)]="newProjCode" name="newProjCode" placeholder="Project Code" required />
                 <input type="text" [(ngModel)]="newProjName" name="newProjName" placeholder="Project Name" required />
-                <input type="text" [(ngModel)]="newProjLocation" name="newProjLocation" placeholder="Site Location" />
-                <button type="submit" class="btn-success">Save Project</button>
+                <input type="text" [(ngModel)]="newProjLocation" name="newProjLocation" placeholder="Location" />
+                <button type="submit" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check</span>
+                  <span>Save Project</span>
+                </button>
               </div>
             </form>
           }
@@ -291,8 +307,9 @@ type MasterTab =
         <div class="panel">
           <div class="panel-header">
             <h2>Employee Project Assignments & Authoritative Designation</h2>
-            <button class="btn-primary" (click)="showNewAssignment = !showNewAssignment">
-              {{ showNewAssignment ? 'Cancel' : '+ Deploy Employee' }}
+            <button class="btn btn-primary" (click)="showNewAssignment = !showNewAssignment">
+              <span class="material-symbols-outlined icon-sm">{{ showNewAssignment ? 'close' : 'add' }}</span>
+              <span>{{ showNewAssignment ? 'Cancel' : 'Deploy Employee' }}</span>
             </button>
           </div>
 
@@ -324,7 +341,10 @@ type MasterTab =
                   }
                 </select>
                 <input type="date" [(ngModel)]="newAssignFrom" name="newAssignFrom" placeholder="Effective From" required />
-                <button type="submit" class="btn-success">Deploy</button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check</span>
+                  <span>Deploy</span>
+                </button>
               </div>
             </form>
           }
@@ -376,7 +396,10 @@ type MasterTab =
                 }
               </select>
               <input type="date" [(ngModel)]="resolutionWorkDate" name="resolutionWorkDate" />
-              <button class="btn-primary" (click)="resolveBilling()">Test Resolution</button>
+              <button class="btn btn-primary" (click)="resolveBilling()">
+                <span class="material-symbols-outlined icon-sm">science</span>
+                <span>Test Resolution</span>
+              </button>
             </div>
 
             @if (resolvedRate(); as res) {
@@ -400,8 +423,9 @@ type MasterTab =
         <div class="panel">
           <div class="panel-header">
             <h2>Shifts & Rostering</h2>
-            <button class="btn-primary" (click)="showNewShift = !showNewShift">
-              {{ showNewShift ? 'Cancel' : '+ Add Shift' }}
+            <button class="btn btn-primary" (click)="showNewShift = !showNewShift">
+              <span class="material-symbols-outlined icon-sm">{{ showNewShift ? 'close' : 'add' }}</span>
+              <span>{{ showNewShift ? 'Cancel' : 'Add Shift' }}</span>
             </button>
           </div>
 
@@ -414,7 +438,10 @@ type MasterTab =
                 <input type="time" [(ngModel)]="newShiftEnd" name="newShiftEnd" required />
                 <input type="number" [(ngModel)]="newShiftBreak" name="newShiftBreak" placeholder="Break Mins" />
                 <input type="number" step="0.5" [(ngModel)]="newShiftHours" name="newShiftHours" placeholder="Work Hours (8.0)" required />
-                <button type="submit" class="btn-success">Save Shift</button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check</span>
+                  <span>Save Shift</span>
+                </button>
               </div>
             </form>
           }
@@ -451,8 +478,9 @@ type MasterTab =
         <div class="panel">
           <div class="panel-header">
             <h2>Company-Configured Public Holidays</h2>
-            <button class="btn-primary" (click)="showNewHoliday = !showNewHoliday">
-              {{ showNewHoliday ? 'Cancel' : '+ Add Holiday' }}
+            <button class="btn btn-primary" (click)="showNewHoliday = !showNewHoliday">
+              <span class="material-symbols-outlined icon-sm">{{ showNewHoliday ? 'close' : 'add' }}</span>
+              <span>{{ showNewHoliday ? 'Cancel' : 'Add Holiday' }}</span>
             </button>
           </div>
 
@@ -463,7 +491,10 @@ type MasterTab =
                 <input type="text" [(ngModel)]="newHolidayName" name="newHolidayName" placeholder="Holiday Name" required />
                 <input type="date" [(ngModel)]="newHolidayDate" name="newHolidayDate" required />
                 <input type="text" [(ngModel)]="newHolidayDesc" name="newHolidayDesc" placeholder="Description" />
-                <button type="submit" class="btn-success">Add Holiday</button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check</span>
+                  <span>Add Holiday</span>
+                </button>
               </div>
             </form>
           }
@@ -544,23 +575,32 @@ type MasterTab =
       .sub-nav button {
         background: transparent;
         border: 1px solid transparent;
-        padding: 0.4rem 0.75rem;
+        padding: 0.45rem 0.875rem;
         border-radius: var(--radius-md);
         font-size: 0.8125rem;
         font-weight: 500;
         cursor: pointer;
         color: var(--text-secondary);
-        transition: all 0.15s ease;
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
       }
       .sub-nav button:hover {
         background: var(--bg-surface-subtle);
         color: var(--text-primary);
+        border-color: var(--border-default);
+        transform: translateY(-1px);
+      }
+      .sub-nav button:active {
+        transform: translateY(0);
       }
       .sub-nav button.active {
         background: var(--brand-50);
         color: var(--brand-700);
         border-color: var(--brand-200);
         font-weight: 600;
+        box-shadow: 0 1px 2px rgba(29, 78, 216, 0.1);
       }
       .panel {
         background: #ffffff;

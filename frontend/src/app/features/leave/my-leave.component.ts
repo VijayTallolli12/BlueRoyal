@@ -33,7 +33,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
             <option [value]="2027">Year 2027</option>
           </select>
           <button (click)="openRequestModal()" class="btn btn-primary">
-            <span class="btn-icon">+</span> Request Leave
+            <span class="material-symbols-outlined icon-sm">add</span>
+            <span>Request Leave</span>
           </button>
         </div>
       </div>
@@ -275,42 +276,6 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         font-weight: 500;
         color: var(--text-primary);
         background: #ffffff;
-      }
-      .btn {
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s;
-      }
-      .btn-primary {
-        background: var(--color-info);
-        color: var(--color-surface);
-      }
-      .btn-primary:hover {
-        background: var(--color-info);
-      }
-      .btn-secondary {
-        background: var(--color-border);
-        color: var(--color-text-primary);
-      }
-      .btn-sm {
-        padding: 4px 10px;
-        font-size: 12px;
-      }
-      .btn-danger-outline {
-        background: transparent;
-        border: 1px solid var(--color-danger);
-        color: var(--color-danger);
-      }
-      .btn-danger-outline:hover {
-        background: var(--color-danger-bg);
-      }
-      .btn-icon {
-        font-weight: bold;
-        margin-right: 4px;
       }
       .kpi-grid {
         display: grid;

@@ -26,7 +26,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
           </div>
           <div class="header-actions">
             <button class="btn btn-secondary" (click)="fetchHealth()">
-              <span>⚡ Refresh Node</span>
+              <span class="material-symbols-outlined icon-sm">sync</span>
+              <span>Refresh Node</span>
             </button>
           </div>
         </div>
@@ -92,30 +93,36 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
             </div>
             <div class="portal-grid">
               <a routerLink="/attendance/my-attendance" class="portal-action-tile">
-                <div class="tile-icon">⏱️</div>
+                <div class="tile-icon">
+                  <span class="material-symbols-outlined">schedule</span>
+                </div>
                 <div class="tile-info">
                   <span class="tile-title">Monthly Timesheet</span>
                   <span class="tile-desc">Inspect regular hours, overtime, and work shifts</span>
                 </div>
-                <span class="tile-arrow">➔</span>
+                <span class="material-symbols-outlined tile-arrow">arrow_forward</span>
               </a>
 
               <a routerLink="/leave/my-leave" class="portal-action-tile">
-                <div class="tile-icon">🌴</div>
+                <div class="tile-icon">
+                  <span class="material-symbols-outlined">beach_access</span>
+                </div>
                 <div class="tile-info">
                   <span class="tile-title">Leave Entitlements</span>
                   <span class="tile-desc">Review allocated balances and submit leave requests</span>
                 </div>
-                <span class="tile-arrow">➔</span>
+                <span class="material-symbols-outlined tile-arrow">arrow_forward</span>
               </a>
 
               <a routerLink="/payroll/my-payroll" class="portal-action-tile">
-                <div class="tile-icon">📑</div>
+                <div class="tile-icon">
+                  <span class="material-symbols-outlined">receipt_long</span>
+                </div>
                 <div class="tile-info">
                   <span class="tile-title">Remuneration Payslips</span>
                   <span class="tile-desc">Access published payslips with printable breakdown</span>
                 </div>
-                <span class="tile-arrow">➔</span>
+                <span class="material-symbols-outlined tile-arrow">arrow_forward</span>
               </a>
             </div>
           </div>
@@ -229,7 +236,21 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
     }
 
     .tile-icon {
-      font-size: 1.5rem;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      background: var(--brand-50);
+      color: var(--brand-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .portal-action-tile:hover .tile-icon {
+      background: var(--brand-700);
+      color: #ffffff;
     }
 
     .tile-info {
@@ -251,7 +272,13 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
 
     .tile-arrow {
       color: var(--text-muted);
-      font-weight: 700;
+      font-size: 20px;
+      transition: transform 0.15s ease, color 0.15s ease;
+    }
+
+    .portal-action-tile:hover .tile-arrow {
+      color: var(--brand-600);
+      transform: translateX(3px);
     }
   `]
 })

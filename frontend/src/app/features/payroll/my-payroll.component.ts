@@ -22,7 +22,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
           </p>
         </div>
         <button class="btn btn-secondary" (click)="loadPayrollHistory()">
-          Refresh
+          <span class="material-symbols-outlined icon-sm">sync</span>
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -39,7 +40,9 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         <div class="loading">Loading your published payslips...</div>
       } @else if (history().length === 0) {
         <div class="empty-state">
-          <div class="empty-icon">💵</div>
+          <div class="empty-icon">
+            <span class="material-symbols-outlined icon-lg">receipt_long</span>
+          </div>
           <h3>No Finalized Payslips Available</h3>
           <p>You currently do not have any published payslips. Once HR finalizes a payroll run, your itemized payslip will appear here.</p>
         </div>
@@ -88,7 +91,10 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
             <div class="modal-header no-print">
               <h3>Employee Remuneration Slip</h3>
               <div class="modal-header-actions">
-                <button class="btn btn-secondary btn-sm" (click)="printPayslip()">🖨️ Print</button>
+                <button class="btn btn-secondary btn-sm" (click)="printPayslip()">
+                  <span class="material-symbols-outlined icon-sm">print</span>
+                  <span>Print</span>
+                </button>
                 <button class="modal-close" (click)="selectedPayslip.set(null)">×</button>
               </div>
             </div>
@@ -238,7 +244,10 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
 
             <div class="modal-footer no-print">
               <button class="btn btn-secondary" (click)="selectedPayslip.set(null)">Close</button>
-              <button class="btn btn-primary" (click)="printPayslip()">🖨️ Print Payslip</button>
+              <button class="btn btn-primary" (click)="printPayslip()">
+                <span class="material-symbols-outlined icon-sm">print</span>
+                <span>Print Payslip</span>
+              </button>
             </div>
           </div>
         </div>
@@ -335,22 +344,6 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         font-weight: 700;
         color: var(--color-success);
       }
-
-      .btn {
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s;
-        text-decoration: none;
-      }
-      .btn-block { width: 100%; display: block; text-align: center; }
-      .btn-primary { background: var(--color-info); color: var(--color-surface); }
-      .btn-primary:hover { background: var(--color-primary-hover); }
-      .btn-secondary { background: var(--color-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border); }
-      .btn-sm { padding: 4px 10px; font-size: 12px; }
 
       .alert {
         padding: 12px 16px;

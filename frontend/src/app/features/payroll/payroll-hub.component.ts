@@ -31,11 +31,13 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         <div class="header-actions">
           @if (authService.hasPermission('payroll:create')) {
             <button class="btn btn-primary" (click)="openCreateModal()">
-              + New Payroll Run
+              <span class="material-symbols-outlined icon-sm">add</span>
+              <span>New Payroll Run</span>
             </button>
           }
           <button class="btn btn-secondary" (click)="loadPeriods()">
-            Refresh
+            <span class="material-symbols-outlined icon-sm">sync</span>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -449,33 +451,6 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         align-items: center;
         flex-wrap: wrap;
       }
-      .btn {
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .btn-sm {
-        padding: 5px 10px;
-        font-size: 12px;
-      }
-      .btn-primary { background: var(--color-info); color: var(--color-surface); }
-      .btn-primary:hover { background: var(--color-primary-hover); }
-      .btn-secondary { background: var(--color-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border); }
-      .btn-secondary:hover { background: var(--color-border); }
-      .btn-outline { background: transparent; color: var(--color-info); border: 1px solid #93c5fd; }
-      .btn-outline:hover { background: var(--color-selected); }
-      .btn-info { background: var(--color-info); color: var(--color-surface); }
-      .btn-success { background: var(--color-success); color: var(--color-surface); }
-      .btn-danger { background: var(--color-danger); color: var(--color-surface); }
-
       .alert {
         padding: 12px 16px;
         border-radius: 8px;
