@@ -1,27 +1,29 @@
 # ==============================================================================
-# BLUE ROYAL HRMS — RENDER FREE STAGING BLUEPRINT (render.yaml)
+# BLUE ROYAL HRMS — RENDER PRODUCTION BLUEPRINT (render.prod.yaml)
 # ==============================================================================
-# Architecture (100% Free Tier - $0/month for Staging/UAT/Demo):
-#   1. Managed PostgreSQL Database (Free Plan)
-#   2. Backend Web Service (Free Plan - Ephemeral Document Storage for Staging)
+# Architecture (Production Tier):
+#   1. Managed PostgreSQL Database (Starter Plan)
+#   2. Backend Web Service (Starter Plan with 10GB Persistent Disk for Documents)
 #   3. Frontend Static Site (Free Global CDN)
-#
-# Note: For production deployment with persistent disk, use render.prod.yaml.
 # ==============================================================================
 
 services:
   # ----------------------------------------------------------------------------
-  # 1. Backend Web Service (Node.js API - Free Tier)
+  # 1. Backend Web Service (Node.js API)
   # ----------------------------------------------------------------------------
   - type: web
     name: blue-royal-hrms-api
     runtime: node
-    plan: free # 100% Free tier (spins down after 15 min inactivity)
+    plan: starter # Starter plan required for persistent disk
     region: oregon
     buildCommand: npm ci && npm run build:contracts && npm run build:database && npm run build:backend
     startCommand: npm run start --workspace=backend
     preDeployCommand: npm run db:migrate
     healthCheckPath: /api/v1/health
+    disk:
+      name: blue-royal-document-storage
+      mountPath: /opt/render/project/src/backend/storage
+      sizeGB: 10
     envVars:
       - key: NODE_ENV
         value: production
@@ -30,7 +32,7 @@ services:
       - key: API_PREFIX
         value: /api/v1
       - key: CORS_ORIGIN
-        sync: false # Set to your frontend static site URL (e.g. https://blue-royal-hrms.onrender.com)
+        sync: false # Set to your frontend static site URL
       - key: DATABASE_URL
         fromDatabase:
           name: blue-royal-postgres
@@ -51,7 +53,7 @@ services:
         value: info
 
   # ----------------------------------------------------------------------------
-  # 2. Frontend Static Site (Angular 19 SPA - Free Tier)
+  # 2. Frontend Static Site (Angular 19 SPA)
   # ----------------------------------------------------------------------------
   - type: web
     name: blue-royal-hrms
@@ -67,11 +69,11 @@ services:
         value: 22
 
 # ------------------------------------------------------------------------------
-# Managed PostgreSQL Database (Free Tier)
+# Managed PostgreSQL Database (Production Starter Plan)
 # ------------------------------------------------------------------------------
 databases:
   - name: blue-royal-postgres
-    plan: free # 100% Free tier managed PostgreSQL
+    plan: starter
     databaseName: blue_royal_hrms
     user: blue_royal_admin
     region: oregon
