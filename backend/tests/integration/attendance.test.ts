@@ -22,7 +22,7 @@ describe('Phase 2 Attendance & Overtime Engine Integration Tests', () => {
   let testEmployeeId: string;
   let testShiftId: string;
   const timestamp = Date.now();
-  const testPeriodCode = `20${(timestamp % 90 + 10)}-05`; // e.g. 2026-05
+  const testPeriodCode = '2026-05'; // May 5th is Tuesday (regular workday)
 
   beforeAll(async () => {
     await sequelize.authenticate();
