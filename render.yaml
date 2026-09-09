@@ -23,6 +23,8 @@ services:
     startCommand: npm run db:migrate && npm run start --workspace=backend
     healthCheckPath: /api/v1/health
     envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -64,7 +66,7 @@ services:
         destination: /index.html
     envVars:
       - key: NODE_VERSION
-        value: 22
+        value: 22.16.0
 
 # ------------------------------------------------------------------------------
 # Managed PostgreSQL Database (Free Tier)
