@@ -3,7 +3,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { permissionGuard } from './core/guards/permission.guard';
 import { PublicLayoutComponent } from './core/components/public-layout.component';
 import { AuthenticatedLayoutComponent } from './core/components/authenticated-layout.component';
-import { LoginTestComponent } from './features/auth/login-test.component';
+import { LoginComponent } from './features/auth/login.component';
 
 export const routes: Routes = [
   {
@@ -16,7 +16,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'login',
-        component: LoginTestComponent,
+        component: LoginComponent,
       },
     ],
   },
