@@ -12,12 +12,17 @@ const envSchema = z.object({
   API_PREFIX: z.string().default('/api/v1'),
   CORS_ORIGIN: z.string().default('http://localhost:4200'),
 
-  // Database Connection Pool managed by Sequelize
+  // Database Connection - supports DATABASE_URL (Render/Cloud) or discrete variables
+  DATABASE_URL: z.string().optional(),
   DB_HOST: z.string().default('localhost'),
   DB_PORT: z.coerce.number().default(5432),
   DB_NAME: z.string().default('blue_royal_hrms_dev'),
   DB_USER: z.string().default('postgres'),
   DB_PASSWORD: z.string().default('postgres'),
+  DB_SSL: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
   DB_LOGGING: z
     .string()
     .transform((v) => v === 'true')
@@ -27,11 +32,19 @@ const envSchema = z.object({
   DB_POOL_IDLE_MS: z.coerce.number().default(10000),
   DB_POOL_ACQUIRE_MS: z.coerce.number().default(30000),
 
+  // Document Storage
+  STORAGE_PATH: z.string().default('storage/documents'),
+
   // Authentication
   JWT_ACCESS_SECRET: z.string().min(16, 'JWT_ACCESS_SECRET must be at least 16 characters'),
   JWT_ACCESS_EXPIRATION: z.string().default('15m'),
   JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters'),
   JWT_REFRESH_EXPIRATION_DAYS: z.coerce.number().default(7),
+  COOKIE_SAME_SITE: z.enum(['strict', 'lax', 'none']).default('lax'),
+  COOKIE_SECURE: z
+    .string()
+    .transform((v) => v === 'true')
+    .optional(),
 
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']).default('info'),

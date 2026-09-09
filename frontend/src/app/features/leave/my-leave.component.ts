@@ -163,73 +163,107 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         </div>
       }
 
-      <!-- Modal: Submit Leave Request -->
+      <!-- Contextual Drawer: Submit Leave Request -->
       @if (showRequestModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Submit Leave Request</h3>
-              <button (click)="closeRequestModal()" class="close-btn">×</button>
+        <div class="drawer-backdrop" (click)="closeRequestModal()">
+          <div class="drawer-panel" (click)="$event.stopPropagation()">
+            <div class="drawer-header">
+              <div class="drawer-header-content">
+                <h2 class="drawer-title">Submit Leave Application</h2>
+                <p class="drawer-subtitle">Apply for statutory or authorized absence with entitlement validation</p>
+              </div>
+              <button type="button" class="drawer-close" (click)="closeRequestModal()" aria-label="Close drawer">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
 
-            <form (ngSubmit)="submitRequest()" class="modal-form">
-              <div class="form-group">
-                <label>Leave Type <span class="req-star">*</span></label>
-                <select [(ngModel)]="requestForm.leaveTypeId" name="leaveTypeId" required class="form-control">
-                  <option value="">-- Select Leave Category --</option>
-                  @for (lt of activeLeaveTypes(); track lt.id) {
-                    <option [value]="lt.id">
-                      {{ lt.name }} ({{ lt.isPaid ? 'Paid' : 'Unpaid' }})
-                    </option>
-                  }
-                </select>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group col">
-                  <label>Start Date <span class="req-star">*</span></label>
-                  <input
-                    type="date"
-                    [(ngModel)]="requestForm.startDate"
-                    name="startDate"
-                    required
-                    class="form-control"
-                  />
+            <div class="drawer-body">
+              <form (ngSubmit)="submitRequest()" id="leaveRequestForm">
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">category</span>
+                    <span>Leave Category</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="myLeaveType">Leave Type *</label>
+                    <select id="myLeaveType" [(ngModel)]="requestForm.leaveTypeId" name="leaveTypeId" required class="form-control">
+                      <option value="">-- Select Leave Category --</option>
+                      @for (lt of activeLeaveTypes(); track lt.id) {
+                        <option [value]="lt.id">
+                          {{ lt.name }} ({{ lt.isPaid ? 'Paid' : 'Unpaid' }})
+                        </option>
+                      }
+                    </select>
+                  </div>
                 </div>
-                <div class="form-group col">
-                  <label>End Date <span class="req-star">*</span></label>
-                  <input
-                    type="date"
-                    [(ngModel)]="requestForm.endDate"
-                    name="endDate"
-                    required
-                    class="form-control"
-                  />
+
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">calendar_month</span>
+                    <span>Absence Period</span>
+                  </div>
+                  <div class="form-grid-2">
+                    <div class="form-group">
+                      <label for="myStartDate">Start Date *</label>
+                      <input
+                        id="myStartDate"
+                        type="date"
+                        [(ngModel)]="requestForm.startDate"
+                        name="startDate"
+                        required
+                        class="form-control"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label for="myEndDate">End Date *</label>
+                      <input
+                        id="myEndDate"
+                        type="date"
+                        [(ngModel)]="requestForm.endDate"
+                        name="endDate"
+                        required
+                        class="form-control"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div class="form-group">
-                <label>Reason for Leave <span class="req-star">*</span></label>
-                <textarea
-                  [(ngModel)]="requestForm.reason"
-                  name="reason"
-                  rows="3"
-                  required
-                  minlength="5"
-                  placeholder="Provide brief explanation for requested leave..."
-                  class="form-control"
-                ></textarea>
-              </div>
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">description</span>
+                    <span>Reason & Justification</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="myLeaveReason">Reason for Leave * (Min 5 chars)</label>
+                    <textarea
+                      id="myLeaveReason"
+                      [(ngModel)]="requestForm.reason"
+                      name="reason"
+                      rows="3"
+                      required
+                      minlength="5"
+                      placeholder="Provide clear operational reason or circumstances..."
+                      class="form-control"
+                    ></textarea>
+                  </div>
+                </div>
+              </form>
+            </div>
 
-              <div class="modal-actions">
-                <button type="button" (click)="closeRequestModal()" class="btn btn-secondary">
-                  Dismiss
-                </button>
-                <button type="submit" [disabled]="submitting()" class="btn btn-primary">
-                  {{ submitting() ? 'Submitting...' : 'Submit Application' }}
-                </button>
-              </div>
-            </form>
+            <div class="drawer-footer">
+              <button type="button" (click)="closeRequestModal()" class="btn btn-secondary">
+                Dismiss
+              </button>
+              <button
+                type="submit"
+                form="leaveRequestForm"
+                [disabled]="submitting() || !requestForm.leaveTypeId || !requestForm.startDate || !requestForm.endDate || requestForm.reason.trim().length < 5"
+                class="btn btn-primary"
+              >
+                <span class="material-symbols-outlined icon-sm">send</span>
+                <span>{{ submitting() ? 'Submitting...' : 'Submit Application' }}</span>
+              </button>
+            </div>
           </div>
         </div>
       }

@@ -1,0 +1,78 @@
+# ==============================================================================
+# BLUE ROYAL HRMS — RENDER BLUEPRINT SPECIFICATION (render.yaml)
+# ==============================================================================
+# Deploys:
+#   1. Managed PostgreSQL Database
+#   2. Backend Web Service (Node.js API + Persistent Disk for Employee Documents)
+#   3. Frontend Static Site (Angular Production SPA with Rewrite Rules)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Backend API Web Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: blue-royal-hrms-api
+    env: node
+    plan: starter # Starter plan allows persistent disk attachment
+    region: oregon
+    buildCommand: npm ci && npm run build:contracts && npm run build:database && npm run build:backend
+    startCommand: npm run start --workspace=backend
+    preDeployCommand: npm run db:migrate
+    healthCheckPath: /api/v1/health
+    disk:
+      name: blue-royal-document-storage
+      mountPath: /opt/render/project/src/backend/storage
+      sizeGB: 10
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: API_PREFIX
+        value: /api/v1
+      - key: CORS_ORIGIN
+        value: https://blue-royal-hrms.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: blue-royal-postgres
+          property: connectionString
+      - key: DB_SSL
+        value: "true"
+      - key: STORAGE_PATH
+        value: storage/documents
+      - key: COOKIE_SAME_SITE
+        value: "none"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: LOG_LEVEL
+        value: info
+
+  # ----------------------------------------------------------------------------
+  # 2. Frontend Angular Static Site
+  # ----------------------------------------------------------------------------
+  - type: static
+    name: blue-royal-hrms
+    buildCommand: npm ci && npm run build:contracts && npm run build:frontend
+    staticPublishPath: frontend/dist/blue-royal-hrms/browser
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+
+# ------------------------------------------------------------------------------
+# Managed PostgreSQL Database
+# ------------------------------------------------------------------------------
+databases:
+  - name: blue-royal-postgres
+    plan: starter
+    databaseName: blue_royal_hrms
+    user: blue_royal_admin
+    region: oregon

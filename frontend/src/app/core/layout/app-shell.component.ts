@@ -25,21 +25,54 @@ import { AuthService } from '../services/auth.service';
         </div>
 
         <nav class="sidebar-nav">
-          <div class="nav-section-title">CORE WORKSPACE</div>
+          <div class="nav-section-title">CORE</div>
           <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item" (click)="closeMobile()">
-            <span class="material-symbols-outlined nav-icon">dashboard</span>
+            <span class="material-symbols-outlined nav-icon">space_dashboard</span>
             <span class="nav-label">Dashboard</span>
           </a>
 
-          @if (authService.hasPermission('designations:read')) {
-            <a routerLink="/masters" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
-              <span class="material-symbols-outlined nav-icon">dataset</span>
-              <span class="nav-label">Master Catalogs</span>
+          @if (authService.hasPermission('employees:read') || authService.hasPermission('onboarding:read')) {
+            <div class="nav-section-title">PEOPLE</div>
+            @if (authService.hasPermission('employees:read')) {
+              <a routerLink="/employees" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+                <span class="material-symbols-outlined nav-icon">badge</span>
+                <span class="nav-label">Employees</span>
+              </a>
+            }
+            @if (authService.hasPermission('onboarding:read')) {
+              <a routerLink="/onboarding" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+                <span class="material-symbols-outlined nav-icon">person_add_alt</span>
+                <span class="nav-label">Onboarding Hub</span>
+              </a>
+            }
+            @if (authService.hasPermission('documents:read')) {
+              <a routerLink="/documents" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+                <span class="material-symbols-outlined nav-icon">folder_shared</span>
+                <span class="nav-label">Document Center</span>
+              </a>
+            }
+          }
+
+          @if (authService.hasPermission('attendance:read') || authService.hasPermission('leave:read') || authService.hasPermission('payroll:read') || authService.hasPermission('assignments:read') || authService.hasPermission('rates:read')) {
+            <div class="nav-section-title">WORKFORCE OPERATIONS</div>
+          }
+
+          @if (authService.hasPermission('assignments:read')) {
+            <a routerLink="/masters" [queryParams]="{tab: 'assignments'}" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+              <span class="material-symbols-outlined nav-icon">assignment_ind</span>
+              <span class="nav-label">Deployments & Assignments</span>
             </a>
           }
 
-          @if (authService.hasPermission('attendance:read') || authService.hasPermission('leave:read') || authService.hasPermission('payroll:read')) {
-            <div class="nav-section-title">OPERATIONS & WORKFORCE</div>
+          @if (authService.hasPermission('rates:read')) {
+            <a routerLink="/masters" [queryParams]="{tab: 'employee-rates'}" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+              <span class="material-symbols-outlined nav-icon">price_change</span>
+              <span class="nav-label">Employee Compensation Rates</span>
+            </a>
+            <a routerLink="/masters" [queryParams]="{tab: 'client-rates'}" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+              <span class="material-symbols-outlined nav-icon">receipt</span>
+              <span class="nav-label">Client Billing Rates</span>
+            </a>
           }
 
           @if (authService.hasPermission('attendance:read')) {
@@ -63,7 +96,15 @@ import { AuthService } from '../services/auth.service';
             </a>
           }
 
-          @if (authService.hasPermission('attendance:self_read') || authService.hasPermission('leave:self_read') || authService.hasPermission('payroll:self_read')) {
+          @if (authService.hasPermission('designations:read')) {
+            <div class="nav-section-title">MASTERS</div>
+            <a routerLink="/masters" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item" (click)="closeMobile()">
+              <span class="material-symbols-outlined nav-icon">dataset</span>
+              <span class="nav-label">Master Catalogs</span>
+            </a>
+          }
+
+          @if (authService.hasPermission('attendance:self_read') || authService.hasPermission('leave:self_read') || authService.hasPermission('payroll:self_read') || authService.hasPermission('documents:self_read')) {
             <div class="nav-section-title">MY SELF-SERVICE</div>
           }
 
@@ -85,6 +126,13 @@ import { AuthService } from '../services/auth.service';
             <a routerLink="/payroll/my-payroll" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
               <span class="material-symbols-outlined nav-icon">receipt_long</span>
               <span class="nav-label">My Payslips</span>
+            </a>
+          }
+
+          @if (authService.hasPermission('documents:self_read')) {
+            <a routerLink="/documents/my-documents" routerLinkActive="active" class="nav-item" (click)="closeMobile()">
+              <span class="material-symbols-outlined nav-icon">description</span>
+              <span class="nav-label">My Documents</span>
             </a>
           }
         </nav>
@@ -205,9 +253,44 @@ import { AuthService } from '../services/auth.service';
       flex: 1;
       padding: 1rem 0.75rem;
       overflow-y: auto;
+      overflow-x: hidden;
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+
+      /* Standard scrollbar styling (Firefox & standard compliant) */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+
+      /* Webkit / Chromium / Safari custom scrollbar */
+      &::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.2);
+        border-radius: 9999px;
+        transition: background-color 0.2s ease;
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.4);
+      }
+
+      &::-webkit-scrollbar-thumb:active {
+        background: rgba(148, 163, 184, 0.6);
+      }
+
+      &::-webkit-scrollbar-corner {
+        background: transparent;
+      }
     }
 
     .nav-section-title {

@@ -153,35 +153,35 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Emp Code</th>
+                    <th class="col-sticky-left">Emp Code</th>
                     <th>Employee Name</th>
                     <th>Basis</th>
-                    <th>Designation</th>
-                    <th>Reg Hours</th>
-                    <th>OT Hours</th>
-                    <th>Gross Pay (AED)</th>
-                    <th>Deductions</th>
+                    <th class="col-hide-mobile">Designation</th>
+                    <th class="col-hide-tablet">Reg Hours</th>
+                    <th class="col-hide-tablet">OT Hours</th>
+                    <th class="col-hide-mobile">Gross Pay</th>
+                    <th class="col-hide-mobile">Deductions</th>
                     <th>Net Pay (AED)</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th class="col-sticky-right text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (item of filteredItems(); track item.id) {
                     <tr [class.blocked-row]="item.hasBlockingIssue">
-                      <td><strong>{{ item.employeeCode }}</strong></td>
+                      <td class="col-sticky-left font-mono font-bold">{{ item.employeeCode }}</td>
                       <td>{{ item.employeeName }}</td>
                       <td>
                         <span class="basis-badge basis-{{ item.remunerationBasis }}">
                           {{ item.remunerationBasis | uppercase }}
                         </span>
                       </td>
-                      <td>{{ item.designationTitle || '-' }}</td>
-                      <td>{{ item.totalRegularHours }}h</td>
-                      <td>{{ item.totalOtHours }}h</td>
-                      <td>{{ item.grossPay | number:'1.2-2' }}</td>
-                      <td>{{ item.totalDeductions | number:'1.2-2' }}</td>
-                      <td><strong>{{ item.netPay | number:'1.2-2' }}</strong></td>
+                      <td class="col-hide-mobile">{{ item.designationTitle || '-' }}</td>
+                      <td class="col-hide-tablet">{{ item.totalRegularHours }}h</td>
+                      <td class="col-hide-tablet">{{ item.totalOtHours }}h</td>
+                      <td class="col-hide-mobile">{{ item.grossPay | number:'1.2-2' }}</td>
+                      <td class="col-hide-mobile">{{ item.totalDeductions | number:'1.2-2' }}</td>
+                      <td><strong class="text-primary">{{ item.netPay | number:'1.2-2' }}</strong></td>
                       <td>
                         @if (item.hasBlockingIssue) {
                           <span class="badge-blocking" [title]="item.blockingReason || ''">
@@ -191,9 +191,9 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                           <span class="badge-clean">✓ Calculated</span>
                         }
                       </td>
-                      <td>
+                      <td class="col-sticky-right text-right">
                         <button class="btn btn-sm btn-outline" (click)="openBreakdown(item)">
-                          Breakdown & Adjust
+                          Breakdown
                         </button>
                       </td>
                     </tr>
@@ -206,114 +206,125 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         }
       }
 
-      <!-- Item Breakdown & Adjustments Modal -->
+      <!-- Item Breakdown & Adjustments Contextual Drawer -->
       @if (selectedItemDetail()) {
-        <div class="modal-backdrop">
-          <div class="modal-card modal-lg">
-            <div class="modal-header">
-              <div>
-                <h3>
+        <div class="drawer-backdrop" (click)="selectedItemDetail.set(null)">
+          <div class="drawer-panel drawer-panel-lg" (click)="$event.stopPropagation()">
+            <div class="drawer-header">
+              <div class="drawer-header-content">
+                <h2 class="drawer-title">
                   {{ selectedItemDetail()?.item?.employeeName }} ({{ selectedItemDetail()?.item?.employeeCode }})
-                </h3>
-                <span class="subtitle">
-                  Basis: {{ selectedItemDetail()?.item?.remunerationBasis | uppercase }} | Net Pay: AED {{ selectedItemDetail()?.item?.netPay | number:'1.2-2' }}
-                </span>
+                </h2>
+                <p class="drawer-subtitle">
+                  Basis: {{ (selectedItemDetail()?.item?.remunerationBasis || 'hourly') | uppercase }} • Net Payable: AED {{ selectedItemDetail()?.item?.netPay | number:'1.2-2' }}
+                </p>
               </div>
-              <button class="modal-close" (click)="selectedItemDetail.set(null)">×</button>
+              <button type="button" class="drawer-close" (click)="selectedItemDetail.set(null)" aria-label="Close drawer">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
 
-            <div class="modal-body">
+            <div class="drawer-body">
               <!-- Attendance summary mini-bar -->
-              <div class="mini-kpi-bar">
-                <div class="mini-kpi">
-                  <span>Regular Hours</span>
-                  <strong>{{ selectedItemDetail()?.attendanceSummary?.totalRegularHours }}h</strong>
+              <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 1.25rem;">
+                <div class="kpi-card">
+                  <span class="kpi-label">Regular Hours</span>
+                  <span class="kpi-value">{{ selectedItemDetail()?.attendanceSummary?.totalRegularHours }}h</span>
                 </div>
-                <div class="mini-kpi">
-                  <span>Overtime Hours</span>
-                  <strong>{{ selectedItemDetail()?.attendanceSummary?.totalOtHours }}h</strong>
+                <div class="kpi-card">
+                  <span class="kpi-label">Overtime Hours</span>
+                  <span class="kpi-value">{{ selectedItemDetail()?.attendanceSummary?.totalOtHours }}h</span>
                 </div>
-                <div class="mini-kpi">
-                  <span>Absence Days</span>
-                  <strong>{{ selectedItemDetail()?.attendanceSummary?.totalAbsenceDays }}</strong>
+                <div class="kpi-card">
+                  <span class="kpi-label">Absence Days</span>
+                  <span class="kpi-value text-muted">{{ selectedItemDetail()?.attendanceSummary?.totalAbsenceDays }}</span>
                 </div>
-                <div class="mini-kpi">
-                  <span>Approved Leaves</span>
-                  <strong>{{ selectedItemDetail()?.attendanceSummary?.totalLeaveDays }}</strong>
+                <div class="kpi-card">
+                  <span class="kpi-label">Approved Leaves</span>
+                  <span class="kpi-value">{{ selectedItemDetail()?.attendanceSummary?.totalLeaveDays }}</span>
                 </div>
               </div>
 
               <!-- Lines Table -->
-              <div class="section-heading">Itemized Compensation & Adjustments</div>
-              <div class="table-responsive">
-                <table class="data-table data-table-sm">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>Code</th>
-                      <th>Description</th>
-                      <th>Date / Component</th>
-                      <th>Rate</th>
-                      <th>Qty</th>
-                      <th>Amount (AED)</th>
-                      <th>Type</th>
-                      @if (period()?.status !== 'finalized') {
-                        <th>Action</th>
-                      }
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (line of selectedItemDetail()?.lines; track line.id) {
+              <div class="form-section">
+                <div class="form-section-title">
+                  <span class="material-symbols-outlined icon-sm">receipt_long</span>
+                  <span>Itemized Compensation & Adjustments</span>
+                </div>
+                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                  <table class="data-table">
+                    <thead>
                       <tr>
-                        <td>
-                          <span class="category-badge category-{{ line.category }}">
-                            {{ line.category | uppercase }}
-                          </span>
-                        </td>
-                        <td><strong>{{ line.code }}</strong></td>
-                        <td>{{ line.description }}</td>
-                        <td>{{ line.workDate || '-' }}</td>
-                        <td>{{ line.rate ? (line.rate | number:'1.2-2') : '-' }}</td>
-                        <td>{{ line.quantity || '-' }}</td>
-                        <td><strong>{{ line.amount | number:'1.2-2' }}</strong></td>
-                        <td>
-                          @if (line.isManual) {
-                            <span class="badge-manual">Manual ({{ line.adjustmentType }})</span>
-                          } @else {
-                            <span class="badge-system">System</span>
-                          }
-                        </td>
+                        <th>Category</th>
+                        <th>Code</th>
+                        <th>Description</th>
+                        <th>Date / Component</th>
+                        <th>Rate</th>
+                        <th>Qty</th>
+                        <th>Amount (AED)</th>
+                        <th>Type</th>
                         @if (period()?.status !== 'finalized') {
-                          <td>
-                            @if (line.isManual) {
-                              <button class="btn btn-sm btn-danger" (click)="deleteAdjustment(line.id)">
-                                Remove
-                              </button>
-                            }
-                          </td>
+                          <th>Action</th>
                         }
                       </tr>
-                    }
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      @for (line of selectedItemDetail()?.lines; track line.id) {
+                        <tr>
+                          <td>
+                            <span class="category-badge category-{{ line.category }}">
+                              {{ line.category | uppercase }}
+                            </span>
+                          </td>
+                          <td><strong>{{ line.code }}</strong></td>
+                          <td>{{ line.description }}</td>
+                          <td>{{ line.workDate || '-' }}</td>
+                          <td>{{ line.rate ? (line.rate | number:'1.2-2') : '-' }}</td>
+                          <td>{{ line.quantity || '-' }}</td>
+                          <td><strong>{{ line.amount | number:'1.2-2' }}</strong></td>
+                          <td>
+                            @if (line.isManual) {
+                              <span class="badge-manual">Manual ({{ line.adjustmentType }})</span>
+                            } @else {
+                              <span class="badge-system">System</span>
+                            }
+                          </td>
+                          @if (period()?.status !== 'finalized') {
+                            <td>
+                              @if (line.isManual) {
+                                <button class="btn btn-sm btn-danger" (click)="deleteAdjustment(line.id)">
+                                  Remove
+                                </button>
+                              }
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <!-- Add Adjustment Section (if not finalized) -->
               @if (period()?.status !== 'finalized' && authService.hasPermission('payroll:calculate')) {
-                <div class="adjustment-box">
-                  <div class="section-heading">Add Manual Adjustment</div>
-                  <form (ngSubmit)="onAddAdjustmentSubmit()" class="adj-form">
-                    <div class="adj-row">
-                      <div class="form-group flex-1">
-                        <label>Adjustment Type *</label>
-                        <select [(ngModel)]="newAdjDto.adjustmentType" name="adjType" class="form-control" required>
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">add_circle</span>
+                    <span>Add Manual Payroll Adjustment</span>
+                  </div>
+                  <form (ngSubmit)="onAddAdjustmentSubmit()" class="adj-form" id="manualAdjForm">
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label for="adjType">Adjustment Type *</label>
+                        <select id="adjType" [(ngModel)]="newAdjDto.adjustmentType" name="adjType" class="form-control" required>
                           <option value="addition">Addition (Bonus / Extra Pay)</option>
                           <option value="deduction">Deduction (Recovery / Penalty)</option>
                         </select>
                       </div>
-                      <div class="form-group flex-1">
-                        <label>Amount (AED) *</label>
+                      <div class="form-group">
+                        <label for="adjAmount">Amount (AED) *</label>
                         <input
+                          id="adjAmount"
                           type="number"
                           step="0.01"
                           min="0.01"
@@ -326,8 +337,9 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                       </div>
                     </div>
                     <div class="form-group">
-                      <label>Mandatory Description (Min 5 chars) *</label>
+                      <label for="adjDesc">Mandatory Description (Min 5 chars) *</label>
                       <input
+                        id="adjDesc"
                         type="text"
                         [(ngModel)]="newAdjDto.description"
                         name="adjDesc"
@@ -341,37 +353,49 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                       class="btn btn-primary btn-sm"
                       [disabled]="!newAdjDto.amount || newAdjDto.description.trim().length < 5 || adjSubmitting()"
                     >
-                      {{ adjSubmitting() ? 'Applying...' : '+ Add Adjustment' }}
+                      <span class="material-symbols-outlined icon-sm">add</span>
+                      <span>{{ adjSubmitting() ? 'Applying...' : 'Add Adjustment' }}</span>
                     </button>
                   </form>
                 </div>
               }
             </div>
 
-            <div class="modal-footer">
-              <button class="btn btn-secondary" (click)="selectedItemDetail.set(null)">Close</button>
+            <div class="drawer-footer">
+              <button type="button" class="btn btn-secondary" (click)="selectedItemDetail.set(null)">Close</button>
             </div>
           </div>
         </div>
       }
 
-      <!-- Unlock Modal -->
+      <!-- Unlock Confirmation Dialog (High Consequence Super Admin Override) -->
       @if (showUnlockModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3 class="text-danger">⚠️ Unlock Finalized Payroll Run</h3>
-              <button class="modal-close" (click)="showUnlockModal.set(false)">×</button>
+        <div class="dialog-backdrop" (click)="showUnlockModal.set(false)">
+          <div class="dialog-box dialog-danger" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+              <div class="dialog-header-content">
+                <div class="dialog-icon danger">
+                  <span class="material-symbols-outlined">lock_open</span>
+                </div>
+                <div>
+                  <h3 class="dialog-title">Unlock Finalized Payroll Period</h3>
+                  <p class="dialog-subtitle">Reopen period {{ period()?.periodCode }} for adjustments</p>
+                </div>
+              </div>
+              <button type="button" class="dialog-close" (click)="showUnlockModal.set(false)">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
             <form (ngSubmit)="onUnlockSubmit()">
-              <div class="modal-body">
+              <div class="dialog-body">
                 <div class="alert alert-warning">
                   <strong>Warning:</strong> You are about to unlock a finalized payroll period ({{ period()?.periodCode }}).
                   This reverts the run back to DRAFT, temporarily hides payslips from Employee Self-Service, and requires a full audit record.
                 </div>
-                <div class="form-group">
-                  <label>Mandatory Audit Justification (Minimum 15 characters) *</label>
+                <div class="form-group" style="margin-top: 1rem;">
+                  <label for="pUnlockReason">Mandatory Audit Justification (Minimum 15 characters) *</label>
                   <textarea
+                    id="pUnlockReason"
                     class="form-control"
                     rows="3"
                     [(ngModel)]="unlockReason"
@@ -379,11 +403,13 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                     placeholder="Detail the audit justification, approver name, or correction mandate..."
                     required
                   ></textarea>
-                  <span class="hint">{{ unlockReason.length }}/15 characters minimum</span>
+                  <span class="char-count" style="display: block; font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-text-muted);">
+                    {{ unlockReason.length }} / 15 characters minimum
+                  </span>
                 </div>
               </div>
 
-              <div class="modal-footer">
+              <div class="dialog-footer">
                 <button type="button" class="btn btn-secondary" (click)="showUnlockModal.set(false)">
                   Cancel
                 </button>
@@ -392,7 +418,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                   class="btn btn-danger"
                   [disabled]="unlockReason.trim().length < 15 || actionLoading()"
                 >
-                  {{ actionLoading() ? 'Unlocking...' : 'Confirm Unlock' }}
+                  <span class="material-symbols-outlined icon-sm">lock_open</span>
+                  <span>{{ actionLoading() ? 'Unlocking...' : 'Confirm Unlock' }}</span>
                 </button>
               </div>
             </form>

@@ -90,74 +90,76 @@ type ActiveTab = 'requests' | 'types' | 'balances';
           @if (loadingRequests()) {
             <div class="loading">Loading leave applications...</div>
           } @else {
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Request #</th>
-                  <th>Employee</th>
-                  <th>Leave Type</th>
-                  <th>Date Range</th>
-                  <th>Duration</th>
-                  <th>Reason</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (r of requests(); track r.id) {
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td>
-                      <span class="req-number">{{ r.requestNumber }}</span>
-                    </td>
-                    <td>
-                      <strong>{{ r.employee?.firstName }} {{ r.employee?.lastName }}</strong>
-                      <div class="sub-text">{{ r.employee?.employeeCode }}</div>
-                    </td>
-                    <td>
-                      <span class="tag-type">{{ r.leaveType?.name }}</span>
-                    </td>
-                    <td>
-                      <strong>{{ r.startDate }}</strong> ➔ <strong>{{ r.endDate }}</strong>
-                    </td>
-                    <td>
-                      <strong>{{ r.totalDays }}</strong> day(s)
-                    </td>
-                    <td class="cell-reason" [title]="r.reason">{{ r.reason }}</td>
-                    <td>
-                      <span class="badge" [ngClass]="getStatusClass(r.status)">{{ r.status }}</span>
-                      @if (r.status === 'REJECTED' && r.rejectionReason) {
-                        <div class="rejection-hint" [title]="r.rejectionReason">
-                          {{ r.rejectionReason }}
-                        </div>
-                      }
-                    </td>
-                    <td class="actions-cell">
-                      @if (r.status === 'PENDING') {
-                        <button (click)="approveRequest(r)" class="btn btn-sm btn-success">
-                          <span class="material-symbols-outlined icon-sm">check</span>
-                          <span>Approve</span>
-                        </button>
-                        <button (click)="openRejectModal(r)" class="btn btn-sm btn-danger">
-                          <span class="material-symbols-outlined icon-sm">close</span>
-                          <span>Reject</span>
-                        </button>
-                      } @else if (r.status === 'APPROVED') {
-                        <button (click)="openRevokeModal(r)" class="btn btn-sm btn-danger-outline">
-                          <span class="material-symbols-outlined icon-sm">undo</span>
-                          <span>Revoke</span>
-                        </button>
-                      } @else {
-                        <span class="text-muted">—</span>
-                      }
-                    </td>
+                    <th class="col-sticky-left">Request #</th>
+                    <th>Employee</th>
+                    <th>Leave Type</th>
+                    <th>Date Range</th>
+                    <th>Duration</th>
+                    <th class="col-hide-mobile">Reason</th>
+                    <th>Status</th>
+                    <th class="col-sticky-right text-right">Actions</th>
                   </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="8" class="empty-cell">No leave requests found matching filters.</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (r of requests(); track r.id) {
+                    <tr>
+                      <td class="col-sticky-left">
+                        <span class="req-number">{{ r.requestNumber }}</span>
+                      </td>
+                      <td>
+                        <strong>{{ r.employee?.firstName }} {{ r.employee?.lastName }}</strong>
+                        <div class="sub-text">{{ r.employee?.employeeCode }}</div>
+                      </td>
+                      <td>
+                        <span class="tag-type">{{ r.leaveType?.name }}</span>
+                      </td>
+                      <td>
+                        <strong>{{ r.startDate }}</strong> ➔ <strong>{{ r.endDate }}</strong>
+                      </td>
+                      <td>
+                        <strong>{{ r.totalDays }}</strong> day(s)
+                      </td>
+                      <td class="cell-reason col-hide-mobile" [title]="r.reason">{{ r.reason }}</td>
+                      <td>
+                        <span class="badge" [ngClass]="getStatusClass(r.status)">{{ r.status }}</span>
+                        @if (r.status === 'REJECTED' && r.rejectionReason) {
+                          <div class="rejection-hint" [title]="r.rejectionReason">
+                            {{ r.rejectionReason }}
+                          </div>
+                        }
+                      </td>
+                      <td class="actions-cell col-sticky-right text-right">
+                        @if (r.status === 'PENDING') {
+                          <button (click)="approveRequest(r)" class="btn btn-sm btn-success">
+                            <span class="material-symbols-outlined icon-sm">check</span>
+                            <span>Approve</span>
+                          </button>
+                          <button (click)="openRejectModal(r)" class="btn btn-sm btn-danger">
+                            <span class="material-symbols-outlined icon-sm">close</span>
+                            <span>Reject</span>
+                          </button>
+                        } @else if (r.status === 'APPROVED') {
+                          <button (click)="openRevokeModal(r)" class="btn btn-sm btn-danger-outline">
+                            <span class="material-symbols-outlined icon-sm">undo</span>
+                            <span>Revoke</span>
+                          </button>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="empty-cell">No leave requests found matching filters.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           }
         </div>
       }
@@ -283,234 +285,313 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         </div>
       }
 
-      <!-- Modal: Reject Request -->
+      <!-- Consequential Dialog: Reject Leave Application -->
       @if (showRejectModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Reject Leave Application</h3>
-              <button (click)="closeRejectModal()" class="close-btn">×</button>
+        <div class="dialog-backdrop" (click)="closeRejectModal()">
+          <div class="dialog-box dialog-danger" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+              <div class="dialog-header-content">
+                <div class="dialog-icon danger">
+                  <span class="material-symbols-outlined">cancel</span>
+                </div>
+                <div>
+                  <h3 class="dialog-title">Reject Leave Application</h3>
+                  <p class="dialog-subtitle">Specify regulatory or staffing rationale for denial</p>
+                </div>
+              </div>
+              <button type="button" class="dialog-close" (click)="closeRejectModal()">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
-            <div class="form-group">
-              <label>Rejection Reason <span class="req-star">*</span> (Min 5 chars)</label>
-              <textarea
-                [(ngModel)]="rejectionReasonText"
-                rows="3"
-                placeholder="Detail the regulatory / operational reason for rejecting this leave..."
-                class="form-control"
-              ></textarea>
+            <div class="dialog-body">
+              <div class="form-group">
+                <label for="rejReason">Rejection Reason * (Min 5 chars)</label>
+                <textarea
+                  id="rejReason"
+                  [(ngModel)]="rejectionReasonText"
+                  rows="3"
+                  placeholder="Detail the regulatory / operational reason for rejecting this leave..."
+                  class="form-control"
+                ></textarea>
+              </div>
             </div>
-            <div class="modal-actions">
-              <button (click)="closeRejectModal()" class="btn btn-secondary">Dismiss</button>
+            <div class="dialog-footer">
+              <button type="button" (click)="closeRejectModal()" class="btn btn-secondary">Dismiss</button>
               <button
+                type="button"
                 (click)="confirmReject()"
                 [disabled]="rejectionReasonText.trim().length < 5"
                 class="btn btn-danger"
               >
-                Confirm Rejection
+                <span class="material-symbols-outlined icon-sm">block</span>
+                <span>Confirm Rejection</span>
               </button>
             </div>
           </div>
         </div>
       }
 
-      <!-- Modal: Revoke Approved Leave -->
+      <!-- Consequential Dialog: Revoke Approved Leave -->
       @if (showRevokeModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Revoke Approved Leave</h3>
-              <button (click)="closeRevokeModal()" class="close-btn">×</button>
+        <div class="dialog-backdrop" (click)="closeRevokeModal()">
+          <div class="dialog-box dialog-danger" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+              <div class="dialog-header-content">
+                <div class="dialog-icon danger">
+                  <span class="material-symbols-outlined">history</span>
+                </div>
+                <div>
+                  <h3 class="dialog-title">Revoke Approved Leave</h3>
+                  <p class="dialog-subtitle">Attendance status will be reset back to normal tracking</p>
+                </div>
+              </div>
+              <button type="button" class="dialog-close" (click)="closeRevokeModal()">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
-            <div class="form-group">
-              <label>Cancellation Reason <span class="req-star">*</span></label>
-              <textarea
-                [(ngModel)]="revokeReasonText"
-                rows="3"
-                placeholder="Reason for revoking approved leave (attendance records will be reset)..."
-                class="form-control"
-              ></textarea>
+            <div class="dialog-body">
+              <div class="form-group">
+                <label for="revReason">Cancellation Reason *</label>
+                <textarea
+                  id="revReason"
+                  [(ngModel)]="revokeReasonText"
+                  rows="3"
+                  placeholder="Reason for revoking approved leave (attendance records will be reset)..."
+                  class="form-control"
+                ></textarea>
+              </div>
             </div>
-            <div class="modal-actions">
-              <button (click)="closeRevokeModal()" class="btn btn-secondary">Dismiss</button>
+            <div class="dialog-footer">
+              <button type="button" (click)="closeRevokeModal()" class="btn btn-secondary">Dismiss</button>
               <button
+                type="button"
                 (click)="confirmRevoke()"
                 [disabled]="revokeReasonText.trim().length < 5"
                 class="btn btn-danger"
               >
-                Revoke Leave
+                <span class="material-symbols-outlined icon-sm">undo</span>
+                <span>Revoke Leave</span>
               </button>
             </div>
           </div>
         </div>
       }
 
-      <!-- Modal: Allocate Balance -->
+      <!-- Contextual Drawer: Allocate Balance -->
       @if (showAllocateModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Allocate / Adjust Annual Leave Balance</h3>
-              <button (click)="closeAllocateModal()" class="close-btn">×</button>
+        <div class="drawer-backdrop" (click)="closeAllocateModal()">
+          <div class="drawer-panel" (click)="$event.stopPropagation()">
+            <div class="drawer-header">
+              <div class="drawer-header-content">
+                <h2 class="drawer-title">Allocate / Adjust Leave Balance</h2>
+                <p class="drawer-subtitle">Configure statutory or contractual annual leave quota</p>
+              </div>
+              <button type="button" class="drawer-close" (click)="closeAllocateModal()" aria-label="Close drawer">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
-            <form (ngSubmit)="confirmAllocate()" class="modal-form">
-              <div class="form-group">
-                <label>Employee <span class="req-star">*</span></label>
-                <select [(ngModel)]="allocateForm.employeeId" name="employeeId" required class="form-control">
-                  <option value="">-- Select Employee --</option>
-                  @for (e of employees(); track e.id) {
-                    <option [value]="e.id">{{ e.employeeCode }} — {{ e.firstName }} {{ e.lastName }}</option>
-                  }
-                </select>
-              </div>
+            <div class="drawer-body">
+              <form (ngSubmit)="confirmAllocate()" id="allocateForm">
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">person</span>
+                    <span>Employee & Category</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="allocEmp">Employee *</label>
+                    <select id="allocEmp" [(ngModel)]="allocateForm.employeeId" name="employeeId" required class="form-control">
+                      <option value="">-- Select Employee --</option>
+                      @for (e of employees(); track e.id) {
+                        <option [value]="e.id">{{ e.employeeCode }} — {{ e.firstName }} {{ e.lastName }}</option>
+                      }
+                    </select>
+                  </div>
 
-              <div class="form-group">
-                <label>Leave Type <span class="req-star">*</span></label>
-                <select [(ngModel)]="allocateForm.leaveTypeId" name="leaveTypeId" required class="form-control">
-                  <option value="">-- Select Leave Category --</option>
-                  @for (lt of leaveTypes(); track lt.id) {
-                    <option [value]="lt.id">{{ lt.name }}</option>
-                  }
-                </select>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group col">
-                  <label>Year <span class="req-star">*</span></label>
-                  <input
-                    type="number"
-                    [(ngModel)]="allocateForm.year"
-                    name="year"
-                    required
-                    class="form-control"
-                  />
+                  <div class="form-group">
+                    <label for="allocType">Leave Type *</label>
+                    <select id="allocType" [(ngModel)]="allocateForm.leaveTypeId" name="leaveTypeId" required class="form-control">
+                      <option value="">-- Select Leave Category --</option>
+                      @for (lt of leaveTypes(); track lt.id) {
+                        <option [value]="lt.id">{{ lt.name }}</option>
+                      }
+                    </select>
+                  </div>
                 </div>
-                <div class="form-group col">
-                  <label>Allocated Days <span class="req-star">*</span></label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    [(ngModel)]="allocateForm.allocatedDays"
-                    name="allocatedDays"
-                    required
-                    class="form-control"
-                  />
+
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">event_repeat</span>
+                    <span>Entitlement Quota</span>
+                  </div>
+                  <div class="form-grid-2">
+                    <div class="form-group">
+                      <label for="allocYear">Calendar Year *</label>
+                      <input
+                        id="allocYear"
+                        type="number"
+                        [(ngModel)]="allocateForm.year"
+                        name="year"
+                        required
+                        class="form-control"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label for="allocDays">Allocated Days *</label>
+                      <input
+                        id="allocDays"
+                        type="number"
+                        step="0.5"
+                        [(ngModel)]="allocateForm.allocatedDays"
+                        name="allocatedDays"
+                        required
+                        class="form-control"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="allocCarry">Carried Forward Days</label>
+                    <input
+                      id="allocCarry"
+                      type="number"
+                      step="0.5"
+                      [(ngModel)]="allocateForm.carriedForward"
+                      name="carriedForward"
+                      class="form-control"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="allocNotes">Operational Notes</label>
+                    <input
+                      id="allocNotes"
+                      type="text"
+                      [(ngModel)]="allocateForm.notes"
+                      name="notes"
+                      placeholder="Optional allocation note or policy reference"
+                      class="form-control"
+                    />
+                  </div>
                 </div>
-              </div>
-
-              <div class="form-group">
-                <label>Carried Forward Days</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  [(ngModel)]="allocateForm.carriedForward"
-                  name="carriedForward"
-                  class="form-control"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>Notes</label>
-                <input
-                  type="text"
-                  [(ngModel)]="allocateForm.notes"
-                  name="notes"
-                  placeholder="Optional allocation note"
-                  class="form-control"
-                />
-              </div>
-
-              <div class="modal-actions">
-                <button type="button" (click)="closeAllocateModal()" class="btn btn-secondary">
-                  Dismiss
-                </button>
-                <button type="submit" class="btn btn-primary">Save Balance</button>
-              </div>
-            </form>
+              </form>
+            </div>
+            <div class="drawer-footer">
+              <button type="button" (click)="closeAllocateModal()" class="btn btn-secondary">
+                Dismiss
+              </button>
+              <button type="submit" form="allocateForm" class="btn btn-primary">
+                <span class="material-symbols-outlined icon-sm">save</span>
+                <span>Save Balance</span>
+              </button>
+            </div>
           </div>
         </div>
       }
 
-      <!-- Modal: Add Leave Type -->
+      <!-- Contextual Drawer: Create Leave Type -->
       @if (showCreateTypeModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Create Leave Type</h3>
-              <button (click)="closeCreateTypeModal()" class="close-btn">×</button>
+        <div class="drawer-backdrop" (click)="closeCreateTypeModal()">
+          <div class="drawer-panel" (click)="$event.stopPropagation()">
+            <div class="drawer-header">
+              <div class="drawer-header-content">
+                <h2 class="drawer-title">Create Leave Type</h2>
+                <p class="drawer-subtitle">Define policy rules, deduction criteria, and defaults</p>
+              </div>
+              <button type="button" class="drawer-close" (click)="closeCreateTypeModal()" aria-label="Close drawer">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
-            <form (ngSubmit)="confirmCreateType()" class="modal-form">
-              <div class="form-row">
-                <div class="form-group col">
-                  <label>Code <span class="req-star">*</span> (e.g. ANNUAL)</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="createTypeForm.code"
-                    name="code"
-                    required
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group col">
-                  <label>Name <span class="req-star">*</span></label>
-                  <input
-                    type="text"
-                    [(ngModel)]="createTypeForm.name"
-                    name="name"
-                    required
-                    class="form-control"
-                  />
-                </div>
-              </div>
+            <div class="drawer-body">
+              <form (ngSubmit)="confirmCreateType()" id="createTypeForm">
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">category</span>
+                    <span>General Classification</span>
+                  </div>
+                  <div class="form-grid-2">
+                    <div class="form-group">
+                      <label for="typeCode">Code * (e.g. ANNUAL)</label>
+                      <input
+                        id="typeCode"
+                        type="text"
+                        [(ngModel)]="createTypeForm.code"
+                        name="code"
+                        required
+                        class="form-control"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label for="typeName">Name *</label>
+                      <input
+                        id="typeName"
+                        type="text"
+                        [(ngModel)]="createTypeForm.name"
+                        name="name"
+                        required
+                        class="form-control"
+                      />
+                    </div>
+                  </div>
 
-              <div class="form-group">
-                <label>Description</label>
-                <textarea
-                  [(ngModel)]="createTypeForm.description"
-                  name="description"
-                  rows="2"
-                  class="form-control"
-                ></textarea>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group col">
-                  <label>Default Days / Year</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    [(ngModel)]="createTypeForm.defaultDaysPerYear"
-                    name="defaultDaysPerYear"
-                    class="form-control"
-                  />
+                  <div class="form-group">
+                    <label for="typeDesc">Description</label>
+                    <textarea
+                      id="typeDesc"
+                      [(ngModel)]="createTypeForm.description"
+                      name="description"
+                      rows="2"
+                      placeholder="Policy rules and eligibility requirements..."
+                      class="form-control"
+                    ></textarea>
+                  </div>
                 </div>
-                <div class="form-group col checkbox-group">
-                  <label>
+
+                <div class="form-section">
+                  <div class="form-section-title">
+                    <span class="material-symbols-outlined icon-sm">rule</span>
+                    <span>Entitlement & Rules</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="typeDays">Default Days / Year</label>
                     <input
-                      type="checkbox"
-                      [(ngModel)]="createTypeForm.isPaid"
-                      name="isPaid"
+                      id="typeDays"
+                      type="number"
+                      step="0.5"
+                      [(ngModel)]="createTypeForm.defaultDaysPerYear"
+                      name="defaultDaysPerYear"
+                      class="form-control"
                     />
-                    Is Paid Leave
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="createTypeForm.deductWorkingDaysOnly"
-                      name="deductWorkingDaysOnly"
-                    />
-                    Skip Weekends & Holidays
-                  </label>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="createTypeForm.isPaid"
+                        name="isPaid"
+                      />
+                      <span>Is Paid Leave (Remunerated)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="createTypeForm.deductWorkingDaysOnly"
+                        name="deductWorkingDaysOnly"
+                      />
+                      <span>Deduct Working Days Only (Skip weekends & statutory holidays)</span>
+                    </label>
+                  </div>
                 </div>
-              </div>
-
-              <div class="modal-actions">
-                <button type="button" (click)="closeCreateTypeModal()" class="btn btn-secondary">
-                  Dismiss
-                </button>
-                <button type="submit" class="btn btn-primary">Create Type</button>
-              </div>
-            </form>
+              </form>
+            </div>
+            <div class="drawer-footer">
+              <button type="button" (click)="closeCreateTypeModal()" class="btn btn-secondary">
+                Dismiss
+              </button>
+              <button type="submit" form="createTypeForm" class="btn btn-primary">
+                <span class="material-symbols-outlined icon-sm">check</span>
+                <span>Create Type</span>
+              </button>
+            </div>
           </div>
         </div>
       }

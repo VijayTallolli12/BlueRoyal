@@ -304,143 +304,202 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         }
       }
 
-      <!-- Cell Edit Drawer / Modal -->
+      <!-- Cell Edit Contextual Drawer -->
       @if (editingRecord(); as editItem) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Edit Timesheet Cell</h3>
-              <button (click)="closeEditDrawer()" class="btn-close">&times;</button>
+        <div class="drawer-backdrop" (click)="closeEditDrawer()">
+          <div class="drawer-panel" (click)="$event.stopPropagation()">
+            <div class="drawer-header">
+              <div class="drawer-header-content">
+                <h2 class="drawer-title">Timesheet Cell Adjustment</h2>
+                <p class="drawer-subtitle">
+                  {{ editItem.employeeName }} ({{ editItem.employeeCode }}) • {{ editItem.record.workDate }} ({{ editItem.record.dayType }})
+                </p>
+              </div>
+              <button type="button" class="drawer-close" (click)="closeEditDrawer()" aria-label="Close drawer">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
-            <div class="modal-body">
-              <p><strong>Employee:</strong> {{ editItem.employeeName }} ({{ editItem.employeeCode }})</p>
-              <p><strong>Work Date:</strong> {{ editItem.record.workDate }} ({{ editItem.record.dayType }})</p>
-
+            <div class="drawer-body">
               @if (editItem.record.hasAnomaly) {
                 <div class="alert alert-warning">
-                  <strong>Anomaly Detected:</strong> {{ editItem.record.anomalyReason }}
+                  <span class="material-symbols-outlined">warning</span>
+                  <div>
+                    <strong>Anomaly Detected:</strong> {{ editItem.record.anomalyReason }}
+                  </div>
                 </div>
               }
 
-              <div class="form-group">
-                <label>Actual Hours Worked (0 - 24):</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="24"
-                  [(ngModel)]="editActualHours"
-                  class="form-control"
-                />
+              <div class="form-section">
+                <div class="form-section-title">
+                  <span class="material-symbols-outlined icon-sm">schedule</span>
+                  <span>Hours & Status</span>
+                </div>
+                <div class="form-group">
+                  <label for="editHours">Actual Hours Worked (0 - 24) *</label>
+                  <input
+                    id="editHours"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="24"
+                    [(ngModel)]="editActualHours"
+                    class="form-control"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" [(ngModel)]="editIsOnLeave" />
+                    <span>On Approved Leave</span>
+                  </label>
+                </div>
               </div>
 
-              <div class="form-group">
-                <label>
-                  <input type="checkbox" [(ngModel)]="editIsOnLeave" />
-                  On Approved Leave
-                </label>
-              </div>
+              <div class="form-section">
+                <div class="form-section-title">
+                  <span class="material-symbols-outlined icon-sm">verified_user</span>
+                  <span>Mandatory Audit Rationale</span>
+                </div>
+                <div class="form-group">
+                  <label for="editReason">Change Justification Reason *</label>
+                  <input
+                    id="editReason"
+                    type="text"
+                    [(ngModel)]="editChangeReason"
+                    placeholder="e.g. Approved site overtime timesheet verified"
+                    class="form-control"
+                    required
+                  />
+                </div>
 
-              <div class="form-group">
-                <label>Change Justification Reason (Required for Audit):</label>
-                <input
-                  type="text"
-                  [(ngModel)]="editChangeReason"
-                  placeholder="e.g. Approved site overtime timesheet verified"
-                  class="form-control"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>Remarks:</label>
-                <input
-                  type="text"
-                  [(ngModel)]="editRemarks"
-                  placeholder="Optional operational notes"
-                  class="form-control"
-                />
+                <div class="form-group">
+                  <label for="editRemarks">Operational Remarks</label>
+                  <input
+                    id="editRemarks"
+                    type="text"
+                    [(ngModel)]="editRemarks"
+                    placeholder="Optional operational notes"
+                    class="form-control"
+                  />
+                </div>
               </div>
 
               <!-- Audit Trail for this cell -->
-              <div class="audit-history">
-                <h4>Cell Audit Trail</h4>
+              <div class="form-section">
+                <div class="form-section-title">
+                  <span class="material-symbols-outlined icon-sm">history</span>
+                  <span>Cell Modification History</span>
+                </div>
                 @if (cellAuditLogs().length === 0) {
-                  <p class="text-muted">No historical manual modifications on this cell.</p>
+                  <p class="text-muted" style="font-size: 0.8125rem; margin: 0.5rem 0;">No historical manual modifications on this cell.</p>
                 } @else {
-                  <ul class="audit-list">
+                  <div class="audit-timeline">
                     @for (log of cellAuditLogs(); track log.id) {
-                      <li>
-                        <strong>{{ log.fieldName }}:</strong>
-                        <span>{{ log.oldValue || 'None' }} &rarr; {{ log.newValue }}</span>
-                        <span class="audit-reason">({{ log.changeReason }})</span>
-                        <span class="audit-time">{{ log.createdAt | date:'short' }}</span>
-                      </li>
+                      <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-content">
+                          <div class="timeline-header">
+                            <strong>{{ log.fieldName }}</strong>
+                            <span class="timeline-time">{{ log.createdAt | date:'short' }}</span>
+                          </div>
+                          <div class="timeline-change">
+                            <span>{{ log.oldValue || 'None' }} &rarr; <strong>{{ log.newValue }}</strong></span>
+                          </div>
+                          <div class="timeline-reason">{{ log.changeReason }}</div>
+                        </div>
+                      </div>
                     }
-                  </ul>
+                  </div>
                 }
               </div>
             </div>
-            <div class="modal-footer">
-              <button (click)="closeEditDrawer()" class="btn btn-secondary">Cancel</button>
-              <button (click)="saveCellEdit()" class="btn btn-primary">Save Changes</button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Unlock Modal -->
-      @if (showUnlockModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Unlock Timesheet Period</h3>
-              <button (click)="showUnlockModal.set(false)" class="btn-close">&times;</button>
-            </div>
-            <div class="modal-body">
-              <div class="alert alert-warning">
-                <strong>Controlled Unlock Protocol:</strong>
-                Unlocking returns this period to DRAFT status. Resubmission, reapproval,
-                and relocking will be strictly required before payroll integration.
-              </div>
-
-              <div class="form-group">
-                <label>Audit Justification Reason (Min 15 Characters):</label>
-                <textarea
-                  rows="4"
-                  [(ngModel)]="unlockReasonText"
-                  placeholder="Enter detailed audit justification for reopening timesheet..."
-                  class="form-control"
-                ></textarea>
-                <span class="char-count">
-                  Characters: {{ unlockReasonText.length }} / 15 minimum
-                </span>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button (click)="showUnlockModal.set(false)" class="btn btn-secondary">Cancel</button>
+            <div class="drawer-footer">
+              <button type="button" (click)="closeEditDrawer()" class="btn btn-secondary">Cancel</button>
               <button
-                (click)="onExecuteUnlock()"
-                [disabled]="unlockReasonText.trim().length < 15"
-                class="btn btn-danger"
+                type="button"
+                (click)="saveCellEdit()"
+                [disabled]="!editChangeReason || editChangeReason.trim().length === 0"
+                class="btn btn-primary"
               >
-                Confirm Unlock
+                <span class="material-symbols-outlined icon-sm">save</span>
+                <span>Save Changes</span>
               </button>
             </div>
           </div>
         </div>
       }
 
-      <!-- Excel Import Modal -->
-      @if (showImportModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card modal-lg">
-            <div class="modal-header">
-              <h3>Import Attendance from Excel</h3>
-              <button (click)="showImportModal.set(false)" class="btn-close">&times;</button>
+      <!-- Unlock Confirmation Dialog (Consequential Super Admin Override) -->
+      @if (showUnlockModal()) {
+        <div class="dialog-backdrop" (click)="showUnlockModal.set(false)">
+          <div class="dialog-box dialog-danger" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+              <div class="dialog-header-content">
+                <div class="dialog-icon danger">
+                  <span class="material-symbols-outlined">lock_open</span>
+                </div>
+                <div>
+                  <h3 class="dialog-title">Unlock Timesheet Period</h3>
+                  <p class="dialog-subtitle">Return period to DRAFT status for corrections</p>
+                </div>
+              </div>
+              <button type="button" class="dialog-close" (click)="showUnlockModal.set(false)">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
-            <div class="modal-body">
+            <div class="dialog-body">
+              <div class="alert alert-warning">
+                <strong>Controlled Unlock Protocol:</strong>
+                Unlocking returns this period to DRAFT status. Resubmission, reapproval,
+                and relocking will be strictly required before payroll integration.
+              </div>
+
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="unlockReason">Audit Justification Reason (Min 15 Characters) *</label>
+                <textarea
+                  id="unlockReason"
+                  rows="4"
+                  [(ngModel)]="unlockReasonText"
+                  placeholder="Enter detailed audit justification for reopening timesheet..."
+                  class="form-control"
+                ></textarea>
+                <span class="char-count" style="display: block; font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-text-muted);">
+                  Characters: {{ unlockReasonText.length }} / 15 minimum
+                </span>
+              </div>
+            </div>
+            <div class="dialog-footer">
+              <button type="button" (click)="showUnlockModal.set(false)" class="btn btn-secondary">Cancel</button>
+              <button
+                type="button"
+                (click)="onExecuteUnlock()"
+                [disabled]="unlockReasonText.trim().length < 15"
+                class="btn btn-danger"
+              >
+                <span class="material-symbols-outlined icon-sm">lock_open</span>
+                <span>Confirm Unlock</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Excel Import Contextual Drawer -->
+      @if (showImportModal()) {
+        <div class="drawer-backdrop" (click)="showImportModal.set(false)">
+          <div class="drawer-panel drawer-panel-lg" (click)="$event.stopPropagation()">
+            <div class="drawer-header">
+              <div class="drawer-header-content">
+                <h2 class="drawer-title">Import Timesheet from Excel</h2>
+                <p class="drawer-subtitle">Batch ingest time tracking entries with dry-run validation</p>
+              </div>
+              <button type="button" class="drawer-close" (click)="showImportModal.set(false)">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div class="drawer-body">
               <div class="form-group">
-                <label>Select Spreadsheet (.xlsx, .xls):</label>
+                <label>Select Spreadsheet (.xlsx, .xls) *</label>
                 <input
                   type="file"
                   accept=".xlsx, .xls"
@@ -450,18 +509,22 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
               </div>
 
               @if (importResult(); as res) {
-                <div class="import-report">
-                  <h4>
-                    Validation Report:
-                    <span [class.text-success]="res.errorCount === 0" [class.text-danger]="res.errorCount > 0">
-                      {{ res.errorCount === 0 ? 'Validation Passed' : 'Validation Failed' }}
+                <div class="import-report" style="margin-top: 1.5rem;">
+                  <div class="report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <h4 style="margin: 0; font-size: 1rem;">Validation Report</h4>
+                    <span class="badge" [class.badge-success]="res.errorCount === 0" [class.badge-danger]="res.errorCount > 0">
+                      {{ res.errorCount === 0 ? 'Validation Passed' : 'Validation Failed (' + res.errorCount + ' Errors)' }}
                     </span>
-                  </h4>
-                  <p>Analyzed: {{ res.totalRows }} | Valid: {{ res.validRows }} | Errors: {{ res.errorCount }}</p>
+                  </div>
+                  <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 1rem;">
+                    <div class="kpi-card"><span class="kpi-label">Analyzed</span><span class="kpi-value">{{ res.totalRows }}</span></div>
+                    <div class="kpi-card"><span class="kpi-label">Valid Rows</span><span class="kpi-value text-success">{{ res.validRows }}</span></div>
+                    <div class="kpi-card"><span class="kpi-label">Error Rows</span><span class="kpi-value" [class.text-danger]="res.errorCount > 0">{{ res.errorCount }}</span></div>
+                  </div>
 
                   @if (res.errors && res.errors.length > 0) {
-                    <div class="error-table-container">
-                      <table class="table error-table">
+                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                      <table class="data-table">
                         <thead>
                           <tr>
                             <th>Row</th>
@@ -488,48 +551,59 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                 </div>
               }
             </div>
-            <div class="modal-footer">
-              <button (click)="showImportModal.set(false)" class="btn btn-secondary">Close</button>
+            <div class="drawer-footer">
+              <button type="button" (click)="showImportModal.set(false)" class="btn btn-secondary">Close</button>
               <button
+                type="button"
                 (click)="onDryRunImport()"
                 [disabled]="!selectedFile"
-                class="btn btn-outline"
+                class="btn btn-secondary"
               >
-                Dry-Run Validation
+                <span class="material-symbols-outlined icon-sm">fact_check</span>
+                <span>Dry-Run Validation</span>
               </button>
               <button
+                type="button"
                 (click)="onExecuteImport()"
                 [disabled]="!selectedFile || (importResult() && importResult()!.errorCount > 0)"
                 class="btn btn-primary"
               >
-                Execute Full Import
+                <span class="material-symbols-outlined icon-sm">upload</span>
+                <span>Execute Full Import</span>
               </button>
             </div>
           </div>
         </div>
       }
 
-      <!-- Create Period Modal -->
+      <!-- Create Period Focused Dialog -->
       @if (showCreatePeriodModal()) {
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>Create Monthly Attendance Period</h3>
-              <button (click)="showCreatePeriodModal.set(false)" class="btn-close">&times;</button>
+        <div class="dialog-backdrop" (click)="showCreatePeriodModal.set(false)">
+          <div class="dialog-box" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+              <div class="dialog-header-content">
+                <h3 class="dialog-title">Generate Monthly Timesheet Period</h3>
+                <p class="dialog-subtitle">Create a new calendar tracking window</p>
+              </div>
+              <button type="button" class="dialog-close" (click)="showCreatePeriodModal.set(false)">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
-            <div class="modal-body">
+            <div class="dialog-body">
               <div class="form-group">
-                <label>Period Code (YYYY-MM):</label>
+                <label for="newPeriodCode">Period Code (YYYY-MM) *</label>
                 <input
+                  id="newPeriodCode"
                   type="text"
                   [(ngModel)]="newPeriodCode"
                   placeholder="e.g. 2026-05"
                   class="form-control"
                 />
               </div>
-              <div class="form-group">
-                <label>Display Name (Optional):</label>
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="newPeriodName">Display Name (Optional)</label>
                 <input
+                  id="newPeriodName"
                   type="text"
                   [(ngModel)]="newPeriodName"
                   placeholder="e.g. May 2026"
@@ -537,9 +611,12 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                 />
               </div>
             </div>
-            <div class="modal-footer">
-              <button (click)="showCreatePeriodModal.set(false)" class="btn btn-secondary">Cancel</button>
-              <button (click)="onCreatePeriod()" class="btn btn-primary">Generate Period</button>
+            <div class="dialog-footer">
+              <button type="button" (click)="showCreatePeriodModal.set(false)" class="btn btn-secondary">Cancel</button>
+              <button type="button" (click)="onCreatePeriod()" [disabled]="!newPeriodCode" class="btn btn-primary">
+                <span class="material-symbols-outlined icon-sm">add_circle</span>
+                <span>Generate Period</span>
+              </button>
             </div>
           </div>
         </div>

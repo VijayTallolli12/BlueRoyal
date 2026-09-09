@@ -6,21 +6,45 @@ import { Sequelize } from 'sequelize';
 dotenv.config({ path: path.resolve(__dirname, '../../../backend/.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
+const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_INTERNAL_URL;
 const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
 const dbName = process.env.DB_NAME || 'blue_royal_hrms_dev';
 const dbUser = process.env.DB_USER || 'postgres';
 const dbPassword = process.env.DB_PASSWORD || 'postgres';
+const isSsl = process.env.DB_SSL === 'true' || (dbUrl !== undefined && dbUrl.includes('sslmode=require'));
 
-export const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
-  host: dbHost,
-  port: dbPort,
-  dialect: 'postgres',
-  logging: process.env.DB_LOGGING === 'true' ? console.log : false,
-  pool: {
-    max: 10,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
-});
+const dialectOptions = isSsl
+  ? {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    }
+  : {};
+
+export const sequelize = dbUrl
+  ? new Sequelize(dbUrl, {
+      dialect: 'postgres',
+      logging: process.env.DB_LOGGING === 'true' ? console.log : false,
+      dialectOptions,
+      pool: {
+        max: 10,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
+    })
+  : new Sequelize(dbName, dbUser, dbPassword, {
+      host: dbHost,
+      port: dbPort,
+      dialect: 'postgres',
+      logging: process.env.DB_LOGGING === 'true' ? console.log : false,
+      dialectOptions,
+      pool: {
+        max: 10,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
+    });

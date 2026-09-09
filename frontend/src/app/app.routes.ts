@@ -20,6 +20,34 @@ export const routes: Routes = [
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+    path: 'employees',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'employees:read' },
+    loadComponent: () =>
+      import('./features/employees/employees.component').then((m) => m.EmployeesComponent),
+  },
+  {
+    path: 'onboarding',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'onboarding:read' },
+    loadComponent: () =>
+      import('./features/onboarding/onboarding-hub.component').then((m) => m.OnboardingHubComponent),
+  },
+  {
+    path: 'documents',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'documents:read' },
+    loadComponent: () =>
+      import('./features/documents/document-center.component').then((m) => m.DocumentCenterComponent),
+  },
+  {
+    path: 'documents/my-documents',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'documents:self_read' },
+    loadComponent: () =>
+      import('./features/documents/my-documents.component').then((m) => m.MyDocumentsComponent),
+  },
+  {
     path: 'masters',
     canActivate: [authGuard, permissionGuard],
     data: { permission: 'designations:read' },

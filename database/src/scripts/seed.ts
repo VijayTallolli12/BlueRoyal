@@ -134,6 +134,41 @@ const BASELINE_PERMISSIONS: PermissionSeed[] = [
   { code: 'payroll:finalize', description: 'Finalize and immutably lock payroll period', module: 'payroll' },
   { code: 'payroll:unlock', description: 'Unlock finalized payroll period (Super Admin only)', module: 'payroll' },
   { code: 'payroll:self_read', description: 'View own finalized payroll records and payslips', module: 'payroll' },
+
+  // Phase 5: Employee Onboarding
+  { code: 'onboarding:read', description: 'View employee onboarding records and progress', module: 'onboarding' },
+  { code: 'onboarding:create', description: 'Initiate employee onboarding workflow', module: 'onboarding' },
+  { code: 'onboarding:update', description: 'Update onboarding checklist and details', module: 'onboarding' },
+  { code: 'onboarding:complete', description: 'Complete employee onboarding and activate profile', module: 'onboarding' },
+
+  // Phase 5: Employee Documents
+  { code: 'document_types:read', description: 'View document catalog types', module: 'documents' },
+  { code: 'document_types:manage', description: 'Create and update document catalog types', module: 'documents' },
+  { code: 'documents:read', description: 'View enterprise employee documents and compliance status', module: 'documents' },
+  { code: 'documents:create', description: 'Upload employee compliance documents', module: 'documents' },
+  { code: 'documents:update', description: 'Update document metadata', module: 'documents' },
+  { code: 'documents:delete', description: 'Soft-delete employee documents', module: 'documents' },
+  { code: 'documents:verify', description: 'Verify or reject compliance documents', module: 'documents' },
+  { code: 'documents:self_read', description: 'View own personal compliance documents', module: 'documents' },
+  { code: 'documents:self_upload', description: 'Upload own compliance documents', module: 'documents' },
+
+  // Phase 5: Expiry Alerts & Monitoring
+  { code: 'expiry:read', description: 'View document expiry alerts and telemetry', module: 'expiry' },
+
+  // Phase 6: Separations & End of Service Final Settlement
+  { code: 'separations:read', description: 'View employee separation records and clearances', module: 'separations' },
+  { code: 'separations:create', description: 'Initiate employee separation notice', module: 'separations' },
+  { code: 'separations:update', description: 'Update separation notice and departmental clearance', module: 'separations' },
+  { code: 'settlements:read', description: 'View final settlement vouchers and calculation breakdowns', module: 'settlements' },
+  { code: 'settlements:create', description: 'Generate draft settlement calculations', module: 'settlements' },
+  { code: 'settlements:update', description: 'Add or remove settlement adjustment lines', module: 'settlements' },
+  { code: 'settlements:review', description: 'Submit settlement voucher for review', module: 'settlements' },
+  { code: 'settlements:approve', description: 'Approve final settlement voucher', module: 'settlements' },
+  { code: 'settlements:finalize', description: 'Finalize and immutably lock settlement voucher', module: 'settlements' },
+  { code: 'settlements:unlock', description: 'Unlock finalized settlement voucher (Super Admin only)', module: 'settlements' },
+  { code: 'settlements:self_read', description: 'View own finalized settlement payslip statement', module: 'settlements' },
+  { code: 'air_ticket_policies:read', description: 'View air ticket repatriation policies', module: 'air_ticket_policies' },
+  { code: 'air_ticket_policies:manage', description: 'Manage air ticket repatriation policies', module: 'air_ticket_policies' },
 ];
 
 const DEFAULT_DESIGNATIONS = [
@@ -258,10 +293,22 @@ async function seed(): Promise<void> {
         'attendance',
         'leave',
         'payroll',
+        'onboarding',
+        'documents',
+        'document_types',
+        'expiry',
+        'separations',
+        'settlements',
+        'air_ticket_policies',
       ];
       for (const perm of allPermissions) {
         const [mod] = perm.code.split(':');
-        if (hrModules.includes(mod) && perm.code !== 'system:configure' && perm.code !== 'payroll:unlock') {
+        if (
+          hrModules.includes(mod) &&
+          perm.code !== 'system:configure' &&
+          perm.code !== 'payroll:unlock' &&
+          perm.code !== 'settlements:unlock'
+        ) {
           await sequelize.query(
             `INSERT INTO role_permissions (role_id, permission_id, created_at)
              VALUES (:roleId, :permissionId, NOW())
@@ -284,6 +331,9 @@ async function seed(): Promise<void> {
         'leave:self_create',
         'leave:self_cancel',
         'payroll:self_read',
+        'documents:self_read',
+        'documents:self_upload',
+        'settlements:self_read',
       ];
       for (const perm of allPermissions.filter((p) => empCodes.includes(p.code))) {
         await sequelize.query(

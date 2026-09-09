@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
-interface SlideItem {
+export interface LoginHeroSlide {
   id: number;
   imageUrl: string;
   category: string;
@@ -13,6 +13,45 @@ interface SlideItem {
   description: string;
   highlights: string[];
 }
+
+export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
+  {
+    id: 1,
+    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80',
+    category: 'ENTERPRISE WORKFORCE INTELLIGENCE',
+    categoryIcon: 'corporate_fare',
+    title: 'Unified Human Capital & Governance',
+    description: 'Streamline multi-department operations, employee lifecycles, and role-based access management with real-time auditability.',
+    highlights: ['Multi-Entity Governance', 'Immutable Audit Trails', 'Continuous Security']
+  },
+  {
+    id: 2,
+    imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
+    category: 'ATTENDANCE & ROSTER AUTOMATION',
+    categoryIcon: 'schedule',
+    title: 'Deterministic Punch Rostering & Biometric Sync',
+    description: 'Eliminate manual timesheet disputes through automated grace-period resolution, locked attendance states, and overtime precision.',
+    highlights: ['Automated Grace Policies', 'Locked Shift States', 'Biometric Integration']
+  },
+  {
+    id: 3,
+    imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
+    category: 'STATUTORY COMPLIANCE & LEAVE',
+    categoryIcon: 'event_available',
+    title: 'Statutory Leave Entitlements & Policy Engine',
+    description: 'Enforce deterministic leave accrual, carry-forward limits, and manager approval chains with complete regulatory compliance.',
+    highlights: ['Multi-Tier Approvals', 'Statutory Accruals', 'Encashment Calculation']
+  },
+  {
+    id: 4,
+    imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1600&q=80',
+    category: 'MULTI-TIER PAYROLL ENGINE',
+    categoryIcon: 'payments',
+    title: 'Zero-Variance Payroll & Compensation Engine',
+    description: 'Execute company-wide payroll runs directly from locked attendance and verified compensation structures with immutable ledger audits.',
+    highlights: ['Zero Variance', 'Locked Attendance Source', 'Instant Itemized Slips']
+  }
+];
 
 @Component({
   selector: 'app-login',
@@ -77,18 +116,16 @@ interface SlideItem {
             }
           </div>
 
-          <!-- Bottom Navigation & Indicators -->
+          <!-- Bottom Navigation & Indicators: Unified single system -->
           <footer class="slider-footer">
-            <div class="slider-dots" role="tablist" aria-label="Slide indicators">
-              @for (slide of slides; track slide.id; let i = $index) {
-                <button
-                  type="button"
-                  class="slider-dot"
-                  [class.active]="currentSlide() === i"
-                  (click)="goToSlide(i)"
-                  [attr.aria-label]="'Go to slide ' + (i + 1)"
-                ></button>
-              }
+            <div class="slider-progress-block">
+              <span class="slide-counter">0{{ currentSlide() + 1 }} / 0{{ slides.length }}</span>
+              <div class="slide-progress-track">
+                <div
+                  class="slide-progress-bar"
+                  [style.width.%]="((currentSlide() + 1) / slides.length) * 100"
+                ></div>
+              </div>
             </div>
 
             <div class="slider-nav-arrows">
@@ -461,39 +498,42 @@ interface SlideItem {
       font-size: 1rem;
     }
 
-    /* Slider Footer / Dots / Controls */
+    /* Slider Footer / Progress & Chevron Navigation */
     .slider-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding-top: 1.5rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    .slider-dots {
+    .slider-progress-block {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 1rem;
     }
 
-    .slider-dot {
-      width: 10px;
-      height: 10px;
+    .slide-counter {
+      font-family: var(--font-mono, monospace);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #93c5fd;
+      letter-spacing: 0.05em;
+    }
+
+    .slide-progress-track {
+      width: 90px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.2);
       border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.3);
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      transition: width 0.35s ease, background-color 0.35s ease;
+      overflow: hidden;
     }
 
-    .slider-dot:hover {
-      background: rgba(255, 255, 255, 0.6);
-    }
-
-    .slider-dot.active {
-      width: 32px;
+    .slide-progress-bar {
+      height: 100%;
       background: #3b82f6;
+      border-radius: 9999px;
+      transition: width 0.4s ease;
     }
 
     .slider-nav-arrows {
@@ -792,45 +832,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   public showPassword = signal(false);
   public errorMessage = signal<string | null>(null);
 
-  // Auto-sliding showcase data
-  public slides: SlideItem[] = [
-    {
-      id: 1,
-      imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80',
-      category: 'ENTERPRISE WORKFORCE INTELLIGENCE',
-      categoryIcon: 'corporate_fare',
-      title: 'Unified Human Capital & Governance',
-      description: 'Streamline multi-department operations, employee lifecycles, and role-based access management with real-time auditability.',
-      highlights: ['Multi-Entity Governance', 'Immutable Audit Trails', 'Continuous Security']
-    },
-    {
-      id: 2,
-      imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
-      category: 'ATTENDANCE & ROSTER AUTOMATION',
-      categoryIcon: 'schedule',
-      title: 'Deterministic Punch Rostering & Biometric Sync',
-      description: 'Eliminate manual timesheet disputes through automated grace-period resolution, locked attendance states, and overtime precision.',
-      highlights: ['Automated Grace Policies', 'Locked Shift States', 'Biometric Integration']
-    },
-    {
-      id: 3,
-      imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
-      category: 'STATUTORY COMPLIANCE & LEAVE',
-      categoryIcon: 'event_available',
-      title: 'Statutory Leave Entitlements & Policy Engine',
-      description: 'Enforce deterministic leave accrual, carry-forward limits, and manager approval chains with complete regulatory compliance.',
-      highlights: ['Multi-Tier Approvals', 'Statutory Accruals', 'Encashment Calculation']
-    },
-    {
-      id: 4,
-      imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1600&q=80',
-      category: 'MULTI-TIER PAYROLL ENGINE',
-      categoryIcon: 'payments',
-      title: 'Zero-Variance Payroll & Compensation Engine',
-      description: 'Execute company-wide payroll runs directly from locked attendance and verified compensation structures with immutable ledger audits.',
-      highlights: ['Zero Variance', 'Locked Attendance Source', 'Instant Itemized Slips']
-    }
-  ];
+  // Auto-sliding showcase data (Configurable architectural model)
+  public slides: LoginHeroSlide[] = DEFAULT_LOGIN_HERO_SLIDES;
 
   public currentSlide = signal(0);
   private timerId: ReturnType<typeof setInterval> | null = null;

@@ -13,11 +13,16 @@ export class AuthController {
 
       const result = await AuthService.login(email, password, { ip, userAgent, correlationId });
 
+      const isSecure =
+        env.COOKIE_SECURE !== undefined
+          ? env.COOKIE_SECURE
+          : env.NODE_ENV === 'production' || env.NODE_ENV === 'staging';
+
       // Set refresh token in secure HttpOnly cookie
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isSecure,
+        sameSite: env.COOKIE_SAME_SITE as any,
         maxAge: env.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
       });
 
@@ -49,10 +54,15 @@ export class AuthController {
         correlationId,
       });
 
+      const isSecure =
+        env.COOKIE_SECURE !== undefined
+          ? env.COOKIE_SECURE
+          : env.NODE_ENV === 'production' || env.NODE_ENV === 'staging';
+
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isSecure,
+        sameSite: env.COOKIE_SAME_SITE as any,
         maxAge: env.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
       });
 
@@ -80,10 +90,15 @@ export class AuthController {
 
       await AuthService.logout(refreshToken, userId, { ip, userAgent, correlationId });
 
+      const isSecure =
+        env.COOKIE_SECURE !== undefined
+          ? env.COOKIE_SECURE
+          : env.NODE_ENV === 'production' || env.NODE_ENV === 'staging';
+
       res.clearCookie('refreshToken', {
         httpOnly: true,
-        secure: env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isSecure,
+        sameSite: env.COOKIE_SAME_SITE as any,
       });
 
       sendSuccess(req, res, { message: 'Logged out successfully.' }, 200);

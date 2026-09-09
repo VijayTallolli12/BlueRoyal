@@ -14,3 +14,6 @@ export * from './salary/salary';
 export * from './attendance/attendance';
 export * from './leave/leave';
 export * from './payroll/payroll';
+export * from './document/document';
+export * from './onboarding/onboarding';
+export * from './settlement/settlement';
