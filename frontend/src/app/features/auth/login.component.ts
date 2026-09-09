@@ -9,147 +9,230 @@ import { AuthService } from '../../core/services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="login-container">
-      <div class="login-card">
-        <div class="header">
-          <h2>Blue Royal HRMS</h2>
-          <p class="subtitle">Enterprise Portal Sign-In</p>
+    <div class="auth-page">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-brand">
+            <div class="brand-badge">BR</div>
+            <div class="brand-info">
+              <h1>BLUE ROYAL</h1>
+              <span class="subtext">ENTERPRISE HRMS SUITE</span>
+            </div>
+          </div>
+          <p class="auth-desc">Sign in to your corporate administrative or employee account</p>
         </div>
 
         @if (errorMessage()) {
-          <div class="alert alert-danger">{{ errorMessage() }}</div>
+          <div class="alert alert-danger" role="alert">
+            <span>{{ errorMessage() }}</span>
+            <button type="button" class="alert-close" (click)="errorMessage.set(null)">×</button>
+          </div>
         }
 
-        <form (ngSubmit)="onSubmit()">
+        <form (ngSubmit)="onSubmit()" class="auth-form" novalidate>
           <div class="form-group">
-            <label for="email">Email Address</label>
+            <label for="email">Work Email</label>
             <input
               id="email"
               type="email"
               [(ngModel)]="email"
               name="email"
-              placeholder="admin@blueroyal.com"
+              placeholder="e.g. hradmin@blueroyal.local"
               required
+              autocomplete="email"
               [disabled]="isLoading()"
             />
           </div>
 
           <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              [(ngModel)]="password"
-              name="password"
-              placeholder="••••••••"
-              required
-              [disabled]="isLoading()"
-            />
+            <div class="label-row">
+              <label for="password">Password</label>
+            </div>
+            <div class="password-input-wrapper">
+              <input
+                id="password"
+                [type]="showPassword() ? 'text' : 'password'"
+                [(ngModel)]="password"
+                name="password"
+                placeholder="Enter account credentials"
+                required
+                autocomplete="current-password"
+                [disabled]="isLoading()"
+              />
+              <button
+                type="button"
+                class="btn-toggle-pwd"
+                (click)="showPassword.set(!showPassword())"
+                tabindex="-1"
+              >
+                {{ showPassword() ? 'Hide' : 'Show' }}
+              </button>
+            </div>
           </div>
 
-          <button type="submit" class="btn-submit" [disabled]="isLoading()">
+          <button type="submit" class="btn btn-primary btn-submit" [disabled]="isLoading() || !email || !password">
             @if (isLoading()) {
-              <span>Signing In...</span>
+              <span class="spinner-inline"></span>
+              <span>Authenticating...</span>
             } @else {
-              <span>Sign In</span>
+              <span>Sign In to System</span>
             }
           </button>
         </form>
+
+        <div class="auth-footer">
+          <div class="system-security-note">
+            <span>🔒 Enterprise Grade Session Management • Role-Based Access</span>
+          </div>
+        </div>
       </div>
     </div>
   `,
-  styles: [
-    `
-      .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: #f1f5f9;
-        padding: 1rem;
-      }
-      .login-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 2.5rem;
-        width: 100%;
-        max-width: 420px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-      }
-      .header {
-        margin-bottom: 2rem;
-        text-align: center;
-      }
-      .header h2 {
-        color: #1e3a8a;
-        font-size: 1.5rem;
-        font-weight: 700;
-      }
-      .subtitle {
-        color: #64748b;
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
-      }
-      .form-group {
-        margin-bottom: 1.25rem;
-      }
-      label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #334155;
-      }
-      input {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        outline: none;
-      }
-      input:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-      }
-      .btn-submit {
-        width: 100%;
-        padding: 0.75rem;
-        background: #1e3a8a;
-        color: #ffffff;
-        border: none;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.875rem;
-        cursor: pointer;
-        margin-top: 0.5rem;
-      }
-      .btn-submit:hover:not(:disabled) {
-        background: #1d4ed8;
-      }
-      .btn-submit:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      .alert {
-        padding: 0.75rem;
-        border-radius: 6px;
-        margin-bottom: 1rem;
-        font-size: 0.875rem;
-      }
-      .alert-danger {
-        background: #fef2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
-      }
-    `,
-  ],
+  styles: [`
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 100%);
+      padding: 1.5rem;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 440px;
+      background: #ffffff;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      padding: 2.25rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .auth-header {
+      margin-bottom: 1.75rem;
+    }
+
+    .auth-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .brand-badge {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--brand-600), var(--brand-900));
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9375rem;
+      letter-spacing: -0.05em;
+    }
+
+    .brand-info h1 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    .brand-info .subtext {
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .auth-desc {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .password-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-input-wrapper input {
+      padding-right: 3.5rem;
+    }
+
+    .btn-toggle-pwd {
+      position: absolute;
+      right: 0.5rem;
+      background: transparent;
+      border: none;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .btn-toggle-pwd:hover {
+      color: var(--text-primary);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 0.625rem;
+      margin-top: 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .spinner-inline {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .auth-footer {
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border-default);
+      text-align: center;
+    }
+
+    .system-security-note {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+    }
+  `]
 })
 export class LoginComponent {
   public email = '';
   public password = '';
   public isLoading = signal(false);
+  public showPassword = signal(false);
   public errorMessage = signal<string | null>(null);
 
   constructor(
@@ -159,7 +242,7 @@ export class LoginComponent {
 
   public onSubmit(): void {
     if (!this.email || !this.password) {
-      this.errorMessage.set('Please enter both email and password.');
+      this.errorMessage.set('Please provide both work email and password.');
       return;
     }
 
@@ -174,7 +257,7 @@ export class LoginComponent {
       error: (err) => {
         this.isLoading.set(false);
         this.errorMessage.set(
-          err.error?.error?.message || 'Login failed. Please check your credentials.',
+          err.error?.error?.message || 'Authentication failed. Please verify credentials.',
         );
       },
     });

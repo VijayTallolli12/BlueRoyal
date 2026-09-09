@@ -528,77 +528,71 @@ type MasterTab =
   styles: [
     `
       .masters-container {
-        margin-top: 1.5rem;
+        margin-top: 0.5rem;
       }
       .sub-nav {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 0.375rem;
         background: #ffffff;
-        padding: 0.75rem;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        margin-bottom: 1.5rem;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 1.25rem;
       }
       .sub-nav button {
-        background: none;
-        border: 1px solid #e2e8f0;
-        padding: 0.5rem 0.85rem;
-        border-radius: 6px;
-        font-size: 0.875rem;
+        background: transparent;
+        border: 1px solid transparent;
+        padding: 0.4rem 0.75rem;
+        border-radius: var(--radius-md);
+        font-size: 0.8125rem;
+        font-weight: 500;
         cursor: pointer;
-        color: #4a5568;
-        transition: all 0.15s;
+        color: var(--text-secondary);
+        transition: all 0.15s ease;
       }
       .sub-nav button:hover {
-        background: #f7fafc;
-        color: #1a202c;
+        background: var(--bg-surface-subtle);
+        color: var(--text-primary);
       }
       .sub-nav button.active {
-        background: #1a365d;
-        color: #ffffff;
-        border-color: #1a365d;
+        background: var(--brand-50);
+        color: var(--brand-700);
+        border-color: var(--brand-200);
         font-weight: 600;
       }
       .panel {
         background: #ffffff;
-        border-radius: 8px;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
         padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
       }
       .panel-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .panel-header h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
       }
       .subtitle {
-        color: #718096;
-        margin-bottom: 1rem;
-        font-size: 0.95rem;
-      }
-      .btn-primary {
-        background: #2b6cb0;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        cursor: pointer;
-      }
-      .btn-success {
-        background: #2f855a;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        cursor: pointer;
+        color: var(--text-muted);
+        margin-bottom: 1.25rem;
+        font-size: 0.8125rem;
       }
       .create-form {
-        background: #f7fafc;
-        border: 1px solid #e2e8f0;
-        padding: 1rem;
-        border-radius: 6px;
-        margin-bottom: 1.5rem;
+        background: var(--bg-surface-subtle);
+        border: 1px solid var(--border-default);
+        padding: 1rem 1.25rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.25rem;
       }
       .form-row {
         display: flex;
@@ -611,52 +605,36 @@ type MasterTab =
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 0.75rem;
       }
-      input, select {
-        padding: 0.5rem;
-        border: 1px solid #cbd5e0;
-        border-radius: 4px;
-        font-size: 0.9rem;
-      }
-      .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 1rem;
-      }
-      .data-table th, .data-table td {
-        text-align: left;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #edf2f7;
-        font-size: 0.9rem;
-      }
-      .data-table th {
-        background: #f7fafc;
-        color: #4a5568;
-        font-weight: 600;
-      }
       .badge {
         display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        background: #edf2f7;
-        color: #4a5568;
+        padding: 0.2rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: var(--bg-surface-subtle);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-default);
       }
       .badge-active {
-        background: #c6f6d5;
-        color: #22543d;
+        background: var(--status-approved-bg);
+        color: var(--status-approved-text);
+        border-color: var(--status-approved-border);
       }
       .tag {
-        background: #ebf8ff;
-        color: #2b6cb0;
+        background: var(--brand-50);
+        color: var(--brand-700);
         padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-weight: 500;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.75rem;
+        border: 1px solid var(--brand-200);
       }
       .flow-card {
-        background: #f7fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--bg-surface-subtle);
+        border: 1px solid var(--border-default);
         padding: 1.25rem;
-        border-radius: 8px;
+        border-radius: var(--radius-md);
         margin-top: 1rem;
       }
       .flow-diagram {
@@ -664,38 +642,42 @@ type MasterTab =
         align-items: center;
         gap: 1rem;
         margin: 1rem 0;
+        flex-wrap: wrap;
       }
       .flow-step {
         background: #ffffff;
-        border: 1px solid #cbd5e0;
+        border: 1px solid var(--border-default);
         padding: 0.75rem 1rem;
-        border-radius: 6px;
+        border-radius: var(--radius-md);
         display: flex;
         flex-direction: column;
+        box-shadow: var(--shadow-sm);
       }
       .flow-arrow {
-        font-size: 1.5rem;
-        color: #a0aec0;
+        font-size: 1.25rem;
+        color: var(--text-muted);
       }
       .resolution-tester {
-        background: #f7fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--bg-surface-subtle);
+        border: 1px solid var(--border-default);
         padding: 1.25rem;
-        border-radius: 8px;
+        border-radius: var(--radius-md);
         margin-top: 1rem;
       }
       .resolution-result {
         margin-top: 1rem;
         padding: 1rem;
-        border-radius: 6px;
+        border-radius: var(--radius-md);
       }
       .resolution-result.resolved {
-        background: #f0fff4;
-        border: 1px solid #9ae6b4;
+        background: var(--status-approved-bg);
+        border: 1px solid var(--status-approved-border);
+        color: var(--status-approved-text);
       }
       .resolution-result.error {
-        background: #fff5f5;
-        border: 1px solid #feb2b2;
+        background: var(--status-danger-bg);
+        border: 1px solid var(--status-danger-border);
+        color: var(--status-danger-text);
       }
     `,
   ],

@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -17,7 +17,9 @@ export class AuthService {
 
   // Signals for modern Angular reactivity
   public currentUser = signal<UserProfileDto | null>(null);
-  public isAuthenticated = computed(() => this.currentUser() !== null);
+  public get isAuthenticated(): boolean {
+    return this.currentUser() !== null;
+  }
 
   constructor(private http: HttpClient) {
     this.restoreSession();

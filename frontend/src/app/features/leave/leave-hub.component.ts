@@ -12,14 +12,17 @@ import {
   EmployeeDto,
 } from '@blue-royal/contracts';
 
+import { AppShellComponent } from '../../core/layout/app-shell.component';
+
 type ActiveTab = 'requests' | 'types' | 'balances';
 
 @Component({
   selector: 'app-leave-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AppShellComponent],
   template: `
-    <div class="leave-hub-container">
+    <app-shell>
+      <div class="leave-hub-container">
       <!-- Header -->
       <div class="hub-header">
         <div>
@@ -504,65 +507,66 @@ type ActiveTab = 'requests' | 'types' | 'balances';
           </div>
         </div>
       }
-    </div>
+      </div>
+    </app-shell>
   `,
   styles: [
     `
       .leave-hub-container {
-        padding: 24px;
-        max-width: 1300px;
-        margin: 0 auto;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
       }
       .hub-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        align-items: flex-start;
+        border-bottom: 1px solid var(--border-default);
+        padding-bottom: 1.25rem;
+        flex-wrap: wrap;
+        gap: 1rem;
       }
       .hub-header h2 {
-        margin: 0 0 4px 0;
-        font-size: 22px;
-        color: #0f172a;
+        margin: 0 0 0.25rem 0;
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--text-primary);
       }
       .subtitle {
         margin: 0;
-        color: #64748b;
-        font-size: 13px;
+        color: var(--text-secondary);
+        font-size: 0.8125rem;
       }
       .tab-buttons {
         display: flex;
-        gap: 8px;
-        background: #f1f5f9;
-        padding: 4px;
-        border-radius: 8px;
+        gap: 0.375rem;
+        background: #ffffff;
+        padding: 0.375rem;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
       }
       .tab-btn {
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
+        padding: 0.4rem 0.875rem;
+        border-radius: var(--radius-md);
+        font-size: 0.8125rem;
+        font-weight: 500;
         cursor: pointer;
-        border: none;
+        border: 1px solid transparent;
         background: transparent;
-        color: #64748b;
-        transition: all 0.2s;
+        color: var(--text-secondary);
+        transition: all 0.15s ease;
       }
       .tab-btn.active {
-        background: #ffffff;
-        color: #0284c7;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        background: var(--brand-50);
+        color: var(--brand-700);
+        border-color: var(--brand-200);
+        font-weight: 600;
       }
       .panel {
         background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
         overflow: hidden;
       }
       .panel-bar {
@@ -570,8 +574,8 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         justify-content: space-between;
         align-items: center;
         padding: 16px 20px;
-        border-bottom: 1px solid #e2e8f0;
-        background: #fafafa;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface-alt);
       }
       .filter-group {
         display: flex;
@@ -582,7 +586,7 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       }
       .form-select {
         padding: 6px 12px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--color-border);
         border-radius: 6px;
         font-size: 13px;
       }
@@ -592,26 +596,26 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         font-size: 14px;
       }
       .data-table th {
-        background: #f8fafc;
+        background: var(--color-surface-alt);
         padding: 12px 16px;
         text-align: left;
         font-weight: 600;
-        color: #475569;
-        border-bottom: 1px solid #e2e8f0;
+        color: var(--color-text-secondary);
+        border-bottom: 1px solid var(--color-border);
       }
       .data-table td {
         padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
+        border-bottom: 1px solid var(--color-hover);
+        color: var(--color-text-primary);
       }
       .req-number {
         font-family: monospace;
         font-weight: 600;
-        color: #0284c7;
+        color: var(--color-info);
       }
       .tag-type {
-        background: #f1f5f9;
-        color: #334155;
+        background: var(--color-hover);
+        color: var(--color-text-primary);
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 12px;
@@ -619,7 +623,7 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       }
       .sub-text {
         font-size: 12px;
-        color: #94a3b8;
+        color: var(--color-disabled);
       }
       .badge {
         padding: 4px 8px;
@@ -629,41 +633,41 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         text-transform: uppercase;
       }
       .status-pending {
-        background: #fef3c7;
-        color: #92400e;
+        background: var(--color-warning-bg);
+        color: var(--color-warning-text);
       }
       .status-approved {
-        background: #dcfce7;
-        color: #166534;
+        background: var(--color-success-bg);
+        color: var(--color-success-text);
       }
       .status-rejected {
-        background: #fee2e2;
-        color: #991b1b;
+        background: var(--color-danger-bg);
+        color: var(--color-danger-text);
       }
       .status-cancelled {
-        background: #f1f5f9;
-        color: #64748b;
+        background: var(--color-hover);
+        color: var(--color-text-muted);
       }
       .badge-paid {
-        background: #dbeafe;
-        color: #1e40af;
+        background: var(--color-primary-light);
+        color: var(--color-info);
       }
       .badge-unpaid {
-        background: #fee2e2;
-        color: #991b1b;
+        background: var(--color-danger-bg);
+        color: var(--color-danger-text);
       }
       .badge-active {
-        background: #dcfce7;
-        color: #166534;
+        background: var(--color-success-bg);
+        color: var(--color-success-text);
       }
       .text-emerald {
         color: #059669;
       }
       .text-indigo {
-        color: #4f46e5;
+        color: var(--color-info);
       }
       .text-amber {
-        color: #d97706;
+        color: var(--color-warning);
       }
       .actions-cell {
         display: flex;
@@ -678,25 +682,25 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         border: none;
       }
       .btn-primary {
-        background: #0284c7;
-        color: #ffffff;
+        background: var(--color-info);
+        color: var(--color-surface);
       }
       .btn-secondary {
-        background: #e2e8f0;
-        color: #334155;
+        background: var(--color-border);
+        color: var(--color-text-primary);
       }
       .btn-success {
-        background: #10b981;
-        color: #ffffff;
+        background: var(--color-success);
+        color: var(--color-surface);
       }
       .btn-danger {
-        background: #ef4444;
-        color: #ffffff;
+        background: var(--color-danger);
+        color: var(--color-surface);
       }
       .btn-danger-outline {
         background: transparent;
-        border: 1px solid #ef4444;
-        color: #ef4444;
+        border: 1px solid var(--color-danger);
+        color: var(--color-danger);
       }
       .btn-sm {
         padding: 4px 8px;
@@ -705,13 +709,13 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       .empty-cell {
         text-align: center;
         padding: 32px;
-        color: #94a3b8;
+        color: var(--color-disabled);
         font-style: italic;
       }
       .loading {
         text-align: center;
         padding: 32px;
-        color: #64748b;
+        color: var(--color-text-muted);
       }
       .alert {
         padding: 12px 16px;
@@ -723,13 +727,13 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         align-items: center;
       }
       .alert-danger {
-        background: #fef2f2;
-        color: #b91c1c;
+        background: var(--color-danger-bg);
+        color: var(--color-danger);
         border: 1px solid #fecaca;
       }
       .alert-success {
-        background: #f0fdf4;
-        color: #15803d;
+        background: var(--color-success-bg);
+        color: var(--color-success-text);
         border: 1px solid #bbf7d0;
       }
       .alert-close {
@@ -753,7 +757,7 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         z-index: 1000;
       }
       .modal-card {
-        background: #ffffff;
+        background: var(--color-surface);
         border-radius: 12px;
         width: 100%;
         max-width: 520px;
@@ -769,13 +773,13 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       .modal-header h3 {
         margin: 0;
         font-size: 18px;
-        color: #0f172a;
+        color: var(--color-text-primary);
       }
       .close-btn {
         background: transparent;
         border: none;
         font-size: 24px;
-        color: #94a3b8;
+        color: var(--color-disabled);
         cursor: pointer;
       }
       .form-group {
@@ -792,13 +796,13 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         display: block;
         font-size: 13px;
         font-weight: 600;
-        color: #334155;
+        color: var(--color-text-primary);
         margin-bottom: 6px;
       }
       .form-control {
         width: 100%;
         padding: 8px 12px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--color-border);
         border-radius: 6px;
         font-size: 14px;
         box-sizing: border-box;
@@ -823,7 +827,7 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       }
       .rejection-hint {
         font-size: 11px;
-        color: #dc2626;
+        color: var(--color-danger);
         font-style: italic;
       }
     `,

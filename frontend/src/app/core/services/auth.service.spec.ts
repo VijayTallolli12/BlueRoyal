@@ -16,7 +16,7 @@ describe('AuthService Foundation', () => {
   it('should initialize with null current user', () => {
     service.clearTokens();
     expect(service.currentUser()).toBeNull();
-    expect(service.isAuthenticated()).toBe(false);
+    expect(service.isAuthenticated).toBe(false);
   });
 
   it('should return false for permissions when user is not authenticated', () => {

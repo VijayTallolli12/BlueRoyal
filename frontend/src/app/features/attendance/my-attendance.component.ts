@@ -5,12 +5,15 @@ import { RouterModule } from '@angular/router';
 import { AttendanceApiService } from '../../core/services/attendance-api.service';
 import { AttendancePeriodDto, AttendanceRecordDto } from '@blue-royal/contracts';
 
+import { AppShellComponent } from '../../core/layout/app-shell.component';
+
 @Component({
   selector: 'app-my-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, AppShellComponent],
   template: `
-    <div class="my-attendance-container">
+    <app-shell>
+      <div class="my-attendance-container">
       <div class="header-bar">
         <div>
           <h2>My Monthly Attendance</h2>
@@ -115,32 +118,34 @@ import { AttendancePeriodDto, AttendanceRecordDto } from '@blue-royal/contracts'
           <div class="empty-state">No attendance records found for this period.</div>
         }
       }
-    </div>
+      </div>
+    </app-shell>
   `,
   styles: [
     `
       .my-attendance-container {
-        padding: 1.5rem;
-        background: #f8fafc;
-        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
       }
       .header-bar {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
+        align-items: flex-start;
         flex-wrap: wrap;
         gap: 1rem;
+        border-bottom: 1px solid var(--border-default);
+        padding-bottom: 1.25rem;
       }
       .header-bar h2 {
-        font-size: 1.5rem;
+        font-size: 1.375rem;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--text-primary);
         margin: 0;
       }
       .subtitle {
-        font-size: 0.875rem;
-        color: #64748b;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
       }
       .period-select {
         display: flex;
@@ -148,10 +153,11 @@ import { AttendancePeriodDto, AttendanceRecordDto } from '@blue-royal/contracts'
         gap: 0.5rem;
       }
       .select-input {
-        padding: 0.5rem 1rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        background: #fff;
+        padding: 0.45rem 0.875rem;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-md);
+        background: #ffffff;
+        font-size: 0.8125rem;
       }
       .kpi-grid {
         display: grid;
@@ -161,7 +167,7 @@ import { AttendancePeriodDto, AttendanceRecordDto } from '@blue-royal/contracts'
       }
       .kpi-card {
         background: #fff;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-border);
         border-radius: 8px;
         padding: 1rem;
         display: flex;
@@ -169,23 +175,23 @@ import { AttendancePeriodDto, AttendanceRecordDto } from '@blue-royal/contracts'
       }
       .kpi-label {
         font-size: 0.75rem;
-        color: #64748b;
+        color: var(--color-text-muted);
         text-transform: uppercase;
         font-weight: 600;
       }
       .kpi-value {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--color-text-primary);
         margin-top: 0.25rem;
       }
-      .text-accent { color: #2563eb; }
-      .text-muted { color: #64748b; }
+      .text-accent { color: var(--color-info); }
+      .text-muted { color: var(--color-text-muted); }
       .font-mono { font-family: monospace; }
       .font-bold { font-weight: 700; }
       .table-card {
         background: #fff;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-border);
         border-radius: 8px;
         overflow: auto;
       }
@@ -196,13 +202,13 @@ import { AttendancePeriodDto, AttendanceRecordDto } from '@blue-royal/contracts'
         white-space: nowrap;
       }
       .data-table th, .data-table td {
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--color-border);
         padding: 0.75rem 1rem;
         text-align: left;
       }
       .data-table th {
-        background: #f8fafc;
-        color: #475569;
+        background: var(--color-surface-alt);
+        color: var(--color-text-secondary);
         font-weight: 600;
       }
       .badge {
@@ -211,19 +217,19 @@ import { AttendancePeriodDto, AttendanceRecordDto } from '@blue-royal/contracts'
         font-size: 0.75rem;
         font-weight: 600;
       }
-      .badge-present { background: #dcfce7; color: #15803d; }
-      .badge-absent { background: #fee2e2; color: #b91c1c; }
-      .badge-leave { background: #fef9c3; color: #854d0e; }
-      .badge-off { background: #f1f5f9; color: #475569; }
+      .badge-present { background: var(--color-success-bg); color: var(--color-success-text); }
+      .badge-absent { background: var(--color-danger-bg); color: var(--color-danger); }
+      .badge-leave { background: var(--color-warning-bg); color: #854d0e; }
+      .badge-off { background: var(--color-hover); color: var(--color-text-secondary); }
       .tag-day-type { font-size: 0.75rem; padding: 0.15rem 0.4rem; border-radius: 4px; }
-      .tag-regular_workday { background: #f1f5f9; color: #334155; }
-      .tag-weekly_off { background: #eff6ff; color: #1d4ed8; }
-      .tag-public_holiday { background: #fef3c7; color: #b45309; }
-      .row-absent { background: #fff5f5; }
-      .row-leave { background: #fefce8; }
-      .loading-state, .empty-state { text-align: center; padding: 3rem; color: #64748b; }
+      .tag-regular_workday { background: var(--color-hover); color: var(--color-text-primary); }
+      .tag-weekly_off { background: var(--color-selected); color: var(--color-primary-hover); }
+      .tag-public_holiday { background: var(--color-warning-bg); color: var(--color-warning); }
+      .row-absent { background: var(--color-danger-bg); }
+      .row-leave { background: var(--color-warning-bg); }
+      .loading-state, .empty-state { text-align: center; padding: 3rem; color: var(--color-text-muted); }
       .alert { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
-      .alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+      .alert-danger { background: var(--color-danger-bg); color: var(--color-danger); border: 1px solid #fecaca; }
     `,
   ],
 })

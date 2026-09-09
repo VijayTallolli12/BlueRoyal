@@ -4,12 +4,15 @@ import { RouterModule } from '@angular/router';
 import { PayrollService } from '../../core/services/payroll.service';
 import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
 
+import { AppShellComponent } from '../../core/layout/app-shell.component';
+
 @Component({
   selector: 'app-my-payroll',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AppShellComponent],
   template: `
-    <div class="my-payroll-container">
+    <app-shell>
+      <div class="my-payroll-container">
       <!-- Header -->
       <div class="header">
         <div>
@@ -240,45 +243,43 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
           </div>
         </div>
       }
-    </div>
+      </div>
+    </app-shell>
   `,
   styles: [
     `
       .my-payroll-container {
-        padding: 24px;
-        max-width: 1200px;
-        margin: 0 auto;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
       }
       .header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        align-items: flex-start;
+        border-bottom: 1px solid var(--border-default);
+        padding-bottom: 1.25rem;
+        flex-wrap: wrap;
+        gap: 1rem;
       }
-      .header h2 { margin: 0 0 4px 0; font-size: 22px; color: #0f172a; }
-      .subtitle { margin: 0; color: #64748b; font-size: 13px; }
+      .header h2 { margin: 0 0 0.25rem 0; font-size: 1.375rem; font-weight: 700; color: var(--text-primary); }
+      .subtitle { margin: 0; color: var(--text-secondary); font-size: 0.8125rem; }
 
       .payslips-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 20px;
+        gap: 1rem;
       }
       .payslip-card {
         background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem;
+        box-shadow: var(--shadow-sm);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: transform 0.15s, box-shadow 0.15s;
       }
       .payslip-card:hover {
         transform: translateY(-2px);
@@ -293,13 +294,13 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
       .period-code {
         font-size: 16px;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--color-text-primary);
         display: block;
       }
       .basis-tag {
         font-size: 11px;
         font-weight: 600;
-        color: #64748b;
+        color: var(--color-text-muted);
         margin-top: 2px;
       }
       .status-badge {
@@ -308,7 +309,7 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
         font-size: 11px;
         font-weight: 700;
       }
-      .status-finalized { background: #dcfce7; color: #15803d; }
+      .status-finalized { background: var(--color-success-bg); color: var(--color-success-text); }
 
       .card-body { margin-bottom: 16px; }
       .stat-row {
@@ -317,22 +318,22 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
         font-size: 13px;
         margin-bottom: 8px;
       }
-      .stat-row .label { color: #64748b; }
-      .stat-row .val { font-weight: 600; color: #1e293b; }
+      .stat-row .label { color: var(--color-text-muted); }
+      .stat-row .val { font-weight: 600; color: var(--color-text-primary); }
       .stat-divider {
         height: 1px;
-        background: #e2e8f0;
+        background: var(--color-border);
         margin: 10px 0;
       }
       .stat-row.highlight {
         align-items: center;
         margin-bottom: 0;
       }
-      .stat-row.highlight .label { font-weight: 600; color: #0f172a; }
+      .stat-row.highlight .label { font-weight: 600; color: var(--color-text-primary); }
       .net-val {
         font-size: 18px;
         font-weight: 700;
-        color: #16a34a;
+        color: var(--color-success);
       }
 
       .btn {
@@ -346,9 +347,9 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
         text-decoration: none;
       }
       .btn-block { width: 100%; display: block; text-align: center; }
-      .btn-primary { background: #2563eb; color: #ffffff; }
-      .btn-primary:hover { background: #1d4ed8; }
-      .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+      .btn-primary { background: var(--color-info); color: var(--color-surface); }
+      .btn-primary:hover { background: var(--color-primary-hover); }
+      .btn-secondary { background: var(--color-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border); }
       .btn-sm { padding: 4px 10px; font-size: 12px; }
 
       .alert {
@@ -360,12 +361,12 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
         align-items: center;
         font-size: 13px;
       }
-      .alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+      .alert-danger { background: var(--color-danger-bg); color: var(--color-danger-text); border: 1px solid #fecaca; }
       .alert-close { background: none; border: none; font-size: 18px; cursor: pointer; color: inherit; }
 
-      .loading, .empty-state { text-align: center; padding: 60px 20px; color: #64748b; }
+      .loading, .empty-state { text-align: center; padding: 60px 20px; color: var(--color-text-muted); }
       .empty-icon { font-size: 48px; margin-bottom: 12px; }
-      .empty-state h3 { margin: 0 0 6px 0; font-size: 18px; color: #0f172a; }
+      .empty-state h3 { margin: 0 0 6px 0; font-size: 18px; color: var(--color-text-primary); }
       .empty-state p { margin: 0; font-size: 14px; max-width: 480px; margin: 0 auto; }
 
       /* Modal & Payslip Document */
@@ -379,25 +380,25 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
       .modal-payslip {
         max-width: 840px;
         width: 100%;
-        background: #ffffff;
+        background: var(--color-surface);
         border-radius: 12px;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         overflow: hidden;
       }
       .modal-header {
         padding: 16px 24px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--color-border);
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
       .modal-header-actions { display: flex; gap: 8px; align-items: center; }
-      .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #94a3b8; }
+      .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--color-disabled); }
       .modal-body { padding: 24px; max-height: 75vh; overflow-y: auto; }
       .modal-footer {
         padding: 14px 24px;
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
+        background: var(--color-surface-alt);
+        border-top: 1px solid var(--color-border);
         display: flex;
         justify-content: flex-end;
         gap: 10px;
@@ -405,13 +406,13 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
 
       .payslip-document {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        color: #1e293b;
+        color: var(--color-text-primary);
       }
       .document-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        border-bottom: 2px solid #0f172a;
+        border-bottom: 2px solid var(--color-text-primary);
         padding-bottom: 16px;
         margin-bottom: 16px;
       }
@@ -420,39 +421,39 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
         font-size: 24px;
         font-weight: 800;
         letter-spacing: 1px;
-        color: #0f172a;
+        color: var(--color-text-primary);
       }
-      .company-sub { margin: 2px 0 0 0; font-size: 12px; color: #64748b; }
+      .company-sub { margin: 2px 0 0 0; font-size: 12px; color: var(--color-text-muted); }
       .doc-meta { text-align: right; }
-      .doc-title { font-size: 18px; font-weight: 800; color: #2563eb; }
-      .doc-period { font-size: 13px; font-weight: 600; color: #334155; }
-      .doc-dates { font-size: 12px; color: #64748b; }
+      .doc-title { font-size: 18px; font-weight: 800; color: var(--color-info); }
+      .doc-period { font-size: 13px; font-weight: 600; color: var(--color-text-primary); }
+      .doc-dates { font-size: 12px; color: var(--color-text-muted); }
 
       .emp-details-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 12px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
         border-radius: 8px;
         padding: 12px 16px;
         margin-bottom: 16px;
       }
-      .dt-label { display: block; font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; }
-      .dt-val { font-size: 14px; font-weight: 700; color: #0f172a; }
+      .dt-label { display: block; font-size: 11px; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; }
+      .dt-val { font-size: 14px; font-weight: 700; color: var(--color-text-primary); }
 
       .attendance-bar {
         display: flex;
         gap: 16px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-border);
         border-radius: 8px;
         padding: 10px 16px;
         margin-bottom: 16px;
         background: #fbfcfe;
       }
       .att-kpi { flex: 1; }
-      .att-kpi span { font-size: 11px; text-transform: uppercase; color: #64748b; display: block; }
-      .att-kpi strong { font-size: 15px; color: #0f172a; }
+      .att-kpi span { font-size: 11px; text-transform: uppercase; color: var(--color-text-muted); display: block; }
+      .att-kpi strong { font-size: 15px; color: var(--color-text-primary); }
 
       .breakdown-columns {
         display: flex;
@@ -465,11 +466,11 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
         font-weight: 700;
         text-transform: uppercase;
         padding: 6px 0;
-        border-bottom: 2px solid #e2e8f0;
+        border-bottom: 2px solid var(--color-border);
         margin-bottom: 6px;
       }
-      .earnings-heading { color: #16a34a; border-color: #bbf7d0; }
-      .deductions-heading { color: #dc2626; border-color: #fecaca; }
+      .earnings-heading { color: var(--color-success); border-color: #bbf7d0; }
+      .deductions-heading { color: var(--color-danger); border-color: #fecaca; }
 
       .payslip-table {
         width: 100%;
@@ -478,47 +479,47 @@ import { PayrollItemDto, EmployeePayslipDto } from '@blue-royal/contracts';
       }
       .payslip-table th {
         text-align: left;
-        color: #64748b;
+        color: var(--color-text-muted);
         padding: 6px 4px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--color-border);
       }
       .payslip-table td {
         padding: 8px 4px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--color-hover);
       }
       .text-right { text-align: right; }
       .text-center { text-align: center; }
-      .text-danger { color: #dc2626; }
-      .text-muted { color: #94a3b8; }
+      .text-danger { color: var(--color-danger); }
+      .text-muted { color: var(--color-disabled); }
       .badge-tag {
         font-size: 10px;
         padding: 2px 5px;
-        background: #fee2e2;
-        color: #991b1b;
+        background: var(--color-danger-bg);
+        color: var(--color-danger-text);
         border-radius: 4px;
       }
-      .badge-add { background: #dcfce7; color: #166534; }
+      .badge-add { background: var(--color-success-bg); color: var(--color-success-text); }
 
       .net-summary-box {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: #f8fafc;
-        border: 2px solid #e2e8f0;
+        background: var(--color-surface-alt);
+        border: 2px solid var(--color-border);
         border-radius: 8px;
         padding: 16px 20px;
         margin-top: 16px;
       }
-      .summary-left div { font-size: 13px; color: #475569; margin-bottom: 2px; }
+      .summary-left div { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 2px; }
       .summary-right { text-align: right; }
-      .net-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; display: block; }
-      .net-amount { font-size: 22px; font-weight: 800; color: #16a34a; }
+      .net-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--color-text-muted); display: block; }
+      .net-amount { font-size: 22px; font-weight: 800; color: var(--color-success); }
 
       .payslip-footer {
         text-align: center;
         margin-top: 24px;
         font-size: 11px;
-        color: #94a3b8;
+        color: var(--color-disabled);
       }
 
       @media print {

@@ -9,12 +9,15 @@ import {
   CreateLeaveRequestDto,
 } from '@blue-royal/contracts';
 
+import { AppShellComponent } from '../../core/layout/app-shell.component';
+
 @Component({
   selector: 'app-my-leave',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AppShellComponent],
   template: `
-    <div class="leave-container">
+    <app-shell>
+      <div class="leave-container">
       <!-- Top Bar -->
       <div class="header-card">
         <div class="header-info">
@@ -229,50 +232,49 @@ import {
           </div>
         </div>
       }
-    </div>
+      </div>
+    </app-shell>
   `,
   styles: [
     `
       .leave-container {
-        padding: 24px;
-        max-width: 1200px;
-        margin: 0 auto;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
       }
       .header-card {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        align-items: flex-start;
+        border-bottom: 1px solid var(--border-default);
+        padding-bottom: 1.25rem;
+        flex-wrap: wrap;
+        gap: 1rem;
       }
       .header-info h2 {
-        margin: 0 0 6px 0;
-        font-size: 24px;
-        color: #0f172a;
+        margin: 0 0 0.25rem 0;
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--text-primary);
       }
       .subtitle {
         margin: 0;
-        color: #64748b;
-        font-size: 14px;
+        color: var(--text-secondary);
+        font-size: 0.8125rem;
       }
       .header-actions {
         display: flex;
-        gap: 12px;
+        gap: 0.75rem;
         align-items: center;
       }
       .year-select {
-        padding: 8px 14px;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        font-size: 14px;
+        padding: 0.45rem 0.875rem;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-md);
+        font-size: 0.8125rem;
         font-weight: 500;
-        color: #334155;
-        background: #f8fafc;
+        color: var(--text-primary);
+        background: #ffffff;
       }
       .btn {
         padding: 8px 16px;
@@ -284,15 +286,15 @@ import {
         transition: all 0.2s;
       }
       .btn-primary {
-        background: #0284c7;
-        color: #ffffff;
+        background: var(--color-info);
+        color: var(--color-surface);
       }
       .btn-primary:hover {
-        background: #0369a1;
+        background: var(--color-info);
       }
       .btn-secondary {
-        background: #e2e8f0;
-        color: #334155;
+        background: var(--color-border);
+        color: var(--color-text-primary);
       }
       .btn-sm {
         padding: 4px 10px;
@@ -300,11 +302,11 @@ import {
       }
       .btn-danger-outline {
         background: transparent;
-        border: 1px solid #ef4444;
-        color: #ef4444;
+        border: 1px solid var(--color-danger);
+        color: var(--color-danger);
       }
       .btn-danger-outline:hover {
-        background: #fee2e2;
+        background: var(--color-danger-bg);
       }
       .btn-icon {
         font-weight: bold;
@@ -317,8 +319,8 @@ import {
         margin-bottom: 20px;
       }
       .kpi-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
         border-radius: 10px;
         padding: 18px;
         display: flex;
@@ -329,21 +331,21 @@ import {
         font-size: 12px;
         font-weight: 600;
         text-transform: uppercase;
-        color: #64748b;
+        color: var(--color-text-muted);
         margin-bottom: 8px;
       }
       .kpi-value {
         font-size: 28px;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--color-text-primary);
         margin-bottom: 4px;
       }
       .kpi-sub {
         font-size: 12px;
-        color: #94a3b8;
+        color: var(--color-disabled);
       }
       .card-remaining {
-        border-left: 4px solid #10b981;
+        border-left: 4px solid var(--color-success);
       }
       .remaining-value {
         color: #059669;
@@ -361,30 +363,30 @@ import {
         gap: 10px;
         margin-bottom: 24px;
         padding: 12px 16px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
         border-radius: 8px;
       }
       .sec-title {
         font-size: 13px;
         font-weight: 600;
-        color: #475569;
+        color: var(--color-text-secondary);
       }
       .balance-pill {
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
         border-radius: 20px;
         padding: 4px 12px;
         font-size: 12px;
-        color: #334155;
+        color: var(--color-text-primary);
       }
       .pill-name {
         font-weight: 600;
         margin-right: 4px;
       }
       .table-container {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
         border-radius: 12px;
         overflow: hidden;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -394,16 +396,16 @@ import {
         justify-content: space-between;
         align-items: center;
         padding: 16px 20px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--color-border);
       }
       .table-header h3 {
         margin: 0;
         font-size: 16px;
-        color: #0f172a;
+        color: var(--color-text-primary);
       }
       .badge-count {
-        background: #f1f5f9;
-        color: #475569;
+        background: var(--color-hover);
+        color: var(--color-text-secondary);
         font-size: 12px;
         padding: 4px 8px;
         border-radius: 12px;
@@ -415,26 +417,26 @@ import {
         font-size: 14px;
       }
       .data-table th {
-        background: #f8fafc;
+        background: var(--color-surface-alt);
         padding: 12px 16px;
         text-align: left;
         font-weight: 600;
-        color: #475569;
-        border-bottom: 1px solid #e2e8f0;
+        color: var(--color-text-secondary);
+        border-bottom: 1px solid var(--color-border);
       }
       .data-table td {
         padding: 14px 16px;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
+        border-bottom: 1px solid var(--color-hover);
+        color: var(--color-text-primary);
       }
       .req-number {
         font-family: monospace;
         font-weight: 600;
-        color: #0284c7;
+        color: var(--color-info);
       }
       .tag-type {
-        background: #f1f5f9;
-        color: #334155;
+        background: var(--color-hover);
+        color: var(--color-text-primary);
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 12px;
@@ -458,31 +460,31 @@ import {
         letter-spacing: 0.5px;
       }
       .status-pending {
-        background: #fef3c7;
-        color: #92400e;
+        background: var(--color-warning-bg);
+        color: var(--color-warning-text);
       }
       .status-approved {
-        background: #dcfce7;
-        color: #166534;
+        background: var(--color-success-bg);
+        color: var(--color-success-text);
       }
       .status-rejected {
-        background: #fee2e2;
-        color: #991b1b;
+        background: var(--color-danger-bg);
+        color: var(--color-danger-text);
       }
       .status-cancelled {
-        background: #f1f5f9;
-        color: #64748b;
+        background: var(--color-hover);
+        color: var(--color-text-muted);
       }
       .rejection-note {
         font-size: 11px;
-        color: #dc2626;
+        color: var(--color-danger);
         margin-top: 4px;
         font-style: italic;
       }
       .empty-cell {
         text-align: center;
         padding: 32px;
-        color: #94a3b8;
+        color: var(--color-disabled);
         font-style: italic;
       }
       .alert {
@@ -495,13 +497,13 @@ import {
         align-items: center;
       }
       .alert-danger {
-        background: #fef2f2;
-        color: #b91c1c;
+        background: var(--color-danger-bg);
+        color: var(--color-danger);
         border: 1px solid #fecaca;
       }
       .alert-success {
-        background: #f0fdf4;
-        color: #15803d;
+        background: var(--color-success-bg);
+        color: var(--color-success-text);
         border: 1px solid #bbf7d0;
       }
       .alert-close {
@@ -526,7 +528,7 @@ import {
         z-index: 1000;
       }
       .modal-card {
-        background: #ffffff;
+        background: var(--color-surface);
         border-radius: 12px;
         width: 100%;
         max-width: 520px;
@@ -542,13 +544,13 @@ import {
       .modal-header h3 {
         margin: 0;
         font-size: 18px;
-        color: #0f172a;
+        color: var(--color-text-primary);
       }
       .close-btn {
         background: transparent;
         border: none;
         font-size: 24px;
-        color: #94a3b8;
+        color: var(--color-disabled);
         cursor: pointer;
       }
       .form-group {
@@ -565,16 +567,16 @@ import {
         display: block;
         font-size: 13px;
         font-weight: 600;
-        color: #334155;
+        color: var(--color-text-primary);
         margin-bottom: 6px;
       }
       .req-star {
-        color: #ef4444;
+        color: var(--color-danger);
       }
       .form-control {
         width: 100%;
         padding: 8px 12px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--color-border);
         border-radius: 6px;
         font-size: 14px;
         box-sizing: border-box;
@@ -588,7 +590,7 @@ import {
       .loading-spinner {
         text-align: center;
         padding: 40px;
-        color: #64748b;
+        color: var(--color-text-muted);
       }
     `,
   ],
