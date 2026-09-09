@@ -2,9 +2,18 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 
-// Look for .env in root or backend/.env
-dotenv.config({ path: path.resolve(__dirname, '../../../backend/.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+// Look for .env in root or backend/.env across dev and compiled production environments
+const envSearchDirs = [
+  process.cwd(),
+  path.resolve(process.cwd(), 'backend'),
+  path.resolve(__dirname, '../../..'),
+  path.resolve(__dirname, '../../../backend'),
+  path.resolve(__dirname, '../../../..'),
+  path.resolve(__dirname, '../../../../backend'),
+];
+for (const dir of envSearchDirs) {
+  dotenv.config({ path: path.join(dir, '.env') });
+}
 
 const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_INTERNAL_URL;
 const dbHost = process.env.DB_HOST || 'localhost';

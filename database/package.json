@@ -6,11 +6,16 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "migrate": "ts-node src/scripts/migrate.ts up",
-    "migrate:undo": "ts-node src/scripts/migrate.ts down",
-    "status": "ts-node src/scripts/migrate.ts status",
-    "seed": "ts-node src/scripts/seed.ts",
-    "seed:demo": "ts-node src/scripts/seed-demo-users.ts"
+    "migrate": "node dist/scripts/migrate.js up",
+    "migrate:undo": "node dist/scripts/migrate.js down",
+    "status": "node dist/scripts/migrate.js status",
+    "migrate:dev": "ts-node src/scripts/migrate.ts up",
+    "migrate:undo:dev": "ts-node src/scripts/migrate.ts down",
+    "status:dev": "ts-node src/scripts/migrate.ts status",
+    "seed": "node dist/src/scripts/seed.js",
+    "seed:demo": "node dist/src/scripts/seed-demo-users.js",
+    "seed:dev": "ts-node src/scripts/seed.ts",
+    "seed:demo:dev": "ts-node src/scripts/seed-demo-users.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -1,21 +1,42 @@
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { Umzug, SequelizeStorage } from 'umzug';
 import { QueryInterface } from 'sequelize';
 import { sequelize } from './config/db';
 
+const isCompiled = __filename.endsWith('.js');
+const migrationGlob = isCompiled ? 'migrations/*.js' : 'migrations/*.ts';
+const migrationCwd = path.resolve(__dirname, '..');
+
 export const migrator = new Umzug({
   migrations: {
-    glob: ['migrations/*.ts', { cwd: path.resolve(__dirname, '..') }],
+    glob: [migrationGlob, { cwd: migrationCwd }],
     resolve: ({ name, path: migrationPath, context }) => {
+      // Normalize migration name to ensure seamless compatibility with sequelize_meta:
+      // whether discovered as .js in production or .ts in dev, recorded name remains .ts.
+      const normalizedName = name.replace(/\.js$/, '.ts');
       return {
-        name,
+        name: normalizedName,
+        path: migrationPath,
         up: async () => {
-          const migration = await import(migrationPath as string);
-          return migration.up(context);
+          if (!migrationPath) throw new Error(`Missing migration path for ${name}`);
+          const importUrl = pathToFileURL(migrationPath).href;
+          const migration = await import(importUrl);
+          const upFn = migration.up || migration.default?.up;
+          if (typeof upFn !== 'function') {
+            throw new Error(`Migration ${name} does not export an up() function`);
+          }
+          return upFn(context);
         },
         down: async () => {
-          const migration = await import(migrationPath as string);
-          return migration.down(context);
+          if (!migrationPath) throw new Error(`Missing migration path for ${name}`);
+          const importUrl = pathToFileURL(migrationPath).href;
+          const migration = await import(importUrl);
+          const downFn = migration.down || migration.default?.down;
+          if (typeof downFn !== 'function') {
+            throw new Error(`Migration ${name} does not export a down() function`);
+          }
+          return downFn(context);
         },
       };
     },
