@@ -16,7 +16,7 @@ services:
     runtime: node
     plan: starter # Starter plan required for persistent disk
     region: oregon
-    buildCommand: npm ci && npm run build:contracts && npm run build:database && npm run build:backend
+    buildCommand: npm ci --include=dev && npm run build:contracts && npm run build:database && npm run build:backend
     startCommand: npm run start --workspace=backend
     preDeployCommand: npm run db:migrate
     healthCheckPath: /api/v1/health
@@ -58,7 +58,7 @@ services:
   - type: web
     name: blue-royal-hrms
     runtime: static
-    buildCommand: npm ci && npm run build:contracts && npm run build:frontend
+    buildCommand: npm ci --include=dev && npm run build:contracts && npm run build:frontend
     staticPublishPath: frontend/dist/blue-royal-hrms/browser
     routes:
       - type: rewrite

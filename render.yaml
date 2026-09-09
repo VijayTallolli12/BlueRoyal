@@ -19,7 +19,7 @@ services:
     runtime: node
     plan: free # 100% Free tier (spins down after 15 min inactivity)
     region: oregon
-    buildCommand: npm ci && npm run build:contracts && npm run build:database && npm run build:backend
+    buildCommand: npm ci --include=dev && npm run build:contracts && npm run build:database && npm run build:backend
     startCommand: npm run db:migrate && npm run start --workspace=backend
     healthCheckPath: /api/v1/health
     envVars:
@@ -56,7 +56,7 @@ services:
   - type: web
     name: blue-royal-hrms
     runtime: static
-    buildCommand: npm ci && npm run build:contracts && npm run build:frontend
+    buildCommand: npm ci --include=dev && npm run build:contracts && npm run build:frontend
     staticPublishPath: frontend/dist/blue-royal-hrms/browser
     routes:
       - type: rewrite
