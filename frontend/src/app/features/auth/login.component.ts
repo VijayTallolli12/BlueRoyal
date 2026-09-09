@@ -207,8 +207,8 @@ interface SlideItem {
               <button
                 type="button"
                 class="demo-chip"
-                (click)="fillDemo('hradmin@blueroyal.local')"
-                title="Fill HR Admin email"
+                (click)="fillDemo('hradmin@blueroyal.local', 'HrAdmin@2026!')"
+                title="Fill HR Admin credentials"
               >
                 <span class="material-symbols-outlined icon-xs">badge</span>
                 HR Admin
@@ -216,8 +216,8 @@ interface SlideItem {
               <button
                 type="button"
                 class="demo-chip"
-                (click)="fillDemo('superadmin@blueroyal.local')"
-                title="Fill Super Admin email"
+                (click)="fillDemo('superadmin@blueroyal.local', 'SuperAdmin@2026!')"
+                title="Fill Super Admin credentials"
               >
                 <span class="material-symbols-outlined icon-xs">admin_panel_settings</span>
                 Super Admin
@@ -225,8 +225,8 @@ interface SlideItem {
               <button
                 type="button"
                 class="demo-chip"
-                (click)="fillDemo('employee@blueroyal.local')"
-                title="Fill Employee email"
+                (click)="fillDemo('employee@blueroyal.local', 'Employee@2026!')"
+                title="Fill Employee credentials"
               >
                 <span class="material-symbols-outlined icon-xs">person</span>
                 Employee
@@ -877,8 +877,11 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.startAutoSlide();
   }
 
-  public fillDemo(demoEmail: string): void {
+  public fillDemo(demoEmail: string, demoPassword?: string): void {
     this.email = demoEmail;
+    if (demoPassword) {
+      this.password = demoPassword;
+    }
     this.errorMessage.set(null);
   }
 
