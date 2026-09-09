@@ -1,20 +1,20 @@
 # ==============================================================================
 # BLUE ROYAL HRMS — RENDER BLUEPRINT SPECIFICATION (render.yaml)
 # ==============================================================================
-# Deploys:
-#   1. Managed PostgreSQL Database
-#   2. Backend Web Service (Node.js API + Persistent Disk for Employee Documents)
-#   3. Frontend Static Site (Angular Production SPA with Rewrite Rules)
+# Architecture:
+#   1. Managed PostgreSQL Database (Internal network, SSL enabled)
+#   2. Backend Web Service (Node.js API + 10GB Persistent Disk + Pre-Deploy Migrations)
+#   3. Frontend Static Site (Angular Production SPA with client-side rewrite rules)
 # ==============================================================================
 
 services:
   # ----------------------------------------------------------------------------
-  # 1. Backend API Web Service
+  # 1. Backend Web Service (Node.js API)
   # ----------------------------------------------------------------------------
   - type: web
     name: blue-royal-hrms-api
-    env: node
-    plan: starter # Starter plan allows persistent disk attachment
+    runtime: node
+    plan: starter # Starter plan enables persistent disk attachment
     region: oregon
     buildCommand: npm ci && npm run build:contracts && npm run build:database && npm run build:backend
     startCommand: npm run start --workspace=backend
@@ -32,7 +32,7 @@ services:
       - key: API_PREFIX
         value: /api/v1
       - key: CORS_ORIGIN
-        value: https://blue-royal-hrms.onrender.com
+        sync: false # Set to your frontend static site URL (e.g. https://blue-royal-hrms.onrender.com)
       - key: DATABASE_URL
         fromDatabase:
           name: blue-royal-postgres
@@ -53,10 +53,11 @@ services:
         value: info
 
   # ----------------------------------------------------------------------------
-  # 2. Frontend Angular Static Site
+  # 2. Frontend Static Site (Angular 19 SPA)
   # ----------------------------------------------------------------------------
-  - type: static
+  - type: web
     name: blue-royal-hrms
+    runtime: static
     buildCommand: npm ci && npm run build:contracts && npm run build:frontend
     staticPublishPath: frontend/dist/blue-royal-hrms/browser
     routes:
