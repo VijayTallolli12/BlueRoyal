@@ -20,7 +20,7 @@ services:
     plan: free # 100% Free tier (spins down after 15 min inactivity)
     region: oregon
     buildCommand: npm ci --include=dev && npm run build:contracts && npm run build:database && npm run build:backend
-    startCommand: npm run db:migrate && npm run start --workspace=backend
+    startCommand: npm run db:migrate && npm run db:seed && npm run db:seed:demo && npm run start --workspace=backend
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_VERSION
