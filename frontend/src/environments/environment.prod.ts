@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: '/api/v1',
+  apiUrl: 'https://blue-royal-hrms-api.onrender.com/api/v1',
 };
