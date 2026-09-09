@@ -68,8 +68,8 @@ flowchart TB
 - **Type**: `web`
 - **Runtime**: `node`
 - **Build Command**: `npm ci && npm run build:contracts && npm run build:database && npm run build:backend`
-- **Start Command**: `npm run start --workspace=backend`
-- **Pre-Deploy Command**: `npm run db:migrate`
+- **Start Command (Free Staging)**: `npm run db:migrate && npm run start --workspace=backend`
+- **Start Command (Production)**: `npm run start --workspace=backend` (with `preDeployCommand: npm run db:migrate`)
 - **Health Check Path**: `/api/v1/health`
 
 ### Initial Database Seeding (Run once after first deploy)

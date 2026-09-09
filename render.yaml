@@ -3,10 +3,11 @@
 # ==============================================================================
 # Architecture (100% Free Tier - $0/month for Staging/UAT/Demo):
 #   1. Managed PostgreSQL Database (Free Plan)
-#   2. Backend Web Service (Free Plan - Ephemeral Document Storage for Staging)
+#   2. Backend Web Service (Free Plan - Runs migrations on start, ephemeral documents)
 #   3. Frontend Static Site (Free Global CDN)
 #
-# Note: For production deployment with persistent disk, use render.prod.yaml.
+# Note: For production deployment with persistent disk & preDeployCommand,
+# use render.prod.yaml.
 # ==============================================================================
 
 services:
@@ -19,8 +20,7 @@ services:
     plan: free # 100% Free tier (spins down after 15 min inactivity)
     region: oregon
     buildCommand: npm ci && npm run build:contracts && npm run build:database && npm run build:backend
-    startCommand: npm run start --workspace=backend
-    preDeployCommand: npm run db:migrate
+    startCommand: npm run db:migrate && npm run start --workspace=backend
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
