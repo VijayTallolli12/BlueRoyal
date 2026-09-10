@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MasterService } from '../../core/services/master.service';
 import {
   DesignationDto,
@@ -36,7 +36,7 @@ export type MasterTab =
 @Component({
   selector: 'app-masters-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppShellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, AppShellComponent],
   template: `
     <app-shell>
       <div class="masters-workspace">
@@ -304,6 +304,22 @@ export type MasterTab =
                 </button>
               </div>
 
+              @if (clients().length === 0) {
+                <div class="alert-guidance alert-warning">
+                  <div class="guidance-icon"><span class="material-symbols-outlined">warning</span></div>
+                  <div class="guidance-content">
+                    <strong>Prerequisite Missing: Commercial Clients</strong>
+                    <p>Every Project Worksite must belong to a parent Commercial Client entity. You cannot create a project until at least one Client exists.</p>
+                    <div class="guidance-actions">
+                      <button type="button" class="btn btn-sm btn-primary" (click)="setTab('clients')">
+                        <span class="material-symbols-outlined icon-sm">corporate_fare</span>
+                        <span>Go to Clients Master (Step 1)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+
               @if (showNewProject) {
                 <form class="create-form" (ngSubmit)="createProject()">
                   <div class="form-grid">
@@ -346,7 +362,13 @@ export type MasterTab =
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="5" class="empty-state">No project worksites found.</td>
+                        <td colspan="5" class="empty-state">
+                          @if (clients().length === 0) {
+                            <span>No commercial clients exist yet. Create a Client first before adding Project Worksites.</span>
+                          } @else {
+                            <span>No project worksites found. Click 'Add Project' to configure a worksite.</span>
+                          }
+                        </td>
                       </tr>
                     }
                   </tbody>
@@ -368,6 +390,29 @@ export type MasterTab =
                   <span>{{ showNewAssignment ? 'Cancel' : 'Deploy Employee' }}</span>
                 </button>
               </div>
+
+              @if (employees().length === 0 || projects().length === 0 || designations().length === 0) {
+                <div class="alert-guidance alert-info">
+                  <div class="guidance-icon"><span class="material-symbols-outlined">info</span></div>
+                  <div class="guidance-content">
+                    <strong>Workforce Deployment Prerequisites</strong>
+                    <p>
+                      An authoritative deployment assignment links an <strong>Employee</strong> to an active <strong>Client Project</strong> worksite and an authoritative <strong>Designation</strong> (satisfies Onboarding Pillar 3).
+                    </p>
+                    <div class="guidance-actions">
+                      @if (employees().length === 0) {
+                        <a routerLink="/employees" class="btn btn-sm btn-outline">Add Employee in Directory</a>
+                      }
+                      @if (projects().length === 0) {
+                        <button type="button" class="btn btn-sm btn-outline" (click)="setTab('projects')">Create Project Worksite</button>
+                      }
+                      @if (designations().length === 0) {
+                        <button type="button" class="btn btn-sm btn-outline" (click)="setTab('designations')">Create Job Designation</button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
 
               @if (showNewAssignment) {
                 <form class="create-form" (ngSubmit)="createAssignment()">
@@ -436,7 +481,13 @@ export type MasterTab =
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="6" class="empty-state">No employee assignments found.</td>
+                        <td colspan="6" class="empty-state">
+                          @if (employees().length === 0 || projects().length === 0 || designations().length === 0) {
+                            <span>Prerequisites incomplete. Ensure Employees, Projects, and Designations exist before deploying.</span>
+                          } @else {
+                            <span>No active employee deployments found. Click 'Deploy Employee' to assign a worker to a site.</span>
+                          }
+                        </td>
                       </tr>
                     }
                   </tbody>
@@ -461,6 +512,32 @@ export type MasterTab =
                   <span>{{ showNewEmployeeRate ? 'Cancel' : 'Set Employee Pay Rate' }}</span>
                 </button>
               </div>
+
+              <!-- Stream Cost Explainer Banner -->
+              <div class="stream-explainer-banner cost-banner">
+                <div class="banner-icon-wrap">
+                  <span class="material-symbols-outlined">payments</span>
+                </div>
+                <div class="banner-text">
+                  <strong>Internal Remuneration (Cost Stream) — Worker Payroll Source of Truth</strong>
+                  <p>
+                    These hourly wage rates define what Blue Royal pays to the individual worker for normal hours and overtime. They are consumed by the Payroll computation engine and fulfill <strong>Onboarding Pillar 4</strong>. Under UAE statutory guidelines, worker pay rates are strictly decoupled from commercial client billing.
+                  </p>
+                </div>
+              </div>
+
+              @if (employees().length === 0) {
+                <div class="alert-guidance alert-warning">
+                  <div class="guidance-icon"><span class="material-symbols-outlined">warning</span></div>
+                  <div class="guidance-content">
+                    <strong>Prerequisite Missing: Registered Employees</strong>
+                    <p>You cannot assign an Employee Pay Rate until at least one candidate or employee is registered in the system.</p>
+                    <div class="guidance-actions">
+                      <a routerLink="/employees" class="btn btn-sm btn-primary">Go to Employee Directory</a>
+                    </div>
+                  </div>
+                </div>
+              }
 
               @if (showNewEmployeeRate) {
                 <form class="create-form" (ngSubmit)="createEmployeeRate()">
@@ -574,6 +651,37 @@ export type MasterTab =
                   <span>{{ showNewClientRate ? 'Cancel' : 'Add Billing Rate' }}</span>
                 </button>
               </div>
+
+              <!-- Stream Revenue Explainer Banner -->
+              <div class="stream-explainer-banner rev-banner">
+                <div class="banner-icon-wrap">
+                  <span class="material-symbols-outlined">receipt_long</span>
+                </div>
+                <div class="banner-text">
+                  <strong>Commercial Invoicing (Revenue Stream) — Two-Tier Billing Resolution Engine</strong>
+                  <p>
+                    These hourly billing rates define what Blue Royal invoices to external commercial clients. The resolution engine follows a 2-tier hierarchy: <strong>Tier 1 (Project-Specific Rate)</strong> automatically overrides <strong>Tier 2 (Client-Wide Fallback)</strong>. Client billing rates are strictly segregated from worker compensation.
+                  </p>
+                </div>
+              </div>
+
+              @if (clients().length === 0 || designations().length === 0) {
+                <div class="alert-guidance alert-warning">
+                  <div class="guidance-icon"><span class="material-symbols-outlined">warning</span></div>
+                  <div class="guidance-content">
+                    <strong>Prerequisites Missing: Clients & Job Designations</strong>
+                    <p>Commercial client billing rates require at least one Client entity and one Designation catalog entry.</p>
+                    <div class="guidance-actions">
+                      @if (clients().length === 0) {
+                        <button type="button" class="btn btn-sm btn-primary" (click)="setTab('clients')">Configure Clients (Step 1)</button>
+                      }
+                      @if (designations().length === 0) {
+                        <button type="button" class="btn btn-sm btn-primary" (click)="setTab('designations')">Configure Designations</button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
 
               @if (showNewClientRate) {
                 <form class="create-form" (ngSubmit)="createClientRate()">
@@ -1353,6 +1461,111 @@ export type MasterTab =
         text-align: center;
         color: var(--text-muted);
         padding: 2rem !important;
+      }
+
+      /* Prerequisite Guidance Alerts & Explainer Banners */
+      .alert-guidance {
+        display: flex;
+        gap: 0.875rem;
+        padding: 1rem 1.25rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.25rem;
+        border: 1px solid transparent;
+      }
+      .alert-guidance.alert-warning {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #92400e;
+      }
+      .alert-guidance.alert-info {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1e40af;
+      }
+      .guidance-icon {
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+      }
+      .guidance-content {
+        flex: 1;
+      }
+      .guidance-content strong {
+        display: block;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+      }
+      .guidance-content p {
+        font-size: 0.8125rem;
+        margin: 0 0 0.625rem 0;
+        line-height: 1.4;
+      }
+      .guidance-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .stream-explainer-banner {
+        display: flex;
+        gap: 0.875rem;
+        align-items: flex-start;
+        padding: 0.875rem 1rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.25rem;
+        border: 1px solid transparent;
+      }
+      .stream-explainer-banner.cost-banner {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1e3a8a;
+      }
+      .stream-explainer-banner.rev-banner {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #14532d;
+      }
+      .banner-icon-wrap {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cost-banner .banner-icon-wrap {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      .rev-banner .banner-icon-wrap {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      .banner-text strong {
+        display: block;
+        font-size: 0.8125rem;
+        margin-bottom: 0.15rem;
+      }
+      .banner-text p {
+        margin: 0;
+        font-size: 0.75rem;
+        line-height: 1.4;
+      }
+      .btn-outline {
+        border: 1px solid var(--border-default);
+        background: #ffffff;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.625rem;
+        border-radius: var(--radius-sm);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+      }
+      .btn-outline:hover {
+        background: #f1f5f9;
+        color: var(--text-primary);
       }
 
       /* Badges & Tags */

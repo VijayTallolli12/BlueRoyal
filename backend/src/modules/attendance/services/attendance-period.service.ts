@@ -794,9 +794,27 @@ export class AttendancePeriodService {
     if (periodCode) {
       period = await AttendancePeriod.findOne({ where: { periodCode } });
     } else {
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const currentMonthCode = now.toISOString().slice(0, 7);
+
       period = await AttendancePeriod.findOne({
-        order: [['periodCode', 'DESC']],
+        where: {
+          startDate: { [Op.lte]: today },
+          endDate: { [Op.gte]: today },
+        },
       });
+
+      if (!period) {
+        period = await AttendancePeriod.findOne({ where: { periodCode: currentMonthCode } });
+      }
+
+      if (!period) {
+        period = await AttendancePeriod.findOne({
+          where: { startDate: { [Op.lte]: today } },
+          order: [['startDate', 'DESC']],
+        });
+      }
     }
 
     if (!period) {

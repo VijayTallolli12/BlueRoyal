@@ -16,16 +16,31 @@ import { payrollRoutes } from './modules/payroll/routes/payroll.routes';
 import documentRouter from './modules/documents/routes/document.routes';
 import onboardingRouter from './modules/onboarding/routes/onboarding.routes';
 import settlementRouter from './modules/settlement/routes/settlement.routes';
+import dashboardRouter from './modules/dashboard/routes/dashboard.routes';
 
 export function createApp(): Express {
   const app = express();
 
   // Security and base middlewares
   app.use(helmet());
-  const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
+  // Strict CORS configuration with exact approved production & staging origins
+  const configuredOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
+  const approvedOrigins = new Set<string>([
+    'https://blue-royal-hrms.vercel.app',
+    'https://blue-royal-hrms.onrender.com',
+    'http://localhost:4200',
+    ...configuredOrigins,
+  ]);
+
   app.use(
     cors({
-      origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, server-to-server health checks)
+        if (!origin || approvedOrigins.has(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error(`Origin ${origin} not permitted by CORS policy`));
+      },
       credentials: true,
     }),
   );
@@ -51,6 +66,7 @@ export function createApp(): Express {
   app.use(env.API_PREFIX, documentRouter);
   app.use(env.API_PREFIX, onboardingRouter);
   app.use(env.API_PREFIX, settlementRouter);
+  app.use(`${env.API_PREFIX}/dashboard`, dashboardRouter);
 
   // 404 handler for undefined routes
   app.use((req, res, _next) => {

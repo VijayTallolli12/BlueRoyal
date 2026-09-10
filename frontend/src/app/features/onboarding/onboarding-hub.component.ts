@@ -31,7 +31,7 @@ import {
             </p>
           </div>
           <div class="header-actions">
-            @if (authService.hasPermission('onboarding:write')) {
+            @if (authService.hasPermission('onboarding:create')) {
               <button class="btn btn-primary" (click)="openStartDrawer()">
                 <span class="material-symbols-outlined icon-sm">person_add_alt</span>
                 <span>Initiate Onboarding</span>
@@ -130,10 +130,67 @@ import {
               <div class="skeleton skeleton-row"></div>
             </div>
           } @else if (filteredPipelines().length === 0) {
-            <div class="empty-state">
-              <span class="material-symbols-outlined icon-lg text-muted">badge</span>
-              <p>No onboarding pipelines found matching the criteria.</p>
-            </div>
+            @if (onboardings().length === 0) {
+              <!-- Educational Empty State for Zero Onboardings -->
+              <div class="empty-state-onboarding">
+                <div class="empty-icon-badge">
+                  <span class="material-symbols-outlined icon-hero">how_to_reg</span>
+                </div>
+                <h3 class="empty-title">No Active Onboarding Pipelines</h3>
+                <p class="empty-desc">
+                  Onboarding is a statutory gatekeeper enforcing 5-pillar readiness (Profile, Employment Parameters, Workforce Deployment, Compensation, and Mandatory Documents) before workers can be rostered or billed.
+                </p>
+
+                <div class="prereq-flow-grid">
+                  <div class="prereq-step-card" [class.is-ready]="clientsCount() > 0 && projectsCount() > 0 && designationsCount() > 0">
+                    <div class="prereq-step-num">1</div>
+                    <div class="prereq-step-info">
+                      <strong>Organization Masters</strong>
+                      <p>Clients, Worksites & Designations</p>
+                      <span class="prereq-status">
+                        {{ (clientsCount() > 0 && projectsCount() > 0 && designationsCount() > 0) ? '✓ Prerequisites configured' : 'Pending configuration' }}
+                      </span>
+                    </div>
+                    <a routerLink="/masters" [queryParams]="{tab: 'clients'}" class="btn btn-sm btn-outline">
+                      Masters Setup
+                    </a>
+                  </div>
+
+                  <div class="prereq-step-card" [class.is-ready]="employees().length > 0">
+                    <div class="prereq-step-num">2</div>
+                    <div class="prereq-step-info">
+                      <strong>Employee Profile</strong>
+                      <p>Biographical candidate records</p>
+                      <span class="prereq-status">
+                        {{ employees().length > 0 ? '✓ ' + employees().length + ' candidate(s) available' : 'No candidates registered' }}
+                      </span>
+                    </div>
+                    <a routerLink="/employees" class="btn btn-sm btn-outline">
+                      Directory
+                    </a>
+                  </div>
+
+                  <div class="prereq-step-card is-active-step">
+                    <div class="prereq-step-num">3</div>
+                    <div class="prereq-step-info">
+                      <strong>Initiate Pipeline</strong>
+                      <p>Track 5 pillars & statutory gating</p>
+                      <span class="prereq-status text-primary">Ready to enroll</span>
+                    </div>
+                    @if (authService.hasPermission('onboarding:create')) {
+                      <button class="btn btn-sm btn-primary" (click)="openStartDrawer()">
+                        Initiate
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="empty-state">
+                <span class="material-symbols-outlined icon-lg text-muted">search_off</span>
+                <p>No onboarding pipelines found matching the current search or status filter.</p>
+              </div>
+            }
           } @else {
             <div class="table-responsive">
               <table class="data-table">
@@ -142,7 +199,7 @@ import {
                     <th class="col-sticky-left">Employee</th>
                     <th>Code</th>
                     <th>Readiness Score</th>
-                    <th class="col-hide-mobile">Checklist Progress</th>
+                    <th class="col-hide-mobile">5-Pillar Readiness Breakdown</th>
                     <th class="col-hide-tablet">Target Date</th>
                     <th>Status</th>
                     <th class="col-sticky-right text-right">Actions</th>
@@ -182,30 +239,46 @@ import {
                       <td class="col-hide-mobile">
                         <div class="checklist-pills">
                           <span
-                            class="pill"
+                            class="pillar-pill"
                             [class.pill-done]="pipeline.checklistProgress.personalInfo"
-                            title="1. Personal Info"
-                          >Info</span>
+                            [title]="pipeline.checklistProgress.personalInfo ? '1. Personal Profile: 20% (Satisfied)' : '1. Personal Profile: 0% (Pending)'"
+                          >
+                            <span class="material-symbols-outlined pill-icon">{{ pipeline.checklistProgress.personalInfo ? 'check' : 'remove' }}</span>
+                            <span>Profile</span>
+                          </span>
                           <span
-                            class="pill"
+                            class="pillar-pill"
                             [class.pill-done]="pipeline.checklistProgress.employmentDetails"
-                            title="2. Employment Details"
-                          >Job</span>
+                            [title]="pipeline.checklistProgress.employmentDetails ? '2. Employment Details: 20% (Satisfied)' : '2. Employment Details: 0% (Pending)'"
+                          >
+                            <span class="material-symbols-outlined pill-icon">{{ pipeline.checklistProgress.employmentDetails ? 'check' : 'remove' }}</span>
+                            <span>Employment</span>
+                          </span>
                           <span
-                            class="pill"
+                            class="pillar-pill"
                             [class.pill-done]="pipeline.checklistProgress.assignmentSetup"
-                            title="3. Client/Project Assignment"
-                          >Assign</span>
+                            [title]="pipeline.checklistProgress.assignmentSetup ? '3. Project Deployment: 20% (Satisfied)' : '3. Project Deployment: 0% (Pending assignment)'"
+                          >
+                            <span class="material-symbols-outlined pill-icon">{{ pipeline.checklistProgress.assignmentSetup ? 'check' : 'remove' }}</span>
+                            <span>Deployment</span>
+                          </span>
                           <span
-                            class="pill"
+                            class="pillar-pill"
                             [class.pill-done]="pipeline.checklistProgress.compensationSetup"
-                            title="4. Hourly Rate / Compensation"
-                          >Comp</span>
+                            [title]="pipeline.checklistProgress.compensationSetup ? '4. Compensation Rates: 20% (Satisfied)' : '4. Compensation Rates: 0% (Pending pay rate)'"
+                          >
+                            <span class="material-symbols-outlined pill-icon">{{ pipeline.checklistProgress.compensationSetup ? 'check' : 'remove' }}</span>
+                            <span>Compensation</span>
+                          </span>
                           <span
-                            class="pill"
+                            class="pillar-pill"
                             [class.pill-done]="pipeline.checklistProgress.mandatoryDocuments"
-                            title="5. Mandatory Documents"
-                          >Docs</span>
+                            [class.pill-alert]="!pipeline.checklistProgress.mandatoryDocuments"
+                            [title]="pipeline.checklistProgress.mandatoryDocuments ? '5. Mandatory Documents: 20% (Satisfied)' : '5. Mandatory Documents: 0% (Action Required)'"
+                          >
+                            <span class="material-symbols-outlined pill-icon">{{ pipeline.checklistProgress.mandatoryDocuments ? 'check' : 'priority_high' }}</span>
+                            <span>Documents</span>
+                          </span>
                         </div>
                       </td>
                       <td class="col-hide-tablet text-secondary">
@@ -260,7 +333,50 @@ import {
             </div>
 
             <div class="drawer-body">
-              <form (ngSubmit)="onStartOnboarding()" class="drawer-form" id="startForm">
+              <!-- Master Catalog Prerequisites Status Banner -->
+              <div class="master-prereq-box">
+                <div class="prereq-box-header">
+                  <span class="material-symbols-outlined icon-sm text-primary">account_tree</span>
+                  <strong>Organization Masters Dependency</strong>
+                </div>
+                <p class="text-xs text-secondary mb-2">
+                  Onboarding links an existing employee profile to authoritative Organization Masters (Designation, Project Worksite, Worker Pay Rates). Master data is configured centrally in Organization Setup, not created ad-hoc here.
+                </p>
+                <div class="prereq-micro-badges">
+                  <span class="micro-badge" [class.micro-badge-ok]="designationsCount() > 0">
+                    {{ designationsCount() }} Designation(s)
+                  </span>
+                  <span class="micro-badge" [class.micro-badge-ok]="clientsCount() > 0">
+                    {{ clientsCount() }} Client(s)
+                  </span>
+                  <span class="micro-badge" [class.micro-badge-ok]="projectsCount() > 0">
+                    {{ projectsCount() }} Worksite(s)
+                  </span>
+                </div>
+                @if (designationsCount() === 0 || projectsCount() === 0) {
+                  <div class="alert alert-warning text-xs mt-2" role="alert">
+                    <span class="material-symbols-outlined icon-sm">warning</span>
+                    <span>
+                      Missing master catalogs! To fulfill Pillar 3, please configure
+                      <a routerLink="/masters" [queryParams]="{tab: 'clients'}" class="alert-link">Clients & Worksites</a>
+                      and
+                      <a routerLink="/masters" [queryParams]="{tab: 'designations'}" class="alert-link">Designations</a>.
+                    </span>
+                  </div>
+                }
+              </div>
+
+              @if (availableEmployees().length === 0) {
+                <div class="alert alert-info text-xs mt-2" role="alert">
+                  <span class="material-symbols-outlined icon-sm">info</span>
+                  <span>
+                    No un-enrolled candidates found in the Directory.
+                    <a routerLink="/employees" class="alert-link">Register a new employee first</a>.
+                  </span>
+                </div>
+              }
+
+              <form (ngSubmit)="onStartOnboarding()" class="drawer-form mt-2" id="startForm">
                 <div class="form-group">
                   <label for="startEmp">Select Employee *</label>
                   <select
@@ -440,7 +556,8 @@ import {
                   <div class="pillar-details">
                     <h4>5. Statutory Mandatory Documents (20%)</h4>
                     <p>
-                      Passport, Visa, Emirates ID, or contract documents uploaded and verified.
+                      Passport, Visa, Emirates ID, or contract documents uploaded and verified in
+                      <a routerLink="/documents" class="text-brand font-medium">Document Center ➔</a>
                       @if (pipeline.missingRequirements && pipeline.missingRequirements.length > 0) {
                         <span class="missing-badge">Missing: {{ pipeline.missingRequirements.join(', ') }}</span>
                       }
@@ -644,6 +761,35 @@ import {
     .checklist-pills {
       display: flex;
       gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+
+    .pillar-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.15rem;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .pillar-pill.pill-done {
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 600;
+    }
+
+    .pillar-pill.pill-alert {
+      background: #fee2e2;
+      color: #991b1b;
+      font-weight: 600;
+    }
+
+    .pill-icon {
+      font-size: 0.8125rem;
     }
 
     .pill {
@@ -659,6 +805,184 @@ import {
       background: #dcfce7;
       color: #166534;
       font-weight: 600;
+    }
+
+    /* Educational Onboarding Empty State */
+    .empty-state-onboarding {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      background: #ffffff;
+      border: 1px dashed var(--border-default);
+      border-radius: var(--radius-lg);
+      max-width: 760px;
+      margin: 1.5rem auto;
+    }
+
+    .empty-icon-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--brand-50, #eff6ff);
+      color: var(--brand-600, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem auto;
+    }
+
+    .icon-hero {
+      font-size: 2rem;
+    }
+
+    .empty-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .empty-desc {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      max-width: 580px;
+      margin: 0 auto 1.5rem auto;
+      line-height: 1.5;
+    }
+
+    .prereq-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem;
+      text-align: left;
+      margin-bottom: 1rem;
+    }
+
+    .prereq-step-card {
+      background: var(--bg-surface-subtle, #f8fafc);
+      border: 1px solid var(--border-default, #e2e8f0);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .prereq-step-card.is-ready {
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+
+    .prereq-step-card.is-active-step {
+      border-color: var(--brand-400, #60a5fa);
+      background: #eff6ff;
+    }
+
+    .prereq-step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .is-ready .prereq-step-num {
+      background: #22c55e;
+      color: #ffffff;
+    }
+
+    .is-active-step .prereq-step-num {
+      background: var(--brand-600, #2563eb);
+      color: #ffffff;
+    }
+
+    .prereq-step-info strong {
+      font-size: 0.8125rem;
+      display: block;
+      color: var(--text-primary);
+    }
+
+    .prereq-step-info p {
+      font-size: 0.6875rem;
+      color: var(--text-secondary);
+      margin: 0.125rem 0;
+    }
+
+    .prereq-status {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .is-ready .prereq-status {
+      color: #16a34a;
+    }
+
+    .btn-outline {
+      border: 1px solid var(--border-default);
+      background: #ffffff;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-outline:hover {
+      background: #f1f5f9;
+      color: var(--text-primary);
+    }
+
+    /* Master Dependency Box in Drawer */
+    .master-prereq-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .prereq-box-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .prereq-micro-badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .micro-badge {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .micro-badge.micro-badge-ok {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .alert-link {
+      font-weight: 600;
+      color: inherit;
+      text-decoration: underline;
     }
 
     .score-card {
@@ -800,6 +1124,9 @@ import {
 export class OnboardingHubComponent implements OnInit {
   public onboardings = signal<EmployeeOnboardingDto[]>([]);
   public employees = signal<EmployeeDto[]>([]);
+  public designationsCount = signal(0);
+  public projectsCount = signal(0);
+  public clientsCount = signal(0);
   public isLoading = signal(true);
   public isSubmitting = signal(false);
   public errorMessage = signal<string | null>(null);
@@ -847,6 +1174,24 @@ export class OnboardingHubComponent implements OnInit {
     this.masterService.getEmployees().subscribe({
       next: (res) => {
         this.employees.set(res.data || []);
+      },
+    });
+
+    this.masterService.getDesignations().subscribe({
+      next: (res) => {
+        this.designationsCount.set(res.data?.length || 0);
+      },
+    });
+
+    this.masterService.getProjects().subscribe({
+      next: (res) => {
+        this.projectsCount.set(res.data?.length || 0);
+      },
+    });
+
+    this.masterService.getClients().subscribe({
+      next: (res) => {
+        this.clientsCount.set(res.data?.length || 0);
       },
     });
   }

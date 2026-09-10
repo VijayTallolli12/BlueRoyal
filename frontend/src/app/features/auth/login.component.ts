@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 export interface LoginHeroSlide {
@@ -841,9 +841,15 @@ export class LoginComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
   ) {}
 
   public ngOnInit(): void {
+    if (this.authService.isAuthenticated) {
+      const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+      this.router.navigateByUrl(returnUrl);
+      return;
+    }
     this.startAutoSlide();
   }
 
@@ -900,7 +906,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.authService.login(this.email, this.password).subscribe({
       next: () => {
         this.isLoading.set(false);
-        this.router.navigate(['/dashboard']);
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+        this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
         this.isLoading.set(false);

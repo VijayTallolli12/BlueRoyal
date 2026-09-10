@@ -17,3 +17,4 @@ export * from './payroll/payroll';
 export * from './document/document';
 export * from './onboarding/onboarding';
 export * from './settlement/settlement';
+export * from './dashboard/dashboard';

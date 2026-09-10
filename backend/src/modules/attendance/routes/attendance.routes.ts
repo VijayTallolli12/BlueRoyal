@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../../../core/middleware/auth.middleware';
-import { requirePermission } from '../../../core/middleware/rbac.middleware';
+import { requirePermission, requireAnyPermission } from '../../../core/middleware/rbac.middleware';
 import { AttendanceController } from '../controllers/attendance.controller';
 
 const upload = multer({
@@ -23,7 +23,7 @@ router.get(
 router.get(
   '/periods',
   authenticate,
-  requirePermission('attendance:read'),
+  requireAnyPermission('attendance:read', 'attendance:self_read'),
   AttendanceController.listPeriods,
 );
 

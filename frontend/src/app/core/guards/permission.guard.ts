@@ -2,9 +2,22 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
+export const permissionGuard: CanActivateFn = async (route: ActivatedRouteSnapshot, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
+
+  // Await session restoration so permissions are fully populated
+  await authService.ensureInitialized();
+
+  // If unauthenticated, redirect to login
+  if (!authService.isAuthenticated) {
+    const queryParams =
+      state.url && state.url !== '/' && state.url !== '/dashboard'
+        ? { returnUrl: state.url }
+        : {};
+    router.navigate(['/login'], { queryParams });
+    return false;
+  }
 
   const requiredPermission = route.data['permission'] as string;
   if (!requiredPermission) {
@@ -15,7 +28,8 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
     return true;
   }
 
-  // Access denied
+  // Access denied - authenticated user lacks specific permission
+  console.warn(`[PermissionGuard] Access denied for route '${state.url}': missing permission '${requiredPermission}'`);
   router.navigate(['/dashboard']);
   return false;
 };

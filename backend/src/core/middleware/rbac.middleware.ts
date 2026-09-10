@@ -25,6 +25,28 @@ export function requirePermission(permissionCode: string) {
   };
 }
 
+export function requireAnyPermission(...permissionCodes: string[]) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      return next(new AuthorizationError('Unauthenticated request cannot be authorized.'));
+    }
+
+    if (req.user.roles.includes('super_admin')) {
+      return next();
+    }
+
+    if (req.user.permissions && permissionCodes.some((p) => req.user!.permissions.includes(p))) {
+      return next();
+    }
+
+    return next(
+      new AuthorizationError(
+        `User does not possess any of the required permissions [${permissionCodes.join(', ')}] to access this resource.`,
+      ),
+    );
+  };
+}
+
 export function requireAnyRole(...allowedRoles: string[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
