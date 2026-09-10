@@ -92,6 +92,13 @@ export class MasterService {
     return this.http.post<ApiSuccessResponse<EmployeeAssignmentDto>>(`${this.apiUrl}/assignments`, dto);
   }
 
+  public updateAssignment(
+    id: string,
+    dto: { effectiveTo?: string | null; remarks?: string }
+  ): Observable<ApiSuccessResponse<EmployeeAssignmentDto>> {
+    return this.http.put<ApiSuccessResponse<EmployeeAssignmentDto>>(`${this.apiUrl}/assignments/${id}`, dto);
+  }
+
   // 6. Rates (Dual-Stream)
   public getEmployeeRates(employeeId?: string): Observable<ApiSuccessResponse<EmployeeHourlyRateDto[]>> {
     const url = employeeId

@@ -775,14 +775,15 @@ export class AppShellComponent {
 
     if (cleanPath === '/masters') {
       if (url.includes('tab=clients')) return { group: 'ORGANIZATION SETUP', page: 'Clients' };
-      if (url.includes('tab=projects')) return { group: 'ORGANIZATION SETUP', page: 'Projects' };
-      if (url.includes('tab=designations')) return { group: 'ORGANIZATION SETUP', page: 'Designations' };
+      if (url.includes('tab=projects')) return { group: 'ORGANIZATION SETUP', page: 'Projects & Worksites' };
+      if (url.includes('tab=designations')) return { group: this.isSuperAdmin() ? 'ORGANIZATION SETUP' : 'ORGANIZATION REFERENCE', page: 'Job Designations' };
       if (url.includes('tab=shifts')) return { group: 'ORGANIZATION SETUP', page: 'Work Shifts & Hours' };
       if (url.includes('tab=calendar')) return { group: 'ORGANIZATION SETUP', page: 'Holidays & Weekly Offs' };
       if (url.includes('tab=salary')) return { group: 'ORGANIZATION SETUP', page: 'Salary Packages' };
       if (url.includes('tab=assignments')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'WORKFORCE OPERATIONS', page: 'Workforce Deployments' };
-      if (url.includes('tab=employee-rates')) return { group: 'WORKFORCE OPERATIONS', page: 'Worker Pay Rates' };
-      if (url.includes('tab=client-rates')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL', page: 'Client Invoicing Rates' };
+      if (url.includes('tab=employee-rates')) return { group: 'WORKFORCE OPERATIONS', page: 'Employee Compensation' };
+      if (url.includes('tab=client-rates')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL', page: 'Client Billing Rates' };
+      if (url.includes('tab=rates')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL', page: 'Rate Simulator' };
       return { group: 'ORGANIZATION SETUP', page: 'Master Catalogs' };
     }
 

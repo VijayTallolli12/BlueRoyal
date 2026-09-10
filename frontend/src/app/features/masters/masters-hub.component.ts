@@ -1,7 +1,8 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 import { MasterService } from '../../core/services/master.service';
 import {
   DesignationDto,
@@ -40,134 +41,153 @@ export type MasterTab =
   template: `
     <app-shell>
       <div class="masters-workspace">
-        <!-- Page Header -->
-        <div class="page-header">
-          <div>
-            <div class="breadcrumb">MASTERS / WORKFORCE OPERATIONS</div>
-            <h1 class="page-title">Enterprise Master Catalogs & Workforce Operations</h1>
-            <p class="page-desc">
-              Authoritative commercial entities, deployment worksites, dual-stream compensation & billing rates, and rostering rules.
-            </p>
+        <!-- Dynamic Contextual Page Header -->
+        <header class="page-header">
+          <div class="header-main">
+            <div class="breadcrumb">{{ currentMeta().breadcrumbGroup }} / {{ currentMeta().breadcrumbPage }}</div>
+            <h1 class="page-title">{{ currentMeta().title }}</h1>
+            <p class="page-desc">{{ currentMeta().subtitle }}</p>
           </div>
-        </div>
+          @if (currentMeta().ctaLabel) {
+            <div class="header-actions">
+              <button class="btn btn-primary btn-lg" (click)="togglePrimaryForm()">
+                <span class="material-symbols-outlined icon-sm">{{ isPrimaryFormOpen() ? 'close' : currentMeta().ctaIcon }}</span>
+                <span>{{ isPrimaryFormOpen() ? 'Cancel' : currentMeta().ctaLabel }}</span>
+              </button>
+            </div>
+          }
+        </header>
 
-        <!-- Workforce Operational Workflow Stepper -->
-        <div class="workflow-banner">
-          <div class="workflow-header">
-            <span class="workflow-badge">OPERATIONAL WORKFLOW</span>
-            <span class="workflow-title">Workforce Deployment & Dual-Stream Rate Pipeline</span>
-          </div>
-          <div class="workflow-stepper">
-            <div class="step-card" [class.step-active]="activeTab() === 'clients'" (click)="setTab('clients')">
-              <span class="step-num">1</span>
-              <div class="step-text">
-                <strong>Client Master</strong>
-                <small>Commercial Partner</small>
-              </div>
+        <!-- Contextual Workforce Flow Indicator (Subtle, Compact Secondary Navigation) -->
+        @if (currentMeta().isFlowTab) {
+          <div class="contextual-flow-strip">
+            <div class="flow-lead">
+              <span class="material-symbols-outlined icon-xs">linear_scale</span>
+              <span>WORKFORCE PIPELINE:</span>
             </div>
-            <div class="step-arrow">➔</div>
-            <div class="step-card" [class.step-active]="activeTab() === 'projects'" (click)="setTab('projects')">
-              <span class="step-num">2</span>
-              <div class="step-text">
-                <strong>Project Site</strong>
-                <small>Location & Worksite</small>
-              </div>
-            </div>
-            <div class="step-arrow">➔</div>
-            <div class="step-card" [class.step-active]="activeTab() === 'assignments'" (click)="setTab('assignments')">
-              <span class="step-num">3</span>
-              <div class="step-text">
-                <strong>Assignment</strong>
-                <small>Client+Proj+Desig</small>
-              </div>
-            </div>
-            <div class="step-arrow">➔</div>
-            <div class="step-card" [class.step-active]="activeTab() === 'employee-rates'" (click)="setTab('employee-rates')">
-              <span class="step-num">4</span>
-              <div class="step-text">
-                <strong>Employee Pay</strong>
-                <small>Worker Rate (Cost)</small>
-              </div>
-            </div>
-            <div class="step-arrow">➔</div>
-            <div class="step-card" [class.step-active]="activeTab() === 'client-rates'" (click)="setTab('client-rates')">
-              <span class="step-num">5</span>
-              <div class="step-text">
-                <strong>Client Invoicing</strong>
-                <small>Commercial (Revenue)</small>
-              </div>
-            </div>
-            <div class="step-arrow">➔</div>
-            <div class="step-card step-gate">
-              <span class="step-num">6</span>
-              <div class="step-text">
-                <strong>Onboarding</strong>
-                <small>Pillars 3 & 4 Gating</small>
-              </div>
-            </div>
-            <div class="step-arrow">➔</div>
-            <div class="step-card step-active-workforce">
-              <span class="step-num">7</span>
-              <div class="step-text">
-                <strong>Active Worker</strong>
-                <small>Rostered & Billable</small>
-              </div>
+            <div class="flow-steps">
+              <button class="flow-step-pill" [class.current]="activeTab() === 'clients'" (click)="setTab('clients')">
+                <span class="step-badge">1</span>
+                <span>Clients</span>
+              </button>
+              <span class="flow-sep">➔</span>
+              <button class="flow-step-pill" [class.current]="activeTab() === 'projects'" (click)="setTab('projects')">
+                <span class="step-badge">2</span>
+                <span>Projects</span>
+              </button>
+              <span class="flow-sep">➔</span>
+              <button class="flow-step-pill" [class.current]="activeTab() === 'assignments'" (click)="setTab('assignments')">
+                <span class="step-badge">3</span>
+                <span>Deployments</span>
+              </button>
+              <span class="flow-sep">➔</span>
+              <button class="flow-step-pill" [class.current]="activeTab() === 'employee-rates'" (click)="setTab('employee-rates')">
+                <span class="step-badge">4</span>
+                <span>Employee Pay</span>
+              </button>
+              <span class="flow-sep">➔</span>
+              <button class="flow-step-pill" [class.current]="activeTab() === 'client-rates'" (click)="setTab('client-rates')">
+                <span class="step-badge">5</span>
+                <span>Client Billing</span>
+              </button>
             </div>
           </div>
-        </div>
+        }
+
+        <!-- View Assignment Modal -->
+        @if (selectedAssignmentForView(); as assign) {
+          <div class="modal-overlay" (click)="selectedAssignmentForView.set(null)">
+            <div class="modal-card" (click)="$event.stopPropagation()">
+              <div class="modal-header">
+                <h3>Workforce Deployment Details</h3>
+                <button type="button" class="btn-icon-close" (click)="selectedAssignmentForView.set(null)">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <div class="detail-grid">
+                  <div class="detail-item">
+                    <span class="detail-label">Employee</span>
+                    <strong class="detail-val">{{ assign.employeeName || assign.employeeId }}</strong>
+                    <span class="detail-sub">{{ assign.employeeCode || '—' }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Commercial Client</span>
+                    <strong class="detail-val">{{ assign.clientName || assign.clientId }}</strong>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Project / Worksite</span>
+                    <strong class="detail-val">{{ assign.projectName || assign.projectId }}</strong>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Authoritative Designation</span>
+                    <div><span class="tag">{{ assign.designationTitle || assign.designationId }}</span></div>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Effective Interval</span>
+                    <code>{{ assign.effectiveFrom }} ➔ {{ assign.effectiveTo || 'Ongoing' }}</code>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Deployment Status</span>
+                    <div>
+                      <span class="badge" [class.badge-active]="!assign.effectiveTo">
+                        {{ assign.effectiveTo ? 'Closed / Past' : 'Active Deployment' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                @if (assign.remarks) {
+                  <div class="detail-remarks">
+                    <span class="detail-label">Deployment Remarks</span>
+                    <p>{{ assign.remarks }}</p>
+                  </div>
+                }
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="selectedAssignmentForView.set(null)">Close</button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Edit Assignment Modal -->
+        @if (selectedAssignmentForEdit(); as assign) {
+          <div class="modal-overlay" (click)="selectedAssignmentForEdit.set(null)">
+            <div class="modal-card" (click)="$event.stopPropagation()">
+              <div class="modal-header">
+                <h3>Edit Workforce Deployment</h3>
+                <button type="button" class="btn-icon-close" (click)="selectedAssignmentForEdit.set(null)">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <form (ngSubmit)="saveAssignmentEdit()">
+                <div class="modal-body">
+                  <div class="edit-banner">
+                    <div>
+                      <strong>{{ assign.employeeName }}</strong> ({{ assign.employeeCode }})
+                    </div>
+                    <small>{{ assign.clientName }} &bull; {{ assign.projectName }} &bull; {{ assign.designationTitle }}</small>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label">Effective End Date (Leave blank for Ongoing deployment)</label>
+                    <input type="date" [(ngModel)]="editAssignEffectiveTo" name="editAssignEffectiveTo" class="form-control" />
+                    <small class="form-hint">Setting a date in the past or today will mark this deployment as closed.</small>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Deployment Remarks / Transfer Notes</label>
+                    <textarea [(ngModel)]="editAssignRemarks" name="editAssignRemarks" rows="3" class="form-control" placeholder="Optional notes..."></textarea>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" (click)="selectedAssignmentForEdit.set(null)">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Save Deployment</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        }
 
         <div class="masters-container">
-          <!-- Sub Navigation Tabs -->
-          <nav class="sub-nav">
-            <button [class.active]="activeTab() === 'overview'" (click)="setTab('overview')">
-              <span class="material-symbols-outlined icon-sm">account_tree</span>
-              <span>Overview & Flow</span>
-            </button>
-            <button [class.active]="activeTab() === 'clients'" (click)="setTab('clients')">
-              <span class="material-symbols-outlined icon-sm">corporate_fare</span>
-              <span>Clients ({{ clients().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'projects'" (click)="setTab('projects')">
-              <span class="material-symbols-outlined icon-sm">location_city</span>
-              <span>Projects ({{ projects().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'assignments'" (click)="setTab('assignments')">
-              <span class="material-symbols-outlined icon-sm">assignment_ind</span>
-              <span>Deployments & Assignments ({{ assignments().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'employee-rates'" (click)="setTab('employee-rates')">
-              <span class="material-symbols-outlined icon-sm">payments</span>
-              <span>Employee Pay Rates ({{ employeeRates().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'client-rates'" (click)="setTab('client-rates')">
-              <span class="material-symbols-outlined icon-sm">receipt_long</span>
-              <span>Client Invoicing Rates ({{ clientRates().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'rates'" (click)="setTab('rates')">
-              <span class="material-symbols-outlined icon-sm">science</span>
-              <span>Rate Simulator</span>
-            </button>
-            <button [class.active]="activeTab() === 'designations'" (click)="setTab('designations')">
-              <span class="material-symbols-outlined icon-sm">badge</span>
-              <span>Designations ({{ designations().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'employees'" (click)="setTab('employees')">
-              <span class="material-symbols-outlined icon-sm">group</span>
-              <span>Employees ({{ employees().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'shifts'" (click)="setTab('shifts')">
-              <span class="material-symbols-outlined icon-sm">schedule</span>
-              <span>Shifts ({{ shifts().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'calendar'" (click)="setTab('calendar')">
-              <span class="material-symbols-outlined icon-sm">calendar_month</span>
-              <span>Holidays ({{ holidays().length }})</span>
-            </button>
-            <button [class.active]="activeTab() === 'salary'" (click)="setTab('salary')">
-              <span class="material-symbols-outlined icon-sm">inventory_2</span>
-              <span>Salary Packages</span>
-            </button>
-          </nav>
 
           <!-- TAB: OVERVIEW -->
           @if (activeTab() === 'overview') {
@@ -382,8 +402,8 @@ export type MasterTab =
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <h2>Employee Project Deployments & Authoritative Assignments</h2>
-                  <p class="subtitle">Effective-dated deployments linking an employee to a Client, Project worksite, and Designation (satisfies Onboarding Pillar 3).</p>
+                  <h2>Workforce Deployments</h2>
+                  <p class="subtitle">Assign employees to clients, projects and designated roles (satisfies Onboarding Pillar 3).</p>
                 </div>
                 <button class="btn btn-primary" (click)="showNewAssignment = !showNewAssignment">
                   <span class="material-symbols-outlined icon-sm">{{ showNewAssignment ? 'close' : 'add' }}</span>
@@ -450,20 +470,63 @@ export type MasterTab =
                 </form>
               }
 
+              <!-- Search & Filter Controls -->
+              <div class="filter-toolbar">
+                <div class="search-box">
+                  <span class="material-symbols-outlined icon-sm text-muted">search</span>
+                  <input
+                    type="text"
+                    class="search-input"
+                    placeholder="Search deployments by employee, client, project, designation..."
+                    [ngModel]="assignmentSearch()"
+                    (ngModelChange)="assignmentSearch.set($event)"
+                  />
+                  @if (assignmentSearch()) {
+                    <button type="button" class="btn-clear" (click)="assignmentSearch.set('')" title="Clear Search">
+                      <span class="material-symbols-outlined icon-xs">close</span>
+                    </button>
+                  }
+                </div>
+
+                <div class="filter-controls">
+                  <select
+                    class="filter-select"
+                    [ngModel]="assignmentClientFilter()"
+                    (ngModelChange)="assignmentClientFilter.set($event)"
+                  >
+                    <option value="">All Clients</option>
+                    @for (c of clients(); track c.id) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+
+                  <select
+                    class="filter-select"
+                    [ngModel]="assignmentStatusFilter()"
+                    (ngModelChange)="assignmentStatusFilter.set($event)"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active Deployments</option>
+                    <option value="closed">Closed Deployments</option>
+                  </select>
+                </div>
+              </div>
+
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
                       <th>Employee</th>
                       <th>Client</th>
-                      <th>Project Worksite</th>
-                      <th>Designation (Authoritative)</th>
-                      <th>Effective Interval</th>
-                      <th>Timeline Status</th>
+                      <th>Project / Worksite</th>
+                      <th>Designation</th>
+                      <th>Effective From</th>
+                      <th>Status</th>
+                      <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (a of assignments(); track a.id) {
+                    @for (a of filteredAssignments(); track a.id) {
                       <tr>
                         <td>
                           <strong>{{ a.employeeName || a.employeeId }}</strong>
@@ -472,20 +535,55 @@ export type MasterTab =
                         <td>{{ a.clientName || a.clientId }}</td>
                         <td>{{ a.projectName || a.projectId }}</td>
                         <td><span class="tag">{{ a.designationTitle || a.designationId }}</span></td>
-                        <td><code>{{ a.effectiveFrom }} ➔ {{ a.effectiveTo || 'Ongoing' }}</code></td>
+                        <td>
+                          <code>{{ a.effectiveFrom }} ➔ {{ a.effectiveTo || 'Ongoing' }}</code>
+                        </td>
                         <td>
                           <span class="badge" [class.badge-active]="!a.effectiveTo">
                             {{ a.effectiveTo ? 'Closed' : 'Active Deployment' }}
                           </span>
                         </td>
+                        <td class="text-right">
+                          <div class="action-btn-group">
+                            <button
+                              type="button"
+                              class="btn-action btn-action-view"
+                              (click)="openViewAssignment(a)"
+                              title="View Details"
+                            >
+                              <span class="material-symbols-outlined icon-xs">visibility</span>
+                              <span>View</span>
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-action btn-action-edit"
+                              (click)="openEditAssignment(a)"
+                              title="Edit Deployment"
+                            >
+                              <span class="material-symbols-outlined icon-xs">edit</span>
+                              <span>Edit</span>
+                            </button>
+                            @if (!a.effectiveTo) {
+                              <button
+                                type="button"
+                                class="btn-action btn-action-danger"
+                                (click)="deactivateAssignment(a)"
+                                title="Deactivate / Close Deployment"
+                              >
+                                <span class="material-symbols-outlined icon-xs">person_remove</span>
+                                <span>Deactivate</span>
+                              </button>
+                            }
+                          </div>
+                        </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="6" class="empty-state">
-                          @if (employees().length === 0 || projects().length === 0 || designations().length === 0) {
-                            <span>Prerequisites incomplete. Ensure Employees, Projects, and Designations exist before deploying.</span>
+                        <td colspan="7" class="empty-state">
+                          @if (assignments().length === 0) {
+                            <span>No employee deployments configured yet. Click 'Deploy Employee' to assign a worker to a site.</span>
                           } @else {
-                            <span>No active employee deployments found. Click 'Deploy Employee' to assign a worker to a site.</span>
+                            <span>No deployments match the current search or filters.</span>
                           }
                         </td>
                       </tr>
@@ -1157,185 +1255,378 @@ export type MasterTab =
         padding-bottom: 2rem;
       }
       .page-header {
-        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+      }
+      .header-main {
+        flex: 1;
+        min-width: 260px;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-shrink: 0;
       }
       .breadcrumb {
         font-size: 0.75rem;
         font-weight: 700;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
         color: var(--brand-600);
         margin-bottom: 0.25rem;
+        text-transform: uppercase;
       }
       .page-title {
         font-size: 1.5rem;
         font-weight: 700;
         color: var(--text-primary);
         margin: 0 0 0.25rem 0;
+        letter-spacing: -0.02em;
       }
       .page-desc {
         color: var(--text-secondary);
         font-size: 0.875rem;
         margin: 0;
+        line-height: 1.45;
       }
 
-      /* Operational Workflow Stepper */
-      .workflow-banner {
-        background: #ffffff;
-        border: 1px solid var(--border-default);
-        border-radius: var(--radius-lg);
-        padding: 1rem 1.25rem;
-        margin-bottom: 1.25rem;
-        box-shadow: var(--shadow-sm);
-      }
-      .workflow-header {
+      /* Contextual Workforce Flow Indicator (Slim & Compact) */
+      .contextual-flow-strip {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.875rem;
+        gap: 0.875rem;
+        background: #f8fafc;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        padding: 0.45rem 0.875rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        overflow-x: auto;
       }
-      .workflow-badge {
+      .flow-lead {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
         font-size: 0.6875rem;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
+        color: #64748b;
+        text-transform: uppercase;
+        flex-shrink: 0;
+      }
+      .flow-steps {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-shrink: 0;
+      }
+      .flow-step-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius-full);
+        padding: 0.2rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .flow-step-pill:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: #0f172a;
+      }
+      .flow-step-pill.current {
         background: var(--brand-50);
+        border-color: var(--brand-300);
         color: var(--brand-700);
-        border: 1px solid var(--brand-200);
-        padding: 0.15rem 0.5rem;
-        border-radius: var(--radius-sm);
+        font-weight: 700;
       }
-      .workflow-title {
+      .step-badge {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        color: #475569;
+        font-size: 0.625rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .flow-step-pill.current .step-badge {
+        background: var(--brand-600);
+        color: #ffffff;
+      }
+      .flow-sep {
+        color: #94a3b8;
+        font-size: 0.6875rem;
+      }
+
+      /* Filter Toolbar for Deployments */
+      .filter-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+      .search-box {
+        flex: 1;
+        min-width: 260px;
+        display: flex;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        padding: 0 0.625rem;
+        gap: 0.35rem;
+      }
+      .search-box:focus-within {
+        border-color: var(--brand-500);
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+      }
+      .search-input {
+        border: none;
+        outline: none;
+        width: 100%;
+        padding: 0.5rem 0.25rem;
         font-size: 0.8125rem;
-        font-weight: 600;
-        color: var(--text-secondary);
+        color: var(--text-primary);
+        background: transparent;
       }
-      .workflow-stepper {
+      .btn-clear {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0.2rem;
+        display: flex;
+        align-items: center;
+      }
+      .btn-clear:hover {
+        color: var(--text-primary);
+      }
+      .filter-controls {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        overflow-x: auto;
-        padding-bottom: 0.25rem;
-        -webkit-overflow-scrolling: touch;
       }
-      .step-card {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: var(--bg-surface-subtle);
+      .filter-select {
+        background: #ffffff;
         border: 1px solid var(--border-default);
         border-radius: var(--radius-md);
         padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--text-primary);
+        outline: none;
+        cursor: pointer;
+      }
+      .filter-select:focus {
+        border-color: var(--brand-500);
+      }
+
+      /* Action Buttons */
+      .action-btn-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
         cursor: pointer;
         transition: all 0.15s ease;
-        flex-shrink: 0;
       }
-      .step-card:hover {
-        background: #ffffff;
-        border-color: var(--brand-300);
-        transform: translateY(-1px);
+      .btn-action-view {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        color: #334155;
       }
-      .step-card.step-active {
-        background: var(--brand-50);
-        border-color: var(--brand-500);
-        box-shadow: 0 1px 3px rgba(29, 78, 216, 0.15);
+      .btn-action-view:hover {
+        background: #f1f5f9;
+        color: #0f172a;
       }
-      .step-num {
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 50%;
-        background: #ffffff;
-        border: 1px solid var(--border-default);
+      .btn-action-edit {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+      }
+      .btn-action-edit:hover {
+        background: #dbeafe;
+      }
+      .btn-action-danger {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #dc2626;
+      }
+      .btn-action-danger:hover {
+        background: #fee2e2;
+      }
+      .icon-xs {
+        font-size: 0.875rem !important;
+      }
+      .text-right {
+        text-align: right;
+      }
+
+      /* Modals */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(2px);
+        z-index: 100;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.75rem;
+        padding: 1rem;
+      }
+      .modal-card {
+        background: #ffffff;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xl);
+        width: 100%;
+        max-width: 520px;
+        overflow: hidden;
+        border: 1px solid var(--border-default);
+      }
+      .modal-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-default);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+      }
+      .modal-header h3 {
+        margin: 0;
+        font-size: 1rem;
         font-weight: 700;
         color: var(--text-primary);
       }
-      .step-card.step-active .step-num {
-        background: var(--brand-600);
-        border-color: var(--brand-600);
-        color: #ffffff;
+      .btn-icon-close {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        padding: 0.25rem;
+        border-radius: var(--radius-sm);
       }
-      .step-text {
+      .btn-icon-close:hover {
+        color: #dc2626;
+        background: #fee2e2;
+      }
+      .modal-body {
+        padding: 1.25rem;
+      }
+      .modal-footer {
+        padding: 0.875rem 1.25rem;
+        border-top: 1px solid var(--border-default);
+        background: #f8fafc;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+      .detail-item {
         display: flex;
         flex-direction: column;
+        gap: 0.2rem;
       }
-      .step-text strong {
+      .detail-label {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+      }
+      .detail-val {
+        font-size: 0.875rem;
+        color: var(--text-primary);
+      }
+      .detail-sub {
         font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+      .detail-remarks {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-subtle);
+      }
+      .detail-remarks p {
+        margin: 0.25rem 0 0;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+      .edit-banner {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: var(--radius-md);
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        font-size: 0.8125rem;
+      }
+      .edit-banner small {
+        color: #1e40af;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .mb-3 {
+        margin-bottom: 0.75rem;
+      }
+      .form-label {
+        font-size: 0.8125rem;
         font-weight: 600;
         color: var(--text-primary);
-        line-height: 1.1;
       }
-      .step-text small {
+      .form-control {
+        width: 100%;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--text-primary);
+        outline: none;
+      }
+      .form-control:focus {
+        border-color: var(--brand-500);
+      }
+      .form-hint {
         font-size: 0.6875rem;
         color: var(--text-muted);
       }
-      .step-card.step-gate {
-        border-style: dashed;
-        background: #fefce8;
-        border-color: #fde047;
+      .btn-secondary {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
       }
-      .step-card.step-gate .step-num {
-        background: #facc15;
-        border-color: #eab308;
-        color: #713f12;
-      }
-      .step-card.step-active-workforce {
-        background: #f0fdf4;
-        border-color: #86efac;
-      }
-      .step-card.step-active-workforce .step-num {
-        background: #22c55e;
-        border-color: #16a34a;
-        color: #ffffff;
-      }
-      .step-arrow {
-        color: var(--text-muted);
-        font-size: 0.875rem;
-        flex-shrink: 0;
-      }
-
-      /* Tabs Nav */
-      .masters-container {
-        margin-top: 0.5rem;
-      }
-      .sub-nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.375rem;
-        background: #ffffff;
-        padding: 0.625rem 0.75rem;
-        border: 1px solid var(--border-default);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-sm);
-        margin-bottom: 1.25rem;
-      }
-      .sub-nav button {
-        background: transparent;
-        border: 1px solid transparent;
-        padding: 0.45rem 0.875rem;
-        border-radius: var(--radius-md);
-        font-size: 0.8125rem;
-        font-weight: 500;
-        cursor: pointer;
-        color: var(--text-secondary);
-        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-      }
-      .sub-nav button:hover {
-        background: var(--bg-surface-subtle);
-        color: var(--text-primary);
-        border-color: var(--border-default);
-        transform: translateY(-1px);
-      }
-      .sub-nav button.active {
-        background: var(--brand-50);
-        color: var(--brand-700);
-        border-color: var(--brand-200);
-        font-weight: 600;
-        box-shadow: 0 1px 2px rgba(29, 78, 216, 0.1);
+      .btn-secondary:hover {
+        background: #e2e8f0;
       }
 
       /* Panels */
@@ -1900,7 +2191,260 @@ export class MastersHubComponent implements OnInit {
   public resolutionEmpId = '';
   public resolutionWorkDate = new Date().toISOString().slice(0, 10);
 
+  // Assignments Search & Filter State
+  public assignmentSearch = signal<string>('');
+  public assignmentStatusFilter = signal<'all' | 'active' | 'closed'>('all');
+  public assignmentClientFilter = signal<string>('');
+
+  // Modals for Assignment View and Edit
+  public selectedAssignmentForView = signal<EmployeeAssignmentDto | null>(null);
+  public selectedAssignmentForEdit = signal<EmployeeAssignmentDto | null>(null);
+  public editAssignEffectiveTo = '';
+  public editAssignRemarks = '';
+
+  // Filtered Deployments computed signal
+  public filteredAssignments = computed(() => {
+    const list = this.assignments();
+    const query = this.assignmentSearch().trim().toLowerCase();
+    const statusFilter = this.assignmentStatusFilter();
+    const clientFilter = this.assignmentClientFilter();
+
+    return list.filter((a) => {
+      if (statusFilter === 'active' && a.effectiveTo) return false;
+      if (statusFilter === 'closed' && !a.effectiveTo) return false;
+      if (clientFilter && a.clientId !== clientFilter) return false;
+
+      if (query) {
+        const empName = (a.employeeName || '').toLowerCase();
+        const empCode = (a.employeeCode || '').toLowerCase();
+        const clientName = (a.clientName || '').toLowerCase();
+        const projName = (a.projectName || '').toLowerCase();
+        const desTitle = (a.designationTitle || '').toLowerCase();
+        return (
+          empName.includes(query) ||
+          empCode.includes(query) ||
+          clientName.includes(query) ||
+          projName.includes(query) ||
+          desTitle.includes(query)
+        );
+      }
+      return true;
+    });
+  });
+
+  // Dynamic Information Architecture Metadata per Tab
+  public currentMeta = computed(() => {
+    const tab = this.activeTab();
+    const isSuperAdmin = this.authService.hasRole('super_admin');
+
+    switch (tab) {
+      case 'assignments':
+        return {
+          breadcrumbGroup: isSuperAdmin ? 'WORKFORCE OVERSIGHT' : 'WORKFORCE OPERATIONS',
+          breadcrumbPage: 'Workforce Deployments',
+          title: 'Workforce Deployments',
+          subtitle: 'Assign employees to clients, projects and designated roles.',
+          ctaLabel: 'Deploy Employee',
+          ctaIcon: 'add',
+          isFlowTab: true,
+          flowStep: 3,
+        };
+      case 'clients':
+        return {
+          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbPage: 'Clients',
+          title: 'Clients',
+          subtitle: 'Manage commercial clients and their associated work.',
+          ctaLabel: 'Add Client',
+          ctaIcon: 'add',
+          isFlowTab: true,
+          flowStep: 1,
+        };
+      case 'projects':
+        return {
+          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbPage: 'Projects & Worksites',
+          title: 'Projects & Worksites',
+          subtitle: 'Manage client projects and worksite locations.',
+          ctaLabel: 'Add Project',
+          ctaIcon: 'add',
+          isFlowTab: true,
+          flowStep: 2,
+        };
+      case 'designations':
+        return {
+          breadcrumbGroup: isSuperAdmin ? 'ORGANIZATION SETUP' : 'ORGANIZATION REFERENCE',
+          breadcrumbPage: 'Job Designations',
+          title: 'Job Designations',
+          subtitle: 'Manage job/designation master data.',
+          ctaLabel: 'Add Designation',
+          ctaIcon: 'add',
+          isFlowTab: false,
+          flowStep: 0,
+        };
+      case 'shifts':
+        return {
+          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbPage: 'Work Shifts & Hours',
+          title: 'Work Shifts & Hours',
+          subtitle: 'Manage employee work schedules.',
+          ctaLabel: 'Add Shift',
+          ctaIcon: 'add',
+          isFlowTab: false,
+          flowStep: 0,
+        };
+      case 'calendar':
+        return {
+          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbPage: 'Holidays & Weekly Offs',
+          title: 'Holidays & Weekly Offs',
+          subtitle: 'Manage organization calendar.',
+          ctaLabel: 'Add Holiday',
+          ctaIcon: 'add',
+          isFlowTab: false,
+          flowStep: 0,
+        };
+      case 'salary':
+        return {
+          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbPage: 'Salary Packages',
+          title: 'Salary Packages',
+          subtitle: 'Manage standard compensation structures.',
+          ctaLabel: null as string | null,
+          ctaIcon: '',
+          isFlowTab: false,
+          flowStep: 0,
+        };
+      case 'employee-rates':
+        return {
+          breadcrumbGroup: 'WORKFORCE OPERATIONS',
+          breadcrumbPage: 'Employee Compensation',
+          title: 'Employee Compensation',
+          subtitle: 'Manage employee pay rates used for payroll.',
+          ctaLabel: 'Set Employee Rate',
+          ctaIcon: 'add',
+          isFlowTab: true,
+          flowStep: 4,
+        };
+      case 'client-rates':
+        return {
+          breadcrumbGroup: isSuperAdmin ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL',
+          breadcrumbPage: 'Client Billing Rates',
+          title: 'Client Billing Rates',
+          subtitle: 'Manage commercial billing rates used for client invoicing.',
+          ctaLabel: 'Set Billing Rate',
+          ctaIcon: 'add',
+          isFlowTab: true,
+          flowStep: 5,
+        };
+      case 'rates':
+        return {
+          breadcrumbGroup: isSuperAdmin ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL',
+          breadcrumbPage: 'Rate Simulator',
+          title: 'Rate Simulator',
+          subtitle: 'Simulate dual-stream rate resolution across client and worker contracts.',
+          ctaLabel: null as string | null,
+          ctaIcon: '',
+          isFlowTab: true,
+          flowStep: 5,
+        };
+      case 'employees':
+        return {
+          breadcrumbGroup: isSuperAdmin ? 'WORKFORCE OVERSIGHT' : 'PEOPLE',
+          breadcrumbPage: 'Employee Registry',
+          title: 'Employee Registry',
+          subtitle: 'Core biographical employee records.',
+          ctaLabel: 'Register Employee',
+          ctaIcon: 'add',
+          isFlowTab: false,
+          flowStep: 0,
+        };
+      case 'overview':
+      default:
+        return {
+          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbPage: 'Master Catalogs',
+          title: 'Master Catalogs & Operations Overview',
+          subtitle: 'Authoritative commercial entities, deployment worksites, and dual-stream rate architecture.',
+          ctaLabel: null as string | null,
+          ctaIcon: '',
+          isFlowTab: false,
+          flowStep: 0,
+        };
+    }
+  });
+
+  public isPrimaryFormOpen(): boolean {
+    switch (this.activeTab()) {
+      case 'assignments': return this.showNewAssignment;
+      case 'clients': return this.showNewClient;
+      case 'projects': return this.showNewProject;
+      case 'designations': return this.showNewDesignation;
+      case 'shifts': return this.showNewShift;
+      case 'calendar': return this.showNewHoliday;
+      case 'employee-rates': return this.showNewEmployeeRate;
+      case 'client-rates': return this.showNewClientRate;
+      case 'employees': return this.showNewEmployee;
+      default: return false;
+    }
+  }
+
+  public togglePrimaryForm(): void {
+    switch (this.activeTab()) {
+      case 'assignments': this.showNewAssignment = !this.showNewAssignment; break;
+      case 'clients': this.showNewClient = !this.showNewClient; break;
+      case 'projects': this.showNewProject = !this.showNewProject; break;
+      case 'designations': this.showNewDesignation = !this.showNewDesignation; break;
+      case 'shifts': this.showNewShift = !this.showNewShift; break;
+      case 'calendar': this.showNewHoliday = !this.showNewHoliday; break;
+      case 'employee-rates': this.showNewEmployeeRate = !this.showNewEmployeeRate; break;
+      case 'client-rates': this.showNewClientRate = !this.showNewClientRate; break;
+      case 'employees': this.showNewEmployee = !this.showNewEmployee; break;
+    }
+  }
+
+  public openViewAssignment(assign: EmployeeAssignmentDto): void {
+    this.selectedAssignmentForView.set(assign);
+  }
+
+  public openEditAssignment(assign: EmployeeAssignmentDto): void {
+    this.selectedAssignmentForEdit.set(assign);
+    this.editAssignEffectiveTo = assign.effectiveTo || '';
+    this.editAssignRemarks = assign.remarks || '';
+  }
+
+  public saveAssignmentEdit(): void {
+    const assign = this.selectedAssignmentForEdit();
+    if (!assign) return;
+    this.masterService
+      .updateAssignment(assign.id, {
+        effectiveTo: this.editAssignEffectiveTo || null,
+        remarks: this.editAssignRemarks || undefined,
+      })
+      .subscribe(() => {
+        this.selectedAssignmentForEdit.set(null);
+        this.refreshAll();
+      });
+  }
+
+  public deactivateAssignment(assign: EmployeeAssignmentDto): void {
+    const confirmed = confirm(
+      `Are you sure you want to deactivate and close deployment for ${assign.employeeName || 'this employee'}? Effective end date will be set to today.`
+    );
+    if (!confirmed) return;
+    const today = new Date().toISOString().slice(0, 10);
+    this.masterService
+      .updateAssignment(assign.id, {
+        effectiveTo: today,
+        remarks: (assign.remarks ? assign.remarks + ' | ' : '') + 'Closed by administrator',
+      })
+      .subscribe(() => {
+        this.refreshAll();
+      });
+  }
+
   constructor(
+    public authService: AuthService,
     private masterService: MasterService,
     private route: ActivatedRoute,
     private router: Router
