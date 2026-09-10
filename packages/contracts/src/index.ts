@@ -18,3 +18,4 @@ export * from './document/document';
 export * from './onboarding/onboarding';
 export * from './settlement/settlement';
 export * from './dashboard/dashboard';
+export * from './invoice/invoice';

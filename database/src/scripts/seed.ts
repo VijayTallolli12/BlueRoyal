@@ -169,6 +169,11 @@ const BASELINE_PERMISSIONS: PermissionSeed[] = [
   { code: 'settlements:self_read', description: 'View own finalized settlement payslip statement', module: 'settlements' },
   { code: 'air_ticket_policies:read', description: 'View air ticket repatriation policies', module: 'air_ticket_policies' },
   { code: 'air_ticket_policies:manage', description: 'Manage air ticket repatriation policies', module: 'air_ticket_policies' },
+
+  // Phase 7: Client Invoices & Commercial Billing
+  { code: 'invoices:read', description: 'View client invoices and commercial billing summaries', module: 'invoices' },
+  { code: 'invoices:create', description: 'Generate client draft invoices from attendance and billing rates', module: 'invoices' },
+  { code: 'invoices:issue', description: 'Issue and finalize client invoices', module: 'invoices' },
 ];
 
 const DEFAULT_DESIGNATIONS = [

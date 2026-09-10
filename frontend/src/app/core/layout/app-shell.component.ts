@@ -652,7 +652,8 @@ export class AppShellComponent {
           items: [
             { label: 'Employee Directory', route: '/employees', icon: 'group' },
             { label: 'Workforce Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
-            { label: 'Client Invoicing Rates', route: '/masters', tab: 'client-rates', icon: 'receipt' }
+            { label: 'Client Invoicing Rates', route: '/masters', tab: 'client-rates', icon: 'receipt' },
+            { label: 'Client Invoices', route: '/invoices', icon: 'request_quote' }
           ]
         },
         {
@@ -772,6 +773,7 @@ export class AppShellComponent {
     if (cleanPath === '/payroll/my-payroll') return { group: 'MY WORKSPACE', page: 'My Itemized Payslips' };
     if (cleanPath.startsWith('/payroll/periods/')) return { group: 'PAYROLL', page: 'Payroll Period Breakdown' };
     if (cleanPath === '/payroll') return { group: this.isSuperAdmin() ? 'OPERATIONS & GOVERNANCE' : 'PAYROLL', page: 'Payroll Processing' };
+    if (cleanPath === '/invoices') return { group: 'WORKFORCE OVERSIGHT', page: 'Client Invoices' };
 
     if (cleanPath === '/masters') {
       if (url.includes('tab=clients')) return { group: 'ORGANIZATION SETUP', page: 'Clients' };

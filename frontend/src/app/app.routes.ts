@@ -108,6 +108,15 @@ export const routes: Routes = [
       import('./features/payroll/my-payroll.component').then((m) => m.MyPayrollComponent),
   },
   {
+    path: 'invoices',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'invoices:read' },
+    loadComponent: () =>
+      import('./features/invoices/client-invoices.component').then(
+        (m) => m.ClientInvoicesComponent,
+      ),
+  },
+  {
     path: '**',
     redirectTo: 'dashboard',
   },
