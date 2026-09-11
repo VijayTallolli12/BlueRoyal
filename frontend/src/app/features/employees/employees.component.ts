@@ -11,12 +11,30 @@ import {
   EmployeeAssignmentDto,
   DesignationDto,
   EmployeeDocumentDto,
-  EMPLOYEE_COUNTRIES,
   EmployeeGender,
   EmploymentType,
   RemunerationBasis,
   EmployeeStatus,
 } from '@blue-royal/contracts';
+
+export const EMPLOYEE_COUNTRIES: readonly string[] = [
+  'India',
+  'United Arab Emirates',
+  'Saudi Arabia',
+  'Qatar',
+  'Oman',
+  'Kuwait',
+  'Bahrain',
+  'Philippines',
+  'Egypt',
+  'United Kingdom',
+  'United States',
+  'Pakistan',
+  'Bangladesh',
+  'Sri Lanka',
+  'Nepal',
+  'Other',
+] as const;
 
 interface EmployeeFormState {
   id?: string;
@@ -73,43 +91,54 @@ interface EmployeeFormState {
         <div class="kpi-grid">
           <!-- Card 1: Total Headcount -->
           <div class="kpi-card">
-            <span class="kpi-label">Total Headcount</span>
-            <span class="kpi-value">{{ totalHeadcount() }}</span>
-            <span class="kpi-sub">Total employee population</span>
+            <div class="kpi-header">
+              <span class="material-symbols-outlined kpi-icon">groups</span>
+              <span class="kpi-title">Total Headcount</span>
+            </div>
+            <div class="kpi-body single">
+              <div class="kpi-stat-item align-left">
+                <span class="kpi-number">{{ totalHeadcount() }}</span>
+                <span class="kpi-caption">Employees</span>
+              </div>
+            </div>
           </div>
 
           <!-- Card 2: Employment Type -->
           <div class="kpi-card">
-            <span class="kpi-label">Employment Type</span>
-            <div class="kpi-dual-values">
-              <div class="kpi-dual-col">
-                <span class="kpi-dual-val text-primary">{{ fullTimeCount() }}</span>
-                <span class="kpi-dual-lbl">Full-Time</span>
+            <div class="kpi-header">
+              <span class="material-symbols-outlined kpi-icon">badge</span>
+              <span class="kpi-title">Employment Type</span>
+            </div>
+            <div class="kpi-body split">
+              <div class="kpi-stat-item">
+                <span class="kpi-number">{{ fullTimeCount() }}</span>
+                <span class="kpi-caption">Full-Time</span>
               </div>
-              <div class="kpi-dual-divider"></div>
-              <div class="kpi-dual-col">
-                <span class="kpi-dual-val text-accent">{{ contractCount() }}</span>
-                <span class="kpi-dual-lbl">Contract</span>
+              <div class="kpi-divider"></div>
+              <div class="kpi-stat-item">
+                <span class="kpi-number">{{ contractCount() }}</span>
+                <span class="kpi-caption">Contract</span>
               </div>
             </div>
-            <span class="kpi-sub">Contractual distribution</span>
           </div>
 
           <!-- Card 3: Employee Status -->
           <div class="kpi-card">
-            <span class="kpi-label">Employee Status</span>
-            <div class="kpi-dual-values">
-              <div class="kpi-dual-col">
-                <span class="kpi-dual-val text-success">{{ activeCount() }}</span>
-                <span class="kpi-dual-lbl">Active</span>
+            <div class="kpi-header">
+              <span class="material-symbols-outlined kpi-icon">check_circle</span>
+              <span class="kpi-title">Employee Status</span>
+            </div>
+            <div class="kpi-body split">
+              <div class="kpi-stat-item">
+                <span class="kpi-number">{{ activeCount() }}</span>
+                <span class="kpi-caption">Active</span>
               </div>
-              <div class="kpi-dual-divider"></div>
-              <div class="kpi-dual-col">
-                <span class="kpi-dual-val text-muted">{{ inactiveCount() }}</span>
-                <span class="kpi-dual-lbl">Inactive</span>
+              <div class="kpi-divider"></div>
+              <div class="kpi-stat-item">
+                <span class="kpi-number">{{ inactiveCount() }}</span>
+                <span class="kpi-caption">Inactive</span>
               </div>
             </div>
-            <span class="kpi-sub">Operational status</span>
           </div>
         </div>
 
@@ -903,7 +932,7 @@ interface EmployeeFormState {
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 1.25rem;
+      gap: 1rem;
     }
     @media (max-width: 900px) {
       .kpi-grid {
@@ -915,64 +944,93 @@ interface EmployeeFormState {
       background: #ffffff;
       border: 1px solid var(--border-default);
       border-radius: var(--radius-lg);
-      padding: 1.25rem;
+      padding: 0.75rem 1rem;
       box-shadow: var(--shadow-sm);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      height: 102px;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-    .kpi-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 0.5rem;
+    .kpi-card:hover {
+      border-color: var(--border-hover, #cbd5e1);
+      box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.06));
     }
 
-    .kpi-value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      line-height: 1;
-      margin-bottom: 0.375rem;
-    }
-
-    .kpi-sub {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-    }
-
-    .kpi-dual-values {
+    .kpi-header {
       display: flex;
       align-items: center;
-      gap: 1.25rem;
-      margin: 0.25rem 0 0.5rem;
+      gap: 0.375rem;
+      margin-bottom: 0.125rem;
     }
 
-    .kpi-dual-col {
+    .kpi-icon {
+      font-size: 1rem;
+      color: var(--text-muted);
+      opacity: 0.8;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+    }
+
+    .kpi-title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      line-height: 1.2;
+    }
+
+    .kpi-body {
+      display: flex;
+      flex: 1;
+      align-items: center;
+    }
+
+    .kpi-body.single {
+      align-items: center;
+    }
+
+    .kpi-body.split {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-stat-item {
+      flex: 1;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      text-align: center;
     }
 
-    .kpi-dual-val {
-      font-size: 1.5rem;
+    .kpi-stat-item.align-left {
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .kpi-number {
+      font-size: 1.625rem;
       font-weight: 700;
-      line-height: 1.1;
+      color: var(--text-primary);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
     }
 
-    .kpi-dual-lbl {
-      font-size: 0.6875rem;
+    .kpi-caption {
+      font-size: 0.75rem;
+      font-weight: 500;
       color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
+      margin-top: 0.125rem;
     }
 
-    .kpi-dual-divider {
+    .kpi-divider {
       width: 1px;
-      height: 2.25rem;
-      background-color: var(--border-default);
+      height: 26px;
+      background-color: var(--border-subtle, #e2e8f0);
+      flex-shrink: 0;
     }
 
     .panel {
