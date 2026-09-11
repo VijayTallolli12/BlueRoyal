@@ -7,6 +7,7 @@ import {
   LeaveOverviewDto,
   PayrollOverviewDto,
   WorkforceDistributionDto,
+  RegionDistributionItemDto,
   ActionRequiredItemDto,
   RecentActivityItemDto,
 } from '@blue-royal/contracts';
@@ -54,6 +55,7 @@ export class DashboardService {
       employmentTypesGroup,
       latestAttendancePeriod,
       recentAuditLogs,
+      regionGroup,
     ] = await Promise.all([
       // 1. Employee counts
       Employee.count({ where: { deletedAt: null } }),
@@ -145,6 +147,17 @@ export class DashboardService {
         order: [['createdAt', 'DESC']],
         limit: 8,
       }),
+
+      // 10. Employees by region/country breakdown
+      Employee.findAll({
+        where: { deletedAt: null },
+        attributes: [
+          'country',
+          [fn('COUNT', col('id')), 'count'],
+        ],
+        group: ['country'],
+        raw: true,
+      }) as unknown as Promise<Array<{ country: string | null; count: string | number }>>,
     ]);
 
     // =========================================================================
@@ -303,6 +316,9 @@ export class DashboardService {
         totalEmployees: activeEmployees,
         totalGrossPay: Number(latestPayrollPeriod.totalGrossPay) || 0,
         totalNetPay: Number(latestPayrollPeriod.totalNetPay) || 0,
+        totalDeductions:
+          Number(latestPayrollPeriod.totalDeductions) ||
+          Math.max(0, (Number(latestPayrollPeriod.totalGrossPay) || 0) - (Number(latestPayrollPeriod.totalNetPay) || 0)),
         currency: 'AED',
         pendingActions:
           (latestPayrollPeriod.blockingIssuesCount || 0) +
@@ -368,9 +384,24 @@ export class DashboardService {
       };
     });
 
+    // 3. Region/Country breakdown
+    const byRegion: RegionDistributionItemDto[] = (regionGroup || [])
+      .map((item) => {
+        const country = item.country?.trim() || 'Other';
+        const count = Number(item.count) || 0;
+        return {
+          country,
+          count,
+          percentage: totalEmployees > 0 ? Math.round((count / totalEmployees) * 1000) / 10 : 0,
+        };
+      })
+      .filter((r) => r.count > 0)
+      .sort((a, b) => b.count - a.count);
+
     const workforce: WorkforceDistributionDto = {
       byDesignation,
       byEmploymentType,
+      byRegion,
     };
 
     // =========================================================================

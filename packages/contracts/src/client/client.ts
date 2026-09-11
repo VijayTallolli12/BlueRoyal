@@ -5,6 +5,8 @@ export interface ClientDto {
   contactPerson: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
   billingAddress: string | null;
   isActive: boolean;
   createdAt: string;
@@ -17,6 +19,8 @@ export interface CreateClientDto {
   contactPerson?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
   billingAddress?: string | null;
   isActive?: boolean;
 }
@@ -27,6 +31,8 @@ export interface UpdateClientDto {
   contactPerson?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
   billingAddress?: string | null;
   isActive?: boolean;
 }

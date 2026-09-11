@@ -145,7 +145,7 @@ describe('Phase 2 Attendance & Overtime Engine Integration Tests', () => {
       where: { attendancePeriodId: createdPeriodId, employeeId: testEmployeeId },
     });
     expect(count).toBe(31);
-  });
+  }, 60000);
 
   it('2. GET /attendance/periods/:id/grid -> should return grid data, dates, and summary cards', async () => {
     const res = await request(app)

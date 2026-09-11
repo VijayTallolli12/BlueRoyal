@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
-import { DashboardSummaryDto } from '@blue-royal/contracts';
+import { DashboardSummaryDto, RegionDistributionItemDto } from '@blue-royal/contracts';
 import { AppShellComponent } from '../../core/layout/app-shell.component';
 
 @Component({
@@ -378,40 +378,44 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
             </div>
           </div>
 
-          <!-- SECTION 4: PAYROLL OVERVIEW -->
-          <section class="payroll-section">
-            <div class="dashboard-card">
+          <!-- SECTION 4: PAYROLL OVERVIEW (50%) + EMPLOYEES BY REGION (50%) -->
+          <div class="split-section payroll-region-split">
+            <!-- 50% PAYROLL OVERVIEW CARD -->
+            <div class="dashboard-card flex-1 payroll-card">
               <div class="card-header">
                 <div class="card-title-group">
                   <div class="pill bg-emerald"><span class="material-symbols-outlined">payments</span></div>
                   <div>
                     <h2 class="card-title">Payroll Overview</h2>
-                    <span class="card-subtitle">Compensation calculations, WPS wage protection, and payroll finalization</span>
+                    <span class="card-subtitle">Monthly compensation calculations, WPS compliance & status</span>
                   </div>
                 </div>
                 <a routerLink="/payroll" class="link-action">
-                  <span>Inspect Payroll Hub</span>
+                  <span>Inspect Hub</span>
                   <span class="material-symbols-outlined icon-xs">arrow_forward</span>
                 </a>
               </div>
 
               @if (data.payroll.hasData) {
-                <div class="payroll-grid">
-                  <div class="p-block">
-                    <span class="p-label">CURRENT PAYROLL PERIOD</span>
-                    <div class="p-val-row">
-                      <span class="p-name">{{ data.payroll.periodName || data.payroll.periodCode }}</span>
-                      <span class="status-badge status-{{ data.payroll.status?.toLowerCase() }}">
-                        {{ formatStatus(data.payroll.status) }}
-                      </span>
+                <div class="payroll-split-content">
+                  <!-- Period Header Block -->
+                  <div class="p-period-header">
+                    <div>
+                      <span class="p-period-name">{{ data.payroll.periodName || data.payroll.periodCode }}</span>
+                      <span class="p-period-dates">{{ data.payroll.startDate }} to {{ data.payroll.endDate }}</span>
                     </div>
-                    <span class="p-sub">{{ data.payroll.startDate }} to {{ data.payroll.endDate }}</span>
+                    <span class="status-badge status-{{ data.payroll.status?.toLowerCase() }}">
+                      {{ formatStatus(data.payroll.status) }}
+                    </span>
                   </div>
 
-                  <div class="p-block">
-                    <span class="p-label">EMPLOYEES PROCESSED</span>
-                    <div class="p-metric">{{ data.payroll.employeesProcessed }} / {{ data.payroll.totalEmployees }}</div>
-                    <div class="bar-track mt-1">
+                  <!-- Processed Employee Count Progress -->
+                  <div class="p-processed-box">
+                    <div class="p-processed-labels">
+                      <span class="p-label">PROCESSED EMPLOYEES</span>
+                      <span class="p-val-count"><strong>{{ data.payroll.employeesProcessed }}</strong> / {{ data.payroll.totalEmployees }}</span>
+                    </div>
+                    <div class="bar-track">
                       <div
                         class="bar-fill bg-blue-fill"
                         [style.width.%]="getProcessedPercentage(data.payroll.employeesProcessed, data.payroll.totalEmployees)"
@@ -419,26 +423,34 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                     </div>
                   </div>
 
-                  <div class="p-block">
-                    <span class="p-label">GROSS PAYROLL</span>
-                    <div class="p-currency">{{ data.payroll.currency }} {{ data.payroll.totalGrossPay | number:'1.2-2' }}</div>
-                    <span class="p-sub">Total gross salary & overtime earnings</span>
+                  <!-- Financial Metrics: Gross, Net, Deductions -->
+                  <div class="p-financial-grid">
+                    <div class="p-fin-tile">
+                      <span class="p-fin-label">Total Gross Pay</span>
+                      <span class="p-fin-val text-primary">{{ data.payroll.currency }} {{ data.payroll.totalGrossPay | number:'1.2-2' }}</span>
+                    </div>
+                    <div class="p-fin-tile">
+                      <span class="p-fin-label">Total Net Pay</span>
+                      <span class="p-fin-val text-success">{{ data.payroll.currency }} {{ data.payroll.totalNetPay | number:'1.2-2' }}</span>
+                    </div>
+                    <div class="p-fin-tile">
+                      <span class="p-fin-label">Total Deductions</span>
+                      <span class="p-fin-val text-amber">{{ data.payroll.currency }} {{ (data.payroll.totalDeductions || 0) | number:'1.2-2' }}</span>
+                    </div>
                   </div>
 
-                  <div class="p-block">
-                    <span class="p-label">PENDING ACTIONS</span>
+                  <!-- Status / Health Indicator -->
+                  <div class="p-status-box">
                     @if (data.payroll.pendingActions && data.payroll.pendingActions > 0) {
                       <div class="p-alert text-danger">
                         <span class="material-symbols-outlined icon-sm">warning</span>
-                        <span>{{ data.payroll.pendingActions }} Action(s) Pending</span>
+                        <span>{{ data.payroll.pendingActions }} Action(s) Pending &mdash; Period review or variance check required</span>
                       </div>
-                      <span class="p-sub">Variance checks or period review required</span>
                     } @else {
                       <div class="p-alert text-success">
                         <span class="material-symbols-outlined icon-sm">check_circle</span>
-                        <span>Ready & Balanced</span>
+                        <span>Ready & Balanced &mdash; All calculations verified</span>
                       </div>
-                      <span class="p-sub">All calculations verified</span>
                     }
                   </div>
                 </div>
@@ -453,7 +465,84 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                 </div>
               }
             </div>
-          </section>
+
+            <!-- 50% EMPLOYEES BY REGION CARD -->
+            <div class="dashboard-card flex-1 region-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <div class="pill bg-violet"><span class="material-symbols-outlined">public</span></div>
+                  <div>
+                    <h2 class="card-title">Employees by Region</h2>
+                    <span class="card-subtitle">Headcount distribution across operating countries</span>
+                  </div>
+                </div>
+                <a routerLink="/employees" class="link-action">
+                  <span>Directory</span>
+                  <span class="material-symbols-outlined icon-xs">arrow_forward</span>
+                </a>
+              </div>
+
+              @if (data.workforce.byRegion && data.workforce.byRegion.length > 0) {
+                <div class="region-content">
+                  <!-- Native SVG Donut Chart -->
+                  <div class="donut-chart-container">
+                    <svg viewBox="0 0 200 200" class="donut-chart-svg">
+                      <!-- Base Track Ring -->
+                      <circle cx="100" cy="100" r="68" fill="transparent" stroke="#f1f5f9" stroke-width="24" />
+                      <!-- Colored Slices -->
+                      @for (slice of getDonutSlices(data.workforce.byRegion); track slice.country) {
+                        <circle
+                          cx="100"
+                          cy="100"
+                          r="68"
+                          fill="transparent"
+                          [attr.stroke]="slice.color"
+                          stroke-width="24"
+                          [attr.stroke-dasharray]="slice.strokeDasharray"
+                          [attr.stroke-dashoffset]="slice.strokeDashoffset"
+                          transform="rotate(-90 100 100)"
+                          class="donut-segment"
+                        >
+                          <title>{{ slice.country }}: {{ slice.count }} ({{ slice.percentage }}%)</title>
+                        </circle>
+                      }
+                      <!-- Center Text -->
+                      <text x="100" y="96" text-anchor="middle" class="donut-center-total">{{ data.kpis.totalEmployees }}</text>
+                      <text x="100" y="112" text-anchor="middle" class="donut-center-label">HEADCOUNT</text>
+                    </svg>
+                  </div>
+
+                  <!-- Region Legend & Breakdown List -->
+                  <div class="region-legend-list">
+                    @for (slice of getDonutSlices(data.workforce.byRegion); track slice.country) {
+                      <div class="region-legend-row">
+                        <div class="region-legend-left">
+                          <span class="region-color-dot" [style.background-color]="slice.color"></span>
+                          <span class="region-country-name" [title]="slice.country">{{ slice.country }}</span>
+                        </div>
+                        <div class="region-legend-right">
+                          <span class="region-count"><strong>{{ slice.count }}</strong></span>
+                          <div class="region-mini-track">
+                            <div class="region-mini-fill" [style.background-color]="slice.color" [style.width.%]="slice.percentage"></div>
+                          </div>
+                          <span class="region-pct">{{ slice.percentage }}%</span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <div class="empty-state-banner">
+                  <span class="material-symbols-outlined icon-lg text-muted">public_off</span>
+                  <div>
+                    <h4>No Regional Data Available</h4>
+                    <p>Employee records do not have country or address data assigned yet.</p>
+                  </div>
+                  <a routerLink="/employees" class="btn btn-secondary btn-sm">Update Employees</a>
+                </div>
+              }
+            </div>
+          </div>
 
           <!-- SECTION 6 & SECTION 7: ACTION REQUIRED & RECENT ACTIVITY (2-COLUMN) -->
           <div class="split-section">
@@ -867,24 +956,232 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
       color: var(--text-secondary);
     }
 
-    .payroll-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-    .p-block {
-      background: var(--bg-surface-subtle);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-md);
-      padding: 0.875rem;
+    /* 50%/50% Payroll & Region Split Section */
+    .payroll-region-split {
+      display: flex;
+      gap: 1.25rem;
+      align-items: stretch;
+    }
+
+    .payroll-card,
+    .region-card {
       display: flex;
       flex-direction: column;
+    }
+
+    .payroll-split-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+      flex: 1;
+    }
+
+    .p-period-header {
+      display: flex;
       justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .p-period-name {
+      display: block;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .p-period-dates {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.125rem;
+    }
+
+    .p-processed-box {
+      display: flex;
+      flex-direction: column;
       gap: 0.375rem;
     }
-    .p-label { font-size: 0.6875rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; }
-    .p-val-row { display: flex; align-items: center; justify-content: space-between; }
-    .p-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
-    .p-metric { font-size: 1.125rem; font-weight: 700; }
-    .p-currency { font-size: 1.25rem; font-weight: 700; color: #047857; }
-    .p-alert { display: flex; align-items: center; gap: 0.25rem; font-weight: 700; font-size: 0.875rem; }
-    .p-sub { font-size: 0.75rem; color: var(--text-muted); }
+    .p-processed-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .p-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+    .p-val-count {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+    .p-val-count strong {
+      color: var(--text-primary);
+    }
+
+    .p-financial-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+    .p-fin-tile {
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 0.625rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .p-fin-label {
+      font-size: 0.625rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .p-fin-val {
+      font-size: 0.875rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .p-status-box {
+      margin-top: auto;
+      padding-top: 0.5rem;
+    }
+    .p-alert {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      line-height: 1.4;
+    }
+
+    /* Region Donut Chart & Legend Styles */
+    .bg-violet { background: #f5f3ff; color: #7c3aed; }
+    .region-content {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 0.25rem 0;
+      flex: 1;
+    }
+    .donut-chart-container {
+      width: 140px;
+      height: 140px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .donut-chart-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .donut-segment {
+      transition: stroke-width 0.2s ease, opacity 0.2s ease;
+      cursor: pointer;
+    }
+    .donut-segment:hover {
+      stroke-width: 28;
+      opacity: 0.9;
+    }
+    .donut-center-total {
+      font-size: 1.625rem;
+      font-weight: 800;
+      fill: var(--text-primary);
+      font-family: inherit;
+    }
+    .donut-center-label {
+      font-size: 0.5625rem;
+      font-weight: 700;
+      fill: var(--text-muted);
+      letter-spacing: 0.08em;
+      font-family: inherit;
+    }
+
+    .region-legend-list {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .region-legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+    }
+    .region-legend-left {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-width: 0;
+      flex: 1;
+    }
+    .region-color-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .region-country-name {
+      color: var(--text-primary);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .region-legend-right {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+    .region-count {
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      min-width: 24px;
+      text-align: right;
+    }
+    .region-mini-track {
+      width: 44px;
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .region-mini-fill {
+      height: 100%;
+      border-radius: 9999px;
+    }
+    .region-pct {
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      font-family: var(--font-mono);
+      min-width: 38px;
+      text-align: right;
+    }
+
+    @media (max-width: 900px) {
+      .payroll-region-split {
+        flex-direction: column;
+      }
+      .region-content {
+        flex-direction: column;
+        align-items: center;
+      }
+      .region-legend-list {
+        width: 100%;
+      }
+    }
 
     .empty-state-banner {
       display: flex;
@@ -1077,5 +1374,36 @@ export class DashboardComponent implements OnInit {
       case 'payroll': return 'error';
       default: return 'notifications';
     }
+  }
+
+  public getDonutSlices(regions?: RegionDistributionItemDto[]) {
+    if (!regions || regions.length === 0) return [];
+    const total = regions.reduce((acc, r) => acc + r.count, 0);
+    if (total === 0) return [];
+    const circumference = 2 * Math.PI * 68; // r = 68 -> ~427.256
+    let accumulated = 0;
+    const colors = [
+      '#2563eb', // Royal Blue
+      '#059669', // Emerald
+      '#d97706', // Amber
+      '#7c3aed', // Purple
+      '#db2777', // Pink
+      '#0891b2', // Cyan
+      '#475569', // Slate
+    ];
+    return regions.map((r, i) => {
+      const pct = r.count / total;
+      const strokeDasharray = `${(pct * circumference).toFixed(2)} ${circumference.toFixed(2)}`;
+      const strokeDashoffset = (-accumulated * circumference).toFixed(2);
+      accumulated += pct;
+      return {
+        country: r.country,
+        count: r.count,
+        percentage: r.percentage,
+        color: colors[i % colors.length],
+        strokeDasharray,
+        strokeDashoffset,
+      };
+    });
   }
 }

@@ -17,39 +17,30 @@ export interface LoginHeroSlide {
 export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
   {
     id: 1,
-    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80',
-    category: 'ENTERPRISE WORKFORCE INTELLIGENCE',
-    categoryIcon: 'corporate_fare',
-    title: 'Unified Human Capital & Governance',
-    description: 'Streamline multi-department operations, employee lifecycles, and role-based access management with real-time auditability.',
-    highlights: ['Multi-Entity Governance', 'Immutable Audit Trails', 'Continuous Security']
+    imageUrl: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1600&q=80',
+    category: 'WORKFORCE MANAGEMENT',
+    categoryIcon: 'groups',
+    title: 'Managing Workforce',
+    description: 'Centralize employee records, streamline onboarding, track attendance and leaves, monitor performance, and oversee the complete employee lifecycle.',
+    highlights: ['Employee Records & Profiles', 'Attendance & Leave Tracking', 'Complete Lifecycle Oversight']
   },
   {
     id: 2,
     imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
-    category: 'ATTENDANCE & ROSTER AUTOMATION',
-    categoryIcon: 'schedule',
-    title: 'Deterministic Punch Rostering & Biometric Sync',
-    description: 'Eliminate manual timesheet disputes through automated grace-period resolution, locked attendance states, and overtime precision.',
-    highlights: ['Automated Grace Policies', 'Locked Shift States', 'Biometric Integration']
+    category: 'ORGANIZATION & CLIENTS',
+    categoryIcon: 'corporate_fare',
+    title: 'Managing Organization & Clients',
+    description: 'Structure organizational departments, manage client profiles, coordinate project allocations, and maintain company records with comprehensive administrative oversight.',
+    highlights: ['Department & Entity Hierarchy', 'Client & Project Allocations', 'Organizational Record Keeping']
   },
   {
     id: 3,
-    imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
-    category: 'STATUTORY COMPLIANCE & LEAVE',
-    categoryIcon: 'event_available',
-    title: 'Statutory Leave Entitlements & Policy Engine',
-    description: 'Enforce deterministic leave accrual, carry-forward limits, and manager approval chains with complete regulatory compliance.',
-    highlights: ['Multi-Tier Approvals', 'Statutory Accruals', 'Encashment Calculation']
-  },
-  {
-    id: 4,
-    imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1600&q=80',
-    category: 'MULTI-TIER PAYROLL ENGINE',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
+    category: 'PAYROLL ADMINISTRATION',
     categoryIcon: 'payments',
-    title: 'Zero-Variance Payroll & Compensation Engine',
-    description: 'Execute company-wide payroll runs directly from locked attendance and verified compensation structures with immutable ledger audits.',
-    highlights: ['Zero Variance', 'Locked Attendance Source', 'Instant Itemized Slips']
+    title: 'Payroll',
+    description: 'Execute accurate salary processing, manage itemized earnings and deductions, maintain complete payroll history, and generate verifiable employee compensation records.',
+    highlights: ['Salary & Wage Processing', 'Itemized Earnings & Deductions', 'Historical Payroll Records']
   }
 ];
 
@@ -166,8 +157,8 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
 
           <!-- Form Header -->
           <div class="form-header">
-            <h1 class="form-title">Welcome back</h1>
-            <p class="form-subtitle">Enter your corporate credentials to access the management portal</p>
+            <h1 class="form-title">Welcome</h1>
+            <p class="form-subtitle">Enter your corporate credentials to access the portal</p>
           </div>
 
           <!-- Alert Banner -->
@@ -182,7 +173,7 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
           <!-- Authentication Form -->
           <form (ngSubmit)="onSubmit()" class="auth-form" novalidate>
             <div class="form-group">
-              <label for="email">Work Email Address</label>
+              <label for="email">Email address</label>
               <div class="input-with-icon">
                 <span class="material-symbols-outlined input-prefix-icon">mail</span>
                 <input
@@ -190,7 +181,7 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
                   type="email"
                   [(ngModel)]="email"
                   name="email"
-                  placeholder="e.g. hradmin@blueroyal.local"
+                  placeholder="e.g. hradmin@blueroyal.com"
                   required
                   autocomplete="email"
                   [disabled]="isLoading()"
@@ -229,10 +220,10 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
             <button type="submit" class="btn btn-primary btn-submit" [disabled]="isLoading() || !email || !password">
               @if (isLoading()) {
                 <span class="spinner-inline"></span>
-                <span>Authenticating Credentials...</span>
+                <span>Login...</span>
               } @else {
                 <span class="material-symbols-outlined icon-sm">login</span>
-                <span>Sign In to System</span>
+                <span>Login</span>
               }
             </button>
           </form>
@@ -244,7 +235,7 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
               <button
                 type="button"
                 class="demo-chip"
-                (click)="fillDemo('hradmin@blueroyal.local', 'HrAdmin@2026!')"
+                (click)="fillDemo('hradmin@blueroyal.com', 'HrAdmin@2026!')"
                 title="Fill HR Admin credentials"
               >
                 <span class="material-symbols-outlined icon-xs">badge</span>
@@ -253,7 +244,7 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
               <button
                 type="button"
                 class="demo-chip"
-                (click)="fillDemo('superadmin@blueroyal.local', 'SuperAdmin@2026!')"
+                (click)="fillDemo('superadmin@blueroyal.com', 'SuperAdmin@2026!')"
                 title="Fill Super Admin credentials"
               >
                 <span class="material-symbols-outlined icon-xs">admin_panel_settings</span>
@@ -262,7 +253,7 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
               <button
                 type="button"
                 class="demo-chip"
-                (click)="fillDemo('employee@blueroyal.local', 'Employee@2026!')"
+                (click)="fillDemo('employee@blueroyal.com', 'Employee@2026!')"
                 title="Fill Employee credentials"
               >
                 <span class="material-symbols-outlined icon-xs">person</span>
@@ -271,10 +262,9 @@ export const DEFAULT_LOGIN_HERO_SLIDES: LoginHeroSlide[] = [
             </div>
           </div>
 
-          <!-- Footer Security Notes -->
+          <!-- Footer Copyright Area -->
           <div class="auth-security-footer">
-            <span class="material-symbols-outlined icon-sm text-muted">lock</span>
-            <span>256-Bit TLS Encryption • Role-Based Access Control • Continuous Audit</span>
+            <span>Copyright 2026 . Blue Royal HRMS All rights reserved</span>
           </div>
         </div>
       </section>

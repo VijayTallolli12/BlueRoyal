@@ -153,11 +153,11 @@ async function runDemoSeed() {
   console.log('\n--- STEP 2: Creating Employee & Onboarding ---');
 
   // 2.1 User Account for Rahul Sharma
-  let rahulUser = await User.findOne({ where: { email: 'rahul.demo@blueroyal.local' } });
+  let rahulUser = await User.findOne({ where: { email: 'rahul.demo@blueroyal.com' } });
   if (!rahulUser) {
     const hashedPassword = await bcrypt.hash('Employee@2026!', 10);
     rahulUser = await User.create({
-      email: 'rahul.demo@blueroyal.local',
+      email: 'rahul.demo@blueroyal.com',
       passwordHash: hashedPassword,
       firstName: 'Rahul',
       lastName: 'Sharma',
@@ -170,9 +170,9 @@ async function runDemoSeed() {
         roleId: employeeRole.id,
       });
     }
-    console.log('✓ Created User Account: rahul.demo@blueroyal.local (Password: Employee@2026!)');
+    console.log('✓ Created User Account: rahul.demo@blueroyal.com (Password: Employee@2026!)');
   } else {
-    console.log('✓ User Account already exists: rahul.demo@blueroyal.local');
+    console.log('✓ User Account already exists: rahul.demo@blueroyal.com');
   }
 
   // 2.2 Employee Core Profile
@@ -182,7 +182,7 @@ async function runDemoSeed() {
       firstName: 'Rahul',
       lastName: 'Sharma',
       employeeCode: 'DEMO-EMP-001',
-      email: 'rahul.demo@blueroyal.local',
+      email: 'rahul.demo@blueroyal.com',
       phoneNumber: '+971 50 123 4567',
       dateOfBirth: '1995-05-15',
       gender: 'male',
@@ -456,12 +456,12 @@ async function runDemoSeed() {
     console.log('✓ Payslip for Rahul Sharma already exists: Net 7,200 AED');
   }
 
-  // Also verify standard demo account `employee@blueroyal.local`
-  const standardDemoUser = await User.findOne({ where: { email: 'employee@blueroyal.local' } });
+  // Also verify standard demo account `employee@blueroyal.com`
+  const standardDemoUser = await User.findOne({ where: { email: 'employee@blueroyal.com' } });
   if (standardDemoUser) {
     const demoEmp = await Employee.findOne({ where: { userId: standardDemoUser.id } });
     if (demoEmp) {
-      console.log(`✓ Standard demo account employee@blueroyal.local is linked to Employee [${demoEmp.employeeCode}] ${demoEmp.firstName} ${demoEmp.lastName}`);
+      console.log(`✓ Standard demo account employee@blueroyal.com is linked to Employee [${demoEmp.employeeCode}] ${demoEmp.firstName} ${demoEmp.lastName}`);
     }
   }
 

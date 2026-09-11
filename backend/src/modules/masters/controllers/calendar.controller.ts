@@ -64,10 +64,11 @@ export class CalendarController {
       const { calendarYear, name, holidayDate, description } = req.body;
       const existing = await PublicHoliday.findOne({ where: { holidayDate } });
       if (existing) {
-        throw AppError.conflict(`Public holiday already configured on ${holidayDate}`);
+        throw AppError.conflict(`Holiday already configured on ${holidayDate}`);
       }
+      const year = calendarYear ? Number(calendarYear) : (holidayDate ? new Date(holidayDate).getFullYear() : new Date().getFullYear());
       const item = await PublicHoliday.create({
-        calendarYear,
+        calendarYear: year,
         name,
         holidayDate,
         description: description || null,
@@ -85,6 +86,49 @@ export class CalendarController {
       });
 
       sendSuccess(req, res, item, 201);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async updateHoliday(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = String(req.params.id);
+      const item = await PublicHoliday.findByPk(id);
+      if (!item) throw AppError.notFound(`Holiday ${id} not found`);
+
+      const { name, holidayDate, description, calendarYear } = req.body;
+      const oldValues = item.toJSON();
+
+      if (holidayDate && holidayDate !== item.holidayDate) {
+        const existing = await PublicHoliday.findOne({ where: { holidayDate } });
+        if (existing && existing.id !== id) {
+          throw AppError.conflict(`Holiday already configured on ${holidayDate}`);
+        }
+      }
+
+      const year = calendarYear ? Number(calendarYear) : (holidayDate ? new Date(holidayDate).getFullYear() : item.calendarYear);
+
+      await item.update({
+        name: name !== undefined ? name : item.name,
+        holidayDate: holidayDate !== undefined ? holidayDate : item.holidayDate,
+        calendarYear: year,
+        description: description !== undefined ? description : item.description,
+      });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'PUBLIC_HOLIDAY_UPDATED',
+        resourceType: 'PublicHoliday',
+        resourceId: id,
+        oldValues,
+        newValues: item.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
+      sendSuccess(req, res, item);
     } catch (err) {
       next(err);
     }

@@ -61,7 +61,7 @@ async function runFullExecution() {
   // Login Super Admin
   const saLogin = await request(app)
     .post('/api/v1/auth/login')
-    .send({ email: 'superadmin@blueroyal.local', password: 'SuperAdmin@2026!' });
+    .send({ email: 'superadmin@blueroyal.com', password: 'SuperAdmin@2026!' });
   const saToken = saLogin.body?.data?.accessToken;
   const saCookie = saLogin.headers['set-cookie'];
 
@@ -71,7 +71,7 @@ async function runFullExecution() {
     role: 'SUPER_ADMIN',
     screen: '/login',
     action: 'Login as Super Admin',
-    dataUsed: 'superadmin@blueroyal.local / SuperAdmin@2026!',
+    dataUsed: 'superadmin@blueroyal.com / SuperAdmin@2026!',
     expected: 'HTTP 200 with JWT access token and super_admin role',
     actual: `HTTP ${saLogin.status}, Role: ${saLogin.body?.data?.user?.roles?.[0]}`,
     status: saLogin.status === 200 ? 'PASS' : 'FAIL',
@@ -272,7 +272,7 @@ async function runFullExecution() {
   // Login HR Admin
   const hrLogin = await request(app)
     .post('/api/v1/auth/login')
-    .send({ email: 'hradmin@blueroyal.local', password: 'HrAdmin@2026!' });
+    .send({ email: 'hradmin@blueroyal.com', password: 'HrAdmin@2026!' });
   const hrToken = hrLogin.body?.data?.accessToken;
 
   record({
@@ -281,7 +281,7 @@ async function runFullExecution() {
     role: 'HR_ADMIN',
     screen: '/login',
     action: 'Login as HR Admin',
-    dataUsed: 'hradmin@blueroyal.local / HrAdmin@2026!',
+    dataUsed: 'hradmin@blueroyal.com / HrAdmin@2026!',
     expected: 'HTTP 200 with hr_admin role and operational permissions',
     actual: `HTTP ${hrLogin.status}, Role: ${hrLogin.body?.data?.user?.roles?.[0]}`,
     status: hrLogin.status === 200 ? 'PASS' : 'FAIL',
@@ -484,7 +484,7 @@ async function runFullExecution() {
   // Login Employee
   const empLogin = await request(app)
     .post('/api/v1/auth/login')
-    .send({ email: 'rahul.demo@blueroyal.local', password: 'Employee@2026!' });
+    .send({ email: 'rahul.demo@blueroyal.com', password: 'Employee@2026!' });
   const empToken = empLogin.body?.data?.accessToken;
 
   record({
@@ -493,7 +493,7 @@ async function runFullExecution() {
     role: 'EMPLOYEE',
     screen: '/login',
     action: 'Login as DEMO Employee',
-    dataUsed: 'rahul.demo@blueroyal.local / Employee@2026!',
+    dataUsed: 'rahul.demo@blueroyal.com / Employee@2026!',
     expected: 'HTTP 200 with employee role and self-service permissions',
     actual: `HTTP ${empLogin.status}, Role: ${empLogin.body?.data?.user?.roles?.[0]}`,
     status: empLogin.status === 200 ? 'PASS' : 'FAIL',

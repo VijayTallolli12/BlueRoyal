@@ -8,10 +8,13 @@ import {
   CreateDesignationDto,
   ClientDto,
   CreateClientDto,
+  UpdateClientDto,
   ProjectDto,
   CreateProjectDto,
+  UpdateProjectDto,
   EmployeeDto,
   CreateEmployeeDto,
+  UpdateEmployeeDto,
   EmployeeAssignmentDto,
   CreateEmployeeAssignmentDto,
   EmployeeHourlyRateDto,
@@ -21,10 +24,12 @@ import {
   ResolvedBillingRateDto,
   ShiftDto,
   CreateShiftDto,
+  UpdateShiftDto,
   WeeklyOffConfigDto,
   CreateWeeklyOffConfigDto,
   PublicHolidayDto,
   CreatePublicHolidayDto,
+  UpdatePublicHolidayDto,
   SalaryComponentDto,
   CreateSalaryComponentDto,
   EmployeeSalaryStructureDto,
@@ -57,6 +62,10 @@ export class MasterService {
     return this.http.post<ApiSuccessResponse<ClientDto>>(`${this.apiUrl}/clients`, dto);
   }
 
+  public updateClient(id: string, dto: UpdateClientDto): Observable<ApiSuccessResponse<ClientDto>> {
+    return this.http.put<ApiSuccessResponse<ClientDto>>(`${this.apiUrl}/clients/${id}`, dto);
+  }
+
   // 3. Projects
   public getProjects(clientId?: string): Observable<ApiSuccessResponse<ProjectDto[]>> {
     const url = clientId ? `${this.apiUrl}/projects?clientId=${clientId}` : `${this.apiUrl}/projects`;
@@ -65,6 +74,10 @@ export class MasterService {
 
   public createProject(dto: CreateProjectDto): Observable<ApiSuccessResponse<ProjectDto>> {
     return this.http.post<ApiSuccessResponse<ProjectDto>>(`${this.apiUrl}/projects`, dto);
+  }
+
+  public updateProject(id: string, dto: UpdateProjectDto): Observable<ApiSuccessResponse<ProjectDto>> {
+    return this.http.put<ApiSuccessResponse<ProjectDto>>(`${this.apiUrl}/projects/${id}`, dto);
   }
 
   // 4. Employees
@@ -78,6 +91,27 @@ export class MasterService {
 
   public createEmployee(dto: CreateEmployeeDto): Observable<ApiSuccessResponse<EmployeeDto>> {
     return this.http.post<ApiSuccessResponse<EmployeeDto>>(`${this.apiUrl}/employees`, dto);
+  }
+
+  public createEmployeeFormData(formData: FormData): Observable<ApiSuccessResponse<EmployeeDto>> {
+    return this.http.post<ApiSuccessResponse<EmployeeDto>>(`${this.apiUrl}/employees`, formData);
+  }
+
+  public updateEmployee(
+    id: string,
+    dto: UpdateEmployeeDto | FormData,
+  ): Observable<ApiSuccessResponse<EmployeeDto>> {
+    return this.http.put<ApiSuccessResponse<EmployeeDto>>(`${this.apiUrl}/employees/${id}`, dto);
+  }
+
+  public deleteEmployeePhoto(id: string): Observable<ApiSuccessResponse<void>> {
+    return this.http.delete<ApiSuccessResponse<void>>(`${this.apiUrl}/employees/${id}/photo`);
+  }
+
+  public getEmployeePhotoUrl(id: string, token?: string): string {
+    return token
+      ? `${this.apiUrl}/employees/${id}/photo?token=${token}`
+      : `${this.apiUrl}/employees/${id}/photo`;
   }
 
   // 5. Assignments (Effective-Dated)
@@ -137,6 +171,10 @@ export class MasterService {
     return this.http.post<ApiSuccessResponse<ShiftDto>>(`${this.apiUrl}/shifts`, dto);
   }
 
+  public updateShift(id: string, dto: UpdateShiftDto): Observable<ApiSuccessResponse<ShiftDto>> {
+    return this.http.put<ApiSuccessResponse<ShiftDto>>(`${this.apiUrl}/shifts/${id}`, dto);
+  }
+
   // 8. Calendar & Holidays
   public getWeeklyOffs(): Observable<ApiSuccessResponse<WeeklyOffConfigDto[]>> {
     return this.http.get<ApiSuccessResponse<WeeklyOffConfigDto[]>>(`${this.apiUrl}/calendar/weekly-offs`);
@@ -153,6 +191,10 @@ export class MasterService {
 
   public createPublicHoliday(dto: CreatePublicHolidayDto): Observable<ApiSuccessResponse<PublicHolidayDto>> {
     return this.http.post<ApiSuccessResponse<PublicHolidayDto>>(`${this.apiUrl}/calendar/holidays`, dto);
+  }
+
+  public updatePublicHoliday(id: string, dto: UpdatePublicHolidayDto): Observable<ApiSuccessResponse<PublicHolidayDto>> {
+    return this.http.put<ApiSuccessResponse<PublicHolidayDto>>(`${this.apiUrl}/calendar/holidays/${id}`, dto);
   }
 
   // 9. Salary Components & Structures

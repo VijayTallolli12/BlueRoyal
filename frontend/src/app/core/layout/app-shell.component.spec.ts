@@ -25,7 +25,7 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
   function mockUser(roles: string[], permissions: string[] = []): void {
     const user: UserProfileDto = {
       id: 'test-user-id',
-      email: `${roles[0]}@blueroyal.local`,
+      email: `${roles[0]}@blueroyal.com`,
       firstName: 'Test',
       lastName: 'User',
       status: 'active',
@@ -52,9 +52,9 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       expect(sectionIds).toEqual(['core', 'orgSetup', 'workforceOversight', 'operationsGov']);
       expect(sectionTitles).toEqual([
         'CORE',
-        'ORGANIZATION SETUP',
-        'WORKFORCE OVERSIGHT',
-        'OPERATIONS & GOVERNANCE',
+        'ORGANIZATION MASTER',
+        'WORKFORCE',
+        'OPERATIONS',
       ]);
 
       // Assert MY WORKSPACE is completely absent
@@ -70,15 +70,15 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       expect(itemLabels).toContain('Clients');
       expect(itemLabels).toContain('Projects');
       expect(itemLabels).toContain('Designations');
-      expect(itemLabels).toContain('Work Shifts & Hours');
-      expect(itemLabels).toContain('Holidays & Weekly Offs');
+      expect(itemLabels).toContain('Work Shift');
+      expect(itemLabels).toContain('Holidays');
       expect(itemLabels).toContain('Salary Packages');
-      expect(itemLabels).toContain('Employee Directory');
-      expect(itemLabels).toContain('Workforce Deployments');
-      expect(itemLabels).toContain('Client Invoicing Rates');
-      expect(itemLabels).toContain('Attendance Periods');
-      expect(itemLabels).toContain('Payroll Processing');
-      expect(itemLabels).toContain('Compliance & Documents');
+      expect(itemLabels).toContain('Employees');
+      expect(itemLabels).toContain('Deployments');
+      expect(itemLabels).toContain('Billing Rates');
+      expect(itemLabels).toContain('Attendance');
+      expect(itemLabels).toContain('Payroll');
+      expect(itemLabels).toContain('Documents');
 
       // Assert zero ESS items exist
       expect(itemLabels).not.toContain('My Timesheet');
@@ -109,10 +109,10 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       expect(sectionIds).toEqual(['core', 'people', 'workforceOps', 'payroll', 'orgRef']);
       expect(sectionTitles).toEqual([
         'CORE',
-        'PEOPLE & ONBOARDING',
-        'WORKFORCE OPERATIONS',
-        'COMPENSATION & PAYROLL',
-        'ORGANIZATION REFERENCE',
+        'PEOPLE',
+        'WORKFORCE',
+        'PAYROLL',
+        'ORGANIZATION MASTER',
       ]);
 
       // Assert MY WORKSPACE is completely absent
@@ -122,19 +122,19 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       const allItems = sections.flatMap(s => s.items);
       const itemLabels = allItems.map(i => i.label);
 
-      expect(itemLabels).toContain('HR Dashboard');
-      expect(itemLabels).toContain('Employee Directory');
-      expect(itemLabels).toContain('Onboarding Hub');
-      expect(itemLabels).toContain('Document Center');
-      expect(itemLabels).toContain('Workforce Deployments');
-      expect(itemLabels).toContain('Worker Pay Rates');
-      expect(itemLabels).toContain('Attendance & Timesheets');
-      expect(itemLabels).toContain('Leave Management');
-      expect(itemLabels).toContain('Payroll Processing');
-      expect(itemLabels).toContain('Job Designations');
-      expect(itemLabels).toContain('Work Shifts');
-      expect(itemLabels).toContain('Company Holidays');
-      expect(itemLabels).toContain('Commercial Clients');
+      expect(itemLabels).toContain('Dashboard');
+      expect(itemLabels).toContain('Employees');
+      expect(itemLabels).toContain('Onboarding');
+      expect(itemLabels).toContain('Documents');
+      expect(itemLabels).toContain('Deployments');
+      expect(itemLabels).toContain('Pay Rates');
+      expect(itemLabels).toContain('Attendance');
+      expect(itemLabels).toContain('Leaves');
+      expect(itemLabels).toContain('Payroll');
+      expect(itemLabels).toContain('Designations');
+      expect(itemLabels).toContain('Work Shift');
+      expect(itemLabels).toContain('Holidays');
+      expect(itemLabels).toContain('Clients');
 
       // Assert zero ESS items exist
       expect(itemLabels).not.toContain('My Timesheet');
@@ -145,7 +145,7 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
   });
 
   describe('EMPLOYEE Navigation Model', () => {
-    it('should generate Employee Portal and MY WORKSPACE only', () => {
+    it('should generate Employee Dashboard and MY WORKSPACE only', () => {
       mockUser(['employee'], [
         'attendance:self_read', 'leave:self_read', 'payroll:self_read', 'documents:self_read'
       ]);
@@ -167,7 +167,7 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       const itemLabels = allItems.map(i => i.label);
 
       expect(itemLabels).toEqual([
-        'Employee Portal',
+        'Dashboard',
         'My Timesheet',
         'My Leave',
         'My Payslips',
@@ -184,8 +184,8 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       expect(sectionIds).not.toContain('orgRef');
       expect(itemLabels).not.toContain('Clients');
       expect(itemLabels).not.toContain('Projects');
-      expect(itemLabels).not.toContain('Work Shifts & Hours');
-      expect(itemLabels).not.toContain('Payroll Processing');
+      expect(itemLabels).not.toContain('Work Shift');
+      expect(itemLabels).not.toContain('Payroll');
     });
   });
 });

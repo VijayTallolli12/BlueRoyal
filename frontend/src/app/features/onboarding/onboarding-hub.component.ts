@@ -340,7 +340,7 @@ import {
                   <strong>Organization Masters Dependency</strong>
                 </div>
                 <p class="text-xs text-secondary mb-2">
-                  Onboarding links an existing employee profile to authoritative Organization Masters (Designation, Project Worksite, Worker Pay Rates). Master data is configured centrally in Organization Setup, not created ad-hoc here.
+                  Onboarding links an existing employee profile to authoritative Organization Masters (Designation, Project Worksite, Worker Pay Rates). Master data is configured centrally in ORGANIZATION MASTER, not created ad-hoc here.
                 </p>
                 <div class="prereq-micro-badges">
                   <span class="micro-badge" [class.micro-badge-ok]="designationsCount() > 0">

@@ -118,33 +118,14 @@ export interface NavSection {
 
       <!-- Main Shell Content Area -->
       <div class="main-container">
-        <!-- Top Navbar with Breadcrumb Trail -->
-        <header class="topbar">
-          <div class="topbar-left">
-            <button class="mobile-toggle" (click)="toggleMobile()" aria-label="Toggle navigation menu">
-              <span class="material-symbols-outlined">menu</span>
-            </button>
-
-            <!-- Dynamic Breadcrumb Trail -->
-            <nav class="breadcrumb-trail" aria-label="Breadcrumb">
-              <span class="breadcrumb-group">{{ currentBreadcrumb().group }}</span>
-              <span class="breadcrumb-divider">/</span>
-              <span class="breadcrumb-page">{{ currentBreadcrumb().page }}</span>
-            </nav>
-          </div>
-
-          <div class="topbar-right">
-            <div class="system-status-pill">
-              <span class="status-indicator-dot"></span>
-              <span>Enterprise Node Online</span>
-            </div>
-
-            @if (authService.currentUser(); as user) {
-              <div class="user-badge-header">
-                <span>{{ user.email }}</span>
-                <span class="role-tag">{{ user.roles.join(', ') }}</span>
-              </div>
-            }
+        <!-- Mobile Header Bar (Visible only on screens <= 900px) -->
+        <header class="mobile-header">
+          <button class="mobile-toggle" (click)="toggleMobile()" aria-label="Toggle navigation menu">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          <div class="mobile-brand">
+            <span class="brand-title">BLUE ROYAL</span>
+            <span class="brand-subtitle">HRMS</span>
           </div>
         </header>
 
@@ -465,23 +446,37 @@ export interface NavSection {
       min-width: 0;
     }
 
-    .topbar {
-      height: 56px;
+    .mobile-header {
+      display: none;
+      height: 52px;
       background-color: var(--bg-surface);
       border-bottom: 1px solid var(--border-default);
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 1.5rem;
+      padding: 0 1rem;
+      gap: 0.75rem;
       position: sticky;
       top: 0;
       z-index: 40;
     }
 
-    .topbar-left {
+    .mobile-brand {
       display: flex;
-      align-items: center;
-      gap: 1rem;
+      align-items: baseline;
+      gap: 0.375rem;
+    }
+
+    .mobile-brand .brand-title {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.05em;
+    }
+
+    .mobile-brand .brand-subtitle {
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--brand-600);
+      letter-spacing: 0.08em;
     }
 
     .mobile-toggle {
@@ -490,76 +485,8 @@ export interface NavSection {
       border: none;
       cursor: pointer;
       color: var(--text-primary);
-    }
-
-    /* Dynamic Breadcrumb Trail */
-    .breadcrumb-trail {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    .breadcrumb-group {
-      color: var(--text-muted);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      font-size: 0.6875rem;
-    }
-
-    .breadcrumb-divider {
-      color: var(--border-default);
-      font-size: 0.8125rem;
-    }
-
-    .breadcrumb-page {
-      color: var(--text-primary);
-      font-weight: 700;
-    }
-
-    .system-status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.2rem 0.55rem;
-      border-radius: var(--radius-full);
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      color: #065f46;
-      font-size: 0.6875rem;
-      font-weight: 600;
-    }
-
-    .status-indicator-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background-color: #10b981;
-    }
-
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.875rem;
-    }
-
-    .user-badge-header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-    }
-
-    .role-tag {
-      background: var(--brand-50);
-      color: var(--brand-700);
-      padding: 0.15rem 0.4rem;
+      padding: 0.25rem;
       border-radius: var(--radius-sm);
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.6875rem;
     }
 
     .content-canvas {
@@ -582,8 +509,13 @@ export interface NavSection {
       .sidebar.mobile-open {
         transform: translateX(0);
       }
+      .mobile-header {
+        display: flex;
+      }
       .mobile-toggle {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .mobile-backdrop {
         position: fixed;
@@ -632,39 +564,39 @@ export class AppShellComponent {
         },
         {
           id: 'orgSetup',
-          title: 'ORGANIZATION SETUP',
+          title: 'ORGANIZATION MASTER',
           icon: 'corporate_fare',
           isAccordion: true,
           items: [
             { label: 'Clients', route: '/masters', tab: 'clients', icon: 'business' },
             { label: 'Projects', route: '/masters', tab: 'projects', icon: 'location_on' },
             { label: 'Designations', route: '/masters', tab: 'designations', icon: 'badge' },
-            { label: 'Work Shifts & Hours', route: '/masters', tab: 'shifts', icon: 'schedule' },
-            { label: 'Holidays & Weekly Offs', route: '/masters', tab: 'calendar', icon: 'event' },
+            { label: 'Work Shift', route: '/masters', tab: 'shifts', icon: 'schedule' },
+            { label: 'Holidays', route: '/masters', tab: 'calendar', icon: 'event' },
             { label: 'Salary Packages', route: '/masters', tab: 'salary', icon: 'account_balance_wallet' }
           ]
         },
         {
           id: 'workforceOversight',
-          title: 'WORKFORCE OVERSIGHT',
+          title: 'WORKFORCE',
           icon: 'groups',
           isAccordion: true,
           items: [
-            { label: 'Employee Directory', route: '/employees', icon: 'group' },
-            { label: 'Workforce Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
-            { label: 'Client Invoicing Rates', route: '/masters', tab: 'client-rates', icon: 'receipt' },
-            { label: 'Client Invoices', route: '/invoices', icon: 'request_quote' }
+            { label: 'Employees', route: '/employees', icon: 'group' },
+            { label: 'Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
+            { label: 'Billing Rates', route: '/masters', tab: 'client-rates', icon: 'receipt' },
+            { label: 'Invoices', route: '/invoices', icon: 'request_quote' }
           ]
         },
         {
           id: 'operationsGov',
-          title: 'OPERATIONS & GOVERNANCE',
+          title: 'OPERATIONS',
           icon: 'admin_panel_settings',
           isAccordion: true,
           items: [
-            { label: 'Attendance Periods', route: '/attendance', icon: 'fact_check' },
-            { label: 'Payroll Processing', route: '/payroll', icon: 'payments' },
-            { label: 'Compliance & Documents', route: '/documents', icon: 'folder_shared' }
+            { label: 'Attendance', route: '/attendance', icon: 'fact_check' },
+            { label: 'Payroll', route: '/payroll', icon: 'payments' },
+            { label: 'Documents', route: '/documents', icon: 'folder_shared' }
           ]
         }
       ];
@@ -677,51 +609,51 @@ export class AppShellComponent {
           title: 'CORE',
           isAccordion: false,
           items: [
-            { label: 'HR Dashboard', route: '/dashboard', icon: 'space_dashboard', exact: true }
+            { label: 'Dashboard', route: '/dashboard', icon: 'space_dashboard', exact: true }
           ]
         },
         {
           id: 'people',
-          title: 'PEOPLE & ONBOARDING',
+          title: 'PEOPLE',
           icon: 'person_search',
           isAccordion: true,
           items: [
-            { label: 'Employee Directory', route: '/employees', icon: 'badge' },
-            { label: 'Onboarding Hub', route: '/onboarding', icon: 'person_add_alt' },
-            { label: 'Document Center', route: '/documents', icon: 'folder_shared' }
+            { label: 'Employees', route: '/employees', icon: 'badge' },
+            { label: 'Onboarding', route: '/onboarding', icon: 'person_add_alt' },
+            { label: 'Documents', route: '/documents', icon: 'folder_shared' }
           ]
         },
         {
           id: 'workforceOps',
-          title: 'WORKFORCE OPERATIONS',
+          title: 'WORKFORCE',
           icon: 'engineering',
           isAccordion: true,
           items: [
-            { label: 'Workforce Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
-            { label: 'Worker Pay Rates', route: '/masters', tab: 'employee-rates', icon: 'price_change' },
-            { label: 'Attendance & Timesheets', route: '/attendance', icon: 'schedule' },
-            { label: 'Leave Management', route: '/leave', icon: 'event_available' }
+            { label: 'Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
+            { label: 'Pay Rates', route: '/masters', tab: 'employee-rates', icon: 'price_change' },
+            { label: 'Attendance', route: '/attendance', icon: 'schedule' },
+            { label: 'Leaves', route: '/leave', icon: 'event_available' }
           ]
         },
         {
           id: 'payroll',
-          title: 'COMPENSATION & PAYROLL',
+          title: 'PAYROLL',
           icon: 'receipt_long',
           isAccordion: true,
           items: [
-            { label: 'Payroll Processing', route: '/payroll', icon: 'payments' }
+            { label: 'Payroll', route: '/payroll', icon: 'payments' }
           ]
         },
         {
           id: 'orgRef',
-          title: 'ORGANIZATION REFERENCE',
+          title: 'ORGANIZATION MASTER',
           icon: 'tune',
           isAccordion: true,
           items: [
-            { label: 'Job Designations', route: '/masters', tab: 'designations', icon: 'work' },
-            { label: 'Work Shifts', route: '/masters', tab: 'shifts', icon: 'more_time' },
-            { label: 'Company Holidays', route: '/masters', tab: 'calendar', icon: 'event_note' },
-            { label: 'Commercial Clients', route: '/masters', tab: 'clients', icon: 'domain' }
+            { label: 'Clients', route: '/masters', tab: 'clients', icon: 'domain' },
+            { label: 'Designations', route: '/masters', tab: 'designations', icon: 'work' },
+            { label: 'Work Shift', route: '/masters', tab: 'shifts', icon: 'more_time' },
+            { label: 'Holidays', route: '/masters', tab: 'calendar', icon: 'event_note' }
           ]
         }
       ];
@@ -734,7 +666,7 @@ export class AppShellComponent {
         title: 'CORE',
         isAccordion: false,
         items: [
-          { label: 'Employee Portal', route: '/dashboard', icon: 'space_dashboard', exact: true }
+          { label: 'Dashboard', route: '/dashboard', icon: 'space_dashboard', exact: true }
         ]
       },
       {
@@ -762,7 +694,7 @@ export class AppShellComponent {
         page: this.isSuperAdmin() ? 'Dashboard' : this.isHrAdmin() ? 'HR Operational Dashboard' : 'Employee Self-Service'
       };
     }
-    if (cleanPath === '/employees') return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'PEOPLE', page: 'Employee Directory' };
+    if (cleanPath === '/employees') return { group: 'WORKFORCE', page: 'Employees' };
     if (cleanPath === '/onboarding') return { group: 'PEOPLE', page: 'Onboarding & Verification Hub' };
     if (cleanPath === '/documents/my-documents') return { group: 'MY WORKSPACE', page: 'My Compliance Documents' };
     if (cleanPath === '/documents') return { group: this.isSuperAdmin() ? 'OPERATIONS & GOVERNANCE' : 'PEOPLE', page: this.isSuperAdmin() ? 'Compliance & Documents' : 'Document Center & Compliance' };
@@ -776,17 +708,17 @@ export class AppShellComponent {
     if (cleanPath === '/invoices') return { group: 'WORKFORCE OVERSIGHT', page: 'Client Invoices' };
 
     if (cleanPath === '/masters') {
-      if (url.includes('tab=clients')) return { group: 'ORGANIZATION SETUP', page: 'Clients' };
-      if (url.includes('tab=projects')) return { group: 'ORGANIZATION SETUP', page: 'Projects & Worksites' };
-      if (url.includes('tab=designations')) return { group: this.isSuperAdmin() ? 'ORGANIZATION SETUP' : 'ORGANIZATION REFERENCE', page: 'Job Designations' };
-      if (url.includes('tab=shifts')) return { group: 'ORGANIZATION SETUP', page: 'Work Shifts & Hours' };
-      if (url.includes('tab=calendar')) return { group: 'ORGANIZATION SETUP', page: 'Holidays & Weekly Offs' };
-      if (url.includes('tab=salary')) return { group: 'ORGANIZATION SETUP', page: 'Salary Packages' };
+      if (url.includes('tab=clients')) return { group: 'ORGANIZATION MASTER', page: 'Clients' };
+      if (url.includes('tab=projects')) return { group: 'ORGANIZATION MASTER', page: 'Projects & Worksites' };
+      if (url.includes('tab=designations')) return { group: 'ORGANIZATION MASTER', page: 'Job Designations' };
+      if (url.includes('tab=shifts')) return { group: 'ORGANIZATION MASTER', page: 'Work Shift' };
+      if (url.includes('tab=calendar')) return { group: 'ORGANIZATION MASTER', page: 'Holidays' };
+      if (url.includes('tab=salary')) return { group: 'ORGANIZATION MASTER', page: 'Salary Packages' };
       if (url.includes('tab=assignments')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'WORKFORCE OPERATIONS', page: 'Workforce Deployments' };
       if (url.includes('tab=employee-rates')) return { group: 'WORKFORCE OPERATIONS', page: 'Employee Compensation' };
       if (url.includes('tab=client-rates')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL', page: 'Client Billing Rates' };
       if (url.includes('tab=rates')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL', page: 'Rate Simulator' };
-      return { group: 'ORGANIZATION SETUP', page: 'Master Catalogs' };
+      return { group: 'ORGANIZATION MASTER', page: 'Master Catalogs' };
     }
 
     return { group: 'WORKSPACE', page: 'Enterprise HRMS' };

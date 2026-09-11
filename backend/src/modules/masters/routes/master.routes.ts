@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { authenticate } from '../../../core/middleware/auth.middleware';
 import { requirePermission } from '../../../core/middleware/rbac.middleware';
 import { DesignationController } from '../controllers/designation.controller';
@@ -9,6 +10,15 @@ import { RateController } from '../controllers/rate.controller';
 import { ShiftController } from '../controllers/shift.controller';
 import { CalendarController } from '../controllers/calendar.controller';
 import { SalaryController } from '../controllers/salary.controller';
+
+const employeeUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+}).fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'passport', maxCount: 1 },
+  { name: 'visa', maxCount: 1 },
+]);
 
 const router = Router();
 
@@ -35,9 +45,11 @@ router.delete('/projects/:id', authenticate, requirePermission('projects:delete'
 
 // 4. Employees
 router.get('/employees', authenticate, requirePermission('employees:read'), EmployeeController.list);
+router.get('/employees/:id/photo', authenticate, EmployeeController.getPhoto);
+router.delete('/employees/:id/photo', authenticate, requirePermission('employees:update'), EmployeeController.deletePhoto);
 router.get('/employees/:id', authenticate, requirePermission('employees:read'), EmployeeController.getById);
-router.post('/employees', authenticate, requirePermission('employees:create'), EmployeeController.create);
-router.put('/employees/:id', authenticate, requirePermission('employees:update'), EmployeeController.update);
+router.post('/employees', authenticate, requirePermission('employees:create'), employeeUpload, EmployeeController.create);
+router.put('/employees/:id', authenticate, requirePermission('employees:update'), employeeUpload, EmployeeController.update);
 router.delete('/employees/:id', authenticate, requirePermission('employees:delete'), EmployeeController.delete);
 
 // 5. Assignments (Effective-Dated)
@@ -56,6 +68,7 @@ router.get('/rates/resolve-billing', authenticate, requirePermission('rates:read
 // 7. Shifts & Rostering
 router.get('/shifts', authenticate, requirePermission('shifts:read'), ShiftController.listShifts);
 router.post('/shifts', authenticate, requirePermission('shifts:create'), ShiftController.createShift);
+router.put('/shifts/:id', authenticate, requirePermission('shifts:update'), ShiftController.updateShift);
 router.get('/shifts/assignments', authenticate, requirePermission('shifts:read'), ShiftController.listAssignments);
 router.post('/shifts/assignments', authenticate, requirePermission('shifts:create'), ShiftController.createAssignment);
 
@@ -64,6 +77,7 @@ router.get('/calendar/weekly-offs', authenticate, requirePermission('calendar:re
 router.post('/calendar/weekly-offs', authenticate, requirePermission('calendar:create'), CalendarController.createWeeklyOff);
 router.get('/calendar/holidays', authenticate, requirePermission('calendar:read'), CalendarController.listHolidays);
 router.post('/calendar/holidays', authenticate, requirePermission('calendar:create'), CalendarController.createHoliday);
+router.put('/calendar/holidays/:id', authenticate, requirePermission('calendar:update'), CalendarController.updateHoliday);
 router.delete('/calendar/holidays/:id', authenticate, requirePermission('calendar:delete'), CalendarController.deleteHoliday);
 
 // 9. Salary Components & Structures

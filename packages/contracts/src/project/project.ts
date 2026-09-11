@@ -7,6 +7,7 @@ export interface ProjectDto {
   code: string;
   name: string;
   siteLocation: string | null;
+  location?: string | null;
   startDate: string | null;
   endDate: string | null;
   status: ProjectStatus;
@@ -19,6 +20,7 @@ export interface CreateProjectDto {
   code: string;
   name: string;
   siteLocation?: string | null;
+  location?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   status?: ProjectStatus;
@@ -29,6 +31,7 @@ export interface UpdateProjectDto {
   code?: string;
   name?: string;
   siteLocation?: string | null;
+  location?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   status?: ProjectStatus;

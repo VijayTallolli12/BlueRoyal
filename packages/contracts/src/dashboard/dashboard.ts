@@ -61,6 +61,7 @@ export interface PayrollOverviewDto {
   totalEmployees?: number;
   totalGrossPay?: number;
   totalNetPay?: number;
+  totalDeductions?: number;
   currency?: string;
   pendingActions?: number;
 }
@@ -80,9 +81,16 @@ export interface EmploymentTypeDistributionItemDto {
   percentage: number;
 }
 
+export interface RegionDistributionItemDto {
+  country: string;
+  count: number;
+  percentage: number;
+}
+
 export interface WorkforceDistributionDto {
   byDesignation: DesignationDistributionItemDto[];
   byEmploymentType: EmploymentTypeDistributionItemDto[];
+  byRegion: RegionDistributionItemDto[];
 }
 
 export interface ActionRequiredItemDto {

@@ -26,13 +26,15 @@ export async function authenticate(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AuthenticationError('Missing or invalid Authorization header.');
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query && typeof req.query.token === 'string') {
+      token = req.query.token;
     }
 
-    const token = authHeader.split(' ')[1];
     if (!token) {
-      throw new AuthenticationError('Authentication token not provided.');
+      throw new AuthenticationError('Missing or invalid Authorization header.');
     }
 
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as TokenPayload;

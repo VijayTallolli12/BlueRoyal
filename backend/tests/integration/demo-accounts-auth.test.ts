@@ -22,14 +22,14 @@ describe('Demo Accounts Authentication & RBAC Verification', () => {
     await seedDemoUsers();
   });
 
-  describe('1. Super Admin Account (superadmin@blueroyal.local)', () => {
+  describe('1. Super Admin Account (superadmin@blueroyal.com)', () => {
     let superAdminToken: string;
 
     it('should reject invalid password with 401 UNAUTHORIZED', async () => {
       const res = await request(app)
         .post('/api/v1/auth/login')
         .send({
-          email: 'superadmin@blueroyal.local',
+          email: 'superadmin@blueroyal.com',
           password: 'WrongPassword123!',
         });
 
@@ -42,14 +42,14 @@ describe('Demo Accounts Authentication & RBAC Verification', () => {
       const res = await request(app)
         .post('/api/v1/auth/login')
         .send({
-          email: 'superadmin@blueroyal.local',
+          email: 'superadmin@blueroyal.com',
           password: superAdminPassword,
         });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.accessToken).toBeDefined();
-      expect(res.body.data.user.email).toBe('superadmin@blueroyal.local');
+      expect(res.body.data.user.email).toBe('superadmin@blueroyal.com');
       expect(res.body.data.user.roles).toContain('super_admin');
 
       superAdminToken = res.body.data.accessToken;
@@ -66,21 +66,21 @@ describe('Demo Accounts Authentication & RBAC Verification', () => {
     });
   });
 
-  describe('2. HR Admin Account (hradmin@blueroyal.local)', () => {
+  describe('2. HR Admin Account (hradmin@blueroyal.com)', () => {
     let hrAdminToken: string;
 
     it('should authenticate successfully and return hr_admin role with operational permissions', async () => {
       const res = await request(app)
         .post('/api/v1/auth/login')
         .send({
-          email: 'hradmin@blueroyal.local',
+          email: 'hradmin@blueroyal.com',
           password: hrAdminPassword,
         });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.accessToken).toBeDefined();
-      expect(res.body.data.user.email).toBe('hradmin@blueroyal.local');
+      expect(res.body.data.user.email).toBe('hradmin@blueroyal.com');
       expect(res.body.data.user.roles).toContain('hr_admin');
 
       // Verify HR Admin permissions include attendance lifecycle
@@ -105,21 +105,21 @@ describe('Demo Accounts Authentication & RBAC Verification', () => {
     });
   });
 
-  describe('3. Employee Account (employee@blueroyal.local)', () => {
+  describe('3. Employee Account (employee@blueroyal.com)', () => {
     let employeeToken: string;
 
     it('should authenticate successfully and return employee role with self-service permissions only', async () => {
       const res = await request(app)
         .post('/api/v1/auth/login')
         .send({
-          email: 'employee@blueroyal.local',
+          email: 'employee@blueroyal.com',
           password: employeePassword,
         });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.accessToken).toBeDefined();
-      expect(res.body.data.user.email).toBe('employee@blueroyal.local');
+      expect(res.body.data.user.email).toBe('employee@blueroyal.com');
       expect(res.body.data.user.roles).toContain('employee');
       expect(res.body.data.user.roles).not.toContain('hr_admin');
       expect(res.body.data.user.roles).not.toContain('super_admin');

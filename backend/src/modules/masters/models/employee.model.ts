@@ -14,6 +14,9 @@ export class Employee extends BaseModel {
   declare public nationality: string;
   declare public email: string | null;
   declare public phoneNumber: string | null;
+  declare public address: string | null;
+  declare public country: string | null;
+  declare public profilePhoto: string | null;
   declare public dateOfJoining: string;
   declare public probationEndDate: string | null;
   declare public employmentType: 'full_time' | 'contract';
@@ -79,6 +82,21 @@ Employee.init(
       type: DataTypes.STRING(32),
       allowNull: true,
       field: 'phone_number',
+    },
+    address: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'address',
+    },
+    country: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      field: 'country',
+    },
+    profilePhoto: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      field: 'profile_photo',
     },
     dateOfJoining: {
       type: DataTypes.DATEONLY,

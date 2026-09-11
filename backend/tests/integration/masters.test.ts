@@ -117,37 +117,176 @@ describe('Phase 1 Masters CRUD Integration Test Suite', () => {
     await Client.destroy({ where: { id: clientId }, force: true });
   });
 
-  // 3. Shifts
-  it('POST /api/v1/shifts should register shift timings with 201', async () => {
+  it('POST and PUT /api/v1/clients and /api/v1/projects should support email/phoneNumber/location aliases and preserve status', async () => {
     const timestamp = Date.now();
-    const res = await request(app)
+
+    // 1. Create client with email and phoneNumber
+    const clientRes = await request(app)
+      .post('/api/v1/clients')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        code: `CLI-ALIAS-${timestamp}`,
+        name: 'Alias Test Client',
+        contactPerson: 'Alice Wonder',
+        email: 'alice@aliastest.com',
+        phoneNumber: '+971 50 999 8888',
+      });
+
+    expect(clientRes.status).toBe(201);
+    expect(clientRes.body.data.contactEmail).toBe('alice@aliastest.com');
+    expect(clientRes.body.data.contactPhone).toBe('+971 50 999 8888');
+    expect(clientRes.body.data.email).toBe('alice@aliastest.com');
+    expect(clientRes.body.data.phoneNumber).toBe('+971 50 999 8888');
+    expect(clientRes.body.data.isActive).toBe(true);
+    const clientId = clientRes.body.data.id;
+
+    // 2. Update client with new email, preserving isActive
+    const clientUpdateRes = await request(app)
+      .put(`/api/v1/clients/${clientId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Updated Alias Client',
+        email: 'alice.updated@aliastest.com',
+      });
+
+    expect(clientUpdateRes.status).toBe(200);
+    expect(clientUpdateRes.body.data.name).toBe('Updated Alias Client');
+    expect(clientUpdateRes.body.data.contactEmail).toBe('alice.updated@aliastest.com');
+    expect(clientUpdateRes.body.data.email).toBe('alice.updated@aliastest.com');
+    expect(clientUpdateRes.body.data.contactPhone).toBe('+971 50 999 8888');
+    expect(clientUpdateRes.body.data.isActive).toBe(true);
+
+    // 3. Create project with location alias
+    const projRes = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        clientId,
+        code: `PRJ-ALIAS-${timestamp}`,
+        name: 'Alias Project Alpha',
+        location: 'Downtown Dubai Boulevard',
+      });
+
+    expect(projRes.status).toBe(201);
+    expect(projRes.body.data.siteLocation).toBe('Downtown Dubai Boulevard');
+    expect(projRes.body.data.location).toBe('Downtown Dubai Boulevard');
+    expect(projRes.body.data.status).toBe('active');
+    const projectId = projRes.body.data.id;
+
+    // 4. Update project with new location alias, preserving status
+    const projUpdateRes = await request(app)
+      .put(`/api/v1/projects/${projectId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Updated Project Alpha',
+        location: 'Business Bay Creek',
+      });
+
+    expect(projUpdateRes.status).toBe(200);
+    expect(projUpdateRes.body.data.name).toBe('Updated Project Alpha');
+    expect(projUpdateRes.body.data.siteLocation).toBe('Business Bay Creek');
+    expect(projUpdateRes.body.data.location).toBe('Business Bay Creek');
+    expect(projUpdateRes.body.data.status).toBe('active');
+
+    // Cleanup
+    await Project.destroy({ where: { id: projectId }, force: true });
+    await Client.destroy({ where: { id: clientId }, force: true });
+  });
+
+  // 3. Shifts (Authoritative Work Hours, Overnight Detection, Same Time Validation, and Update)
+  it('POST /api/v1/shifts should authoritatively calculate workHours and support overnight shifts and PUT updates', async () => {
+    const timestamp = Date.now();
+
+    // 1. Same start and end time validation
+    const sameTimeRes = await request(app)
       .post('/api/v1/shifts')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        code: `SH-TEST-${timestamp}`,
+        code: `SH-SAME-${timestamp}`,
+        name: 'Invalid Same Time Shift',
+        startTime: '08:00',
+        endTime: '08:00',
+        breakMinutes: 0,
+      });
+    expect(sameTimeRes.status).toBe(400);
+    expect(sameTimeRes.body.error.message).toContain('Start time and end time cannot be the same');
+
+    // 2. Break greater than duration validation
+    const invalidBreakRes = await request(app)
+      .post('/api/v1/shifts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        code: `SH-BRK-${timestamp}`,
+        name: 'Invalid Break Shift',
+        startTime: '08:00',
+        endTime: '12:00',
+        breakMinutes: 300,
+      });
+    expect(invalidBreakRes.status).toBe(400);
+    expect(invalidBreakRes.body.error.message).toContain('Break time cannot be greater than the shift duration');
+
+    // 3. Normal Day Shift (client sends tampered workHours: 99.0, backend authoritatively calculates 8.00)
+    const dayRes = await request(app)
+      .post('/api/v1/shifts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        code: `SH-DAY-${timestamp}`,
         name: 'Standard Morning Shift',
-        startTime: '08:00:00',
-        endTime: '17:00:00',
+        startTime: '08:00',
+        endTime: '17:00',
         breakMinutes: 60,
-        workHours: 8.0,
+        workHours: 99.0, // Should be ignored by authoritative backend calculation
       });
 
-    expect(res.status).toBe(201);
-    expect(res.body.data.code).toBe(`SH-TEST-${timestamp}`);
+    expect(dayRes.status).toBe(201);
+    expect(dayRes.body.data.code).toBe(`SH-DAY-${timestamp}`);
+    expect(Number(dayRes.body.data.workHours)).toBe(8.0);
+    expect(dayRes.body.data.isNightShift).toBe(false);
+    const shiftId = dayRes.body.data.id;
+
+    // 4. Update Shift (PUT /shifts/:id to 08:30 to 17:30 with 30m break -> 8.50 hrs)
+    const updateRes = await request(app)
+      .put(`/api/v1/shifts/${shiftId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        startTime: '08:30',
+        endTime: '17:30',
+        breakMinutes: 30,
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(Number(updateRes.body.data.workHours)).toBe(8.5);
+    expect(updateRes.body.data.isNightShift).toBe(false);
+
+    // 5. Overnight Shift (22:00 to 06:00 with 60m break -> duration 8 hrs - 1 hr break = 7.00 hrs, isNightShift: true)
+    const nightRes = await request(app)
+      .post('/api/v1/shifts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        code: `SH-NIGHT-${timestamp}`,
+        name: 'Night Operations Shift',
+        startTime: '22:00',
+        endTime: '06:00',
+        breakMinutes: 60,
+      });
+
+    expect(nightRes.status).toBe(201);
+    expect(Number(nightRes.body.data.workHours)).toBe(7.0);
+    expect(nightRes.body.data.isNightShift).toBe(true);
 
     // Cleanup
-    await Shift.destroy({ where: { id: res.body.data.id } });
+    await Shift.destroy({ where: { id: [shiftId, nightRes.body.data.id] } });
   });
 
-  // 4. Company Public Holidays
-  it('POST /api/v1/calendar/holidays should add company-configured holiday', async () => {
+  // 4. Company Holidays (Create & Update)
+  it('POST and PUT /api/v1/calendar/holidays should create and update holiday', async () => {
     await PublicHoliday.destroy({ where: { holidayDate: '2026-11-15' } });
+    await PublicHoliday.destroy({ where: { holidayDate: '2026-11-16' } });
 
     const res = await request(app)
       .post('/api/v1/calendar/holidays')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        calendarYear: 2026,
         name: 'Company Founder Day',
         holidayDate: '2026-11-15',
         description: 'Annual corporate celebration',
@@ -155,26 +294,66 @@ describe('Phase 1 Masters CRUD Integration Test Suite', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data.holidayDate).toBe('2026-11-15');
+    expect(res.body.data.calendarYear).toBe(2026);
+    const holidayId = res.body.data.id;
+
+    // Update Holiday
+    const updateRes = await request(app)
+      .put(`/api/v1/calendar/holidays/${holidayId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Updated Founder Day',
+        holidayDate: '2026-11-16',
+        description: 'Updated celebration description',
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.data.name).toBe('Updated Founder Day');
+    expect(updateRes.body.data.holidayDate).toBe('2026-11-16');
+    expect(updateRes.body.data.calendarYear).toBe(2026);
 
     // Cleanup
-    await PublicHoliday.destroy({ where: { holidayDate: '2026-11-15' } });
+    await PublicHoliday.destroy({ where: { id: holidayId } });
   });
 
-  // 5. Employee CRUD with Audit Log Verification
-  it('POST /api/v1/employees should create employee and record EMPLOYEE_CREATED audit log', async () => {
+  // 5. Employee CRUD with Audit Log Verification & Mandatory Document Validation
+  it('POST /api/v1/employees should reject creation when mandatory Passport and Visa are missing', async () => {
     const timestamp = Date.now();
     const res = await request(app)
       .post('/api/v1/employees')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        employeeCode: `EMP-INT-${timestamp}`,
+        employeeCode: `EMP-INT-FAIL-${timestamp}`,
         firstName: 'Sarah',
         lastName: 'Connor',
+        email: `sarah.${timestamp}@example.com`,
         gender: 'female',
         dateOfBirth: '1992-05-14',
         nationality: 'British',
         dateOfJoining: '2026-02-01',
       });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.message).toContain('Passport document is mandatory');
+  });
+
+  it('POST /api/v1/employees should create employee with mandatory Passport/Visa and record EMPLOYEE_CREATED audit log', async () => {
+    const timestamp = Date.now();
+    const res = await request(app)
+      .post('/api/v1/employees')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('employeeCode', `EMP-INT-${timestamp}`)
+      .field('firstName', 'Sarah')
+      .field('lastName', 'Connor')
+      .field('email', `sarah.connor.${timestamp}@example.com`)
+      .field('gender', 'female')
+      .field('dateOfBirth', '1992-05-14')
+      .field('country', 'United Kingdom')
+      .field('nationality', 'British')
+      .field('dateOfJoining', '2026-02-01')
+      .attach('passport', Buffer.from('%PDF-1.4 sample passport content'), 'passport.pdf')
+      .attach('visa', Buffer.from('%PDF-1.4 sample visa content'), 'visa.pdf');
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -190,6 +369,14 @@ describe('Phase 1 Masters CRUD Integration Test Suite', () => {
     });
     expect(audit).not.toBeNull();
     expect(audit?.actorId).toBe(adminUserId);
+
+    // Verify GET by ID loads documents
+    const getRes = await request(app)
+      .get(`/api/v1/employees/${employeeId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.data.documents).toBeDefined();
+    expect(getRes.body.data.documents.length).toBe(2);
 
     // Cleanup
     await Employee.destroy({ where: { id: employeeId }, force: true });

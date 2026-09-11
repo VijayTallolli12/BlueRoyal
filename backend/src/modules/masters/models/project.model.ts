@@ -14,6 +14,16 @@ export class Project extends BaseModel {
   declare public deletedAt: Date | null;
 
   declare public client?: Client;
+
+  public get location(): string | null {
+    return this.siteLocation;
+  }
+
+  public override toJSON(): Record<string, unknown> {
+    const values = { ...(super.toJSON() as Record<string, unknown>) };
+    values['location'] = this.siteLocation;
+    return values;
+  }
 }
 
 Project.init(

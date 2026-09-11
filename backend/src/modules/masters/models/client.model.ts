@@ -11,6 +11,21 @@ export class Client extends BaseModel {
   declare public billingAddress: string | null;
   declare public isActive: boolean;
   declare public deletedAt: Date | null;
+
+  public get email(): string | null {
+    return this.contactEmail;
+  }
+
+  public get phoneNumber(): string | null {
+    return this.contactPhone;
+  }
+
+  public override toJSON(): Record<string, unknown> {
+    const values = { ...(super.toJSON() as Record<string, unknown>) };
+    values['email'] = this.contactEmail;
+    values['phoneNumber'] = this.contactPhone;
+    return values;
+  }
 }
 
 Client.init(

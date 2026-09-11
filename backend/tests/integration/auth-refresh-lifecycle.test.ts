@@ -20,14 +20,14 @@ describe('Auth Session Persistence & Refresh Lifecycle Integration Test', () => 
     const loginRes = await request(app)
       .post('/api/v1/auth/login')
       .send({
-        email: 'hradmin@blueroyal.local',
+        email: 'hradmin@blueroyal.com',
         password: 'HrAdmin@2026!',
       });
 
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.success).toBe(true);
     expect(loginRes.body.data.accessToken).toBeDefined();
-    expect(loginRes.body.data.user.email).toBe('hradmin@blueroyal.local');
+    expect(loginRes.body.data.user.email).toBe('hradmin@blueroyal.com');
     expect(loginRes.headers['set-cookie']).toBeDefined();
 
     const accessToken = loginRes.body.data.accessToken;
@@ -39,7 +39,7 @@ describe('Auth Session Persistence & Refresh Lifecycle Integration Test', () => 
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(meRes.status).toBe(200);
-    expect(meRes.body.data.email).toBe('hradmin@blueroyal.local');
+    expect(meRes.body.data.email).toBe('hradmin@blueroyal.com');
     expect(meRes.body.data.roles).toContain('hr_admin');
     expect(meRes.body.data.permissions).toContain('designations:create');
 
@@ -73,7 +73,7 @@ describe('Auth Session Persistence & Refresh Lifecycle Integration Test', () => 
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(refreshBootstrapRes.status).toBe(200);
-    expect(refreshBootstrapRes.body.data.email).toBe('hradmin@blueroyal.local');
+    expect(refreshBootstrapRes.body.data.email).toBe('hradmin@blueroyal.com');
     expect(refreshBootstrapRes.body.data.permissions).toContain('designations:read');
 
     // 6. After refresh, user page reloads data from PostgreSQL
@@ -112,7 +112,7 @@ describe('Auth Session Persistence & Refresh Lifecycle Integration Test', () => 
       .set('Authorization', `Bearer ${newAccessToken}`);
 
     expect(replayedMeRes.status).toBe(200);
-    expect(replayedMeRes.body.data.email).toBe('hradmin@blueroyal.local');
+    expect(replayedMeRes.body.data.email).toBe('hradmin@blueroyal.com');
 
     // 10. Clean up
     await Designation.destroy({ where: { id: createdId } });

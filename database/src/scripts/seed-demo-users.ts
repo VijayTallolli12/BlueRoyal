@@ -13,7 +13,7 @@ interface DemoAccountConfig {
 
 const DEMO_ACCOUNTS: DemoAccountConfig[] = [
   {
-    email: 'superadmin@blueroyal.local',
+    email: 'superadmin@blueroyal.com',
     roleName: 'super_admin',
     firstName: 'Demo',
     lastName: 'SuperAdmin',
@@ -21,7 +21,7 @@ const DEMO_ACCOUNTS: DemoAccountConfig[] = [
     defaultPasswordPrefix: 'BR-SuperAdmin',
   },
   {
-    email: 'hradmin@blueroyal.local',
+    email: 'hradmin@blueroyal.com',
     roleName: 'hr_admin',
     firstName: 'Demo',
     lastName: 'HrAdmin',
@@ -29,7 +29,7 @@ const DEMO_ACCOUNTS: DemoAccountConfig[] = [
     defaultPasswordPrefix: 'BR-HrAdmin',
   },
   {
-    email: 'employee@blueroyal.local',
+    email: 'employee@blueroyal.com',
     roleName: 'employee',
     firstName: 'Demo',
     lastName: 'Employee',
@@ -59,6 +59,30 @@ export async function seedDemoUsers(): Promise<Record<string, { role: string; em
 
   try {
     await sequelize.authenticate();
+
+    // Migrate any existing .local demo accounts to .com to ensure no legacy addresses remain
+    await sequelize.query(`
+      UPDATE users u1
+      SET email = REPLACE(u1.email, '@blueroyal.local', '@blueroyal.com')
+      WHERE u1.email LIKE '%@blueroyal.local'
+        AND NOT EXISTS (
+          SELECT 1 FROM users u2 WHERE u2.email = REPLACE(u1.email, '@blueroyal.local', '@blueroyal.com')
+        );
+    `);
+    await sequelize.query(`
+      DELETE FROM users WHERE email LIKE '%@blueroyal.local';
+    `);
+    await sequelize.query(`
+      UPDATE employees e1
+      SET email = REPLACE(e1.email, '@blueroyal.local', '@blueroyal.com')
+      WHERE e1.email LIKE '%@blueroyal.local'
+        AND NOT EXISTS (
+          SELECT 1 FROM employees e2 WHERE e2.email = REPLACE(e1.email, '@blueroyal.local', '@blueroyal.com')
+        );
+    `);
+    await sequelize.query(`
+      DELETE FROM employees WHERE email LIKE '%@blueroyal.local';
+    `);
 
     // Verify confirmed roles exist
     const roles = await sequelize.query<{ id: string; name: string }>(
@@ -149,11 +173,11 @@ export async function seedDemoUsers(): Promise<Record<string, { role: string; em
             `INSERT INTO employees (
                id, employee_code, user_id, first_name, last_name, gender,
                date_of_birth, nationality, email, date_of_joining,
-               employment_type, status, created_at, updated_at
+               employment_type, status, address, country, created_at, updated_at
              ) VALUES (
                gen_random_uuid(), 'EMP-DEMO-001', :userId, :firstName, :lastName, 'male',
                '1995-06-15', 'Emirati', :email, '2026-01-01',
-               'full_time', 'active', NOW(), NOW()
+               'full_time', 'active', 'Business Bay, Dubai, UAE', 'United Arab Emirates', NOW(), NOW()
              );`,
             {
               replacements: {
@@ -173,6 +197,8 @@ export async function seedDemoUsers(): Promise<Record<string, { role: string; em
                last_name = :lastName,
                email = :email,
                status = 'active',
+               address = COALESCE(address, 'Business Bay, Dubai, UAE'),
+               country = COALESCE(country, 'United Arab Emirates'),
                updated_at = NOW()
              WHERE id = :empId;`,
             {
@@ -194,6 +220,126 @@ export async function seedDemoUsers(): Promise<Record<string, { role: string; em
         email: acc.email,
         password: rawPassword,
       };
+    }
+
+    // 4. Seed / Update Demo Clients and Projects without deleting existing records
+    console.log('Seeding / updating demo clients and projects...');
+    const demoClients = [
+      {
+        code: 'CLI-MASAOOD',
+        name: 'MASAOOD',
+        contactPerson: 'Robert',
+        contactEmail: 'contact@masaood.com',
+        contactPhone: '+971 2 642 4444',
+        billingAddress: 'Abu Dhabi, United Arab Emirates',
+        projectName: 'Masaood Marine Operations',
+        projectCode: 'PRJ-MASAOOD-01',
+        projectLocation: 'Mussafah, Abu Dhabi',
+      },
+      {
+        code: 'CL-DEMO-01',
+        name: 'Blue Royal Client Partner',
+        contactPerson: 'John Smith',
+        contactEmail: 'contact@blueroyalclient.demo',
+        contactPhone: '+971 4 123 4567',
+        billingAddress: 'Business Bay, Dubai, UAE',
+        projectName: 'Downtown Dubai Project',
+        projectCode: 'PRJ-DEMO-01',
+        projectLocation: 'Downtown Dubai, UAE',
+      },
+    ];
+
+    for (const dc of demoClients) {
+      const existingClient = await sequelize.query<{ id: string }>(
+        'SELECT id FROM clients WHERE code = :code;',
+        { replacements: { code: dc.code }, type: QueryTypes.SELECT },
+      );
+
+      let clientId: string;
+      if (existingClient.length === 0) {
+        const clientRes = await sequelize.query<{ id: string }>(
+          `INSERT INTO clients (id, code, name, contact_person, contact_email, contact_phone, billing_address, is_active, created_at, updated_at)
+           VALUES (gen_random_uuid(), :code, :name, :contactPerson, :contactEmail, :contactPhone, :billingAddress, true, NOW(), NOW())
+           RETURNING id;`,
+          {
+            replacements: {
+              code: dc.code,
+              name: dc.name,
+              contactPerson: dc.contactPerson,
+              contactEmail: dc.contactEmail,
+              contactPhone: dc.contactPhone,
+              billingAddress: dc.billingAddress,
+            },
+            type: QueryTypes.SELECT,
+          },
+        );
+        clientId = clientRes[0].id;
+      } else {
+        clientId = existingClient[0].id;
+        await sequelize.query(
+          `UPDATE clients SET
+             name = :name,
+             contact_person = :contactPerson,
+             contact_email = :contactEmail,
+             contact_phone = :contactPhone,
+             billing_address = :billingAddress,
+             is_active = true,
+             updated_at = NOW()
+           WHERE id = :id;`,
+          {
+            replacements: {
+              id: clientId,
+              name: dc.name,
+              contactPerson: dc.contactPerson,
+              contactEmail: dc.contactEmail,
+              contactPhone: dc.contactPhone,
+              billingAddress: dc.billingAddress,
+            },
+            type: QueryTypes.RAW,
+          },
+        );
+      }
+
+      // Upsert associated project
+      const existingProj = await sequelize.query<{ id: string }>(
+        'SELECT id FROM projects WHERE code = :projectCode;',
+        { replacements: { projectCode: dc.projectCode }, type: QueryTypes.SELECT },
+      );
+
+      if (existingProj.length === 0) {
+        await sequelize.query(
+          `INSERT INTO projects (id, client_id, code, name, site_location, status, created_at, updated_at)
+           VALUES (gen_random_uuid(), :clientId, :projectCode, :projectName, :projectLocation, 'active', NOW(), NOW());`,
+          {
+            replacements: {
+              clientId,
+              projectCode: dc.projectCode,
+              projectName: dc.projectName,
+              projectLocation: dc.projectLocation,
+            },
+            type: QueryTypes.RAW,
+          },
+        );
+      } else {
+        await sequelize.query(
+          `UPDATE projects SET
+             name = :projectName,
+             site_location = :projectLocation,
+             client_id = :clientId,
+             status = 'active',
+             updated_at = NOW()
+           WHERE id = :id;`,
+          {
+            replacements: {
+              id: existingProj[0].id,
+              clientId,
+              projectName: dc.projectName,
+              projectLocation: dc.projectLocation,
+            },
+            type: QueryTypes.RAW,
+          },
+        );
+      }
     }
 
     // Display formatted credentials table once in console output

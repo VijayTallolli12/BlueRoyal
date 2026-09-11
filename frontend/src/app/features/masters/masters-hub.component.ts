@@ -50,9 +50,9 @@ export type MasterTab =
           </div>
           @if (currentMeta().ctaLabel) {
             <div class="header-actions">
-              <button class="btn btn-primary btn-lg" (click)="togglePrimaryForm()">
-                <span class="material-symbols-outlined icon-sm">{{ isPrimaryFormOpen() ? 'close' : currentMeta().ctaIcon }}</span>
-                <span>{{ isPrimaryFormOpen() ? 'Cancel' : currentMeta().ctaLabel }}</span>
+              <button class="btn btn-primary btn-lg" (click)="openPrimaryForm()">
+                <span class="material-symbols-outlined icon-sm">{{ currentMeta().ctaIcon }}</span>
+                <span>{{ currentMeta().ctaLabel }}</span>
               </button>
             </div>
           }
@@ -150,41 +150,774 @@ export type MasterTab =
           </div>
         }
 
-        <!-- Edit Assignment Modal -->
-        @if (selectedAssignmentForEdit(); as assign) {
-          <div class="modal-overlay" (click)="selectedAssignmentForEdit.set(null)">
-            <div class="modal-card" (click)="$event.stopPropagation()">
-              <div class="modal-header">
-                <h3>Edit Workforce Deployment</h3>
-                <button type="button" class="btn-icon-close" (click)="selectedAssignmentForEdit.set(null)">
-                  <span class="material-symbols-outlined">close</span>
-                </button>
+        <!-- Offcanvas Drawer & Backdrop -->
+        @if (isOffcanvasOpen()) {
+          <div class="offcanvas-backdrop" (click)="closeOffcanvas()"></div>
+          <aside class="offcanvas-panel" role="dialog" aria-modal="true">
+            <div class="offcanvas-header">
+              <div class="offcanvas-header-left">
+                <div class="offcanvas-icon-pill">
+                  <span class="material-symbols-outlined">{{ offcanvasMeta().icon }}</span>
+                </div>
+                <div>
+                  <h2 class="offcanvas-title">{{ offcanvasMeta().title }}</h2>
+                  <p class="offcanvas-subtitle">{{ offcanvasMeta().subtitle }}</p>
+                </div>
               </div>
-              <form (ngSubmit)="saveAssignmentEdit()">
-                <div class="modal-body">
-                  <div class="edit-banner">
-                    <div>
-                      <strong>{{ assign.employeeName }}</strong> ({{ assign.employeeCode }})
+              <button type="button" class="btn-offcanvas-close" (click)="closeOffcanvas()" title="Close Drawer">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div class="offcanvas-body">
+              <!-- CLIENT ADD / EDIT FORM -->
+              @if (showNewClient || selectedClientForEdit()) {
+                <form (ngSubmit)="submitActiveOffcanvas()">
+                  @if (clientFormError()) {
+                    <div class="alert-guidance alert-warning mb-3" style="padding: 0.6rem 0.8rem; font-size: 0.8125rem;">
+                      <span class="material-symbols-outlined icon-sm">warning</span>
+                      <span>{{ clientFormError() }}</span>
                     </div>
+                  }
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="clientCode">Client Code <span class="req">*</span></label>
+                    <input
+                      id="clientCode"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewClient ? newClientCode : editClientCode"
+                      (ngModelChange)="showNewClient ? (newClientCode = $event) : (editClientCode = $event)"
+                      name="clientCode"
+                      placeholder="e.g. CLI-001"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="clientName">Client Name <span class="req">*</span></label>
+                    <input
+                      id="clientName"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewClient ? newClientName : editClientName"
+                      (ngModelChange)="showNewClient ? (newClientName = $event) : (editClientName = $event)"
+                      name="clientName"
+                      placeholder="e.g. Emaar Properties"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="clientContact">Contact Person</label>
+                    <input
+                      id="clientContact"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewClient ? newClientContact : editClientContact"
+                      (ngModelChange)="showNewClient ? (newClientContact = $event) : (editClientContact = $event)"
+                      name="clientContact"
+                      placeholder="e.g. John Doe"
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="clientEmail">Email</label>
+                    <input
+                      id="clientEmail"
+                      type="email"
+                      class="form-control"
+                      [ngModel]="showNewClient ? newClientEmail : editClientEmail"
+                      (ngModelChange)="showNewClient ? (newClientEmail = $event) : (editClientEmail = $event)"
+                      name="clientEmail"
+                      placeholder="e.g. contact@company.com"
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="clientPhone">Phone Number</label>
+                    <input
+                      id="clientPhone"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewClient ? newClientPhone : editClientPhone"
+                      (ngModelChange)="showNewClient ? (newClientPhone = $event) : (editClientPhone = $event)"
+                      name="clientPhone"
+                      placeholder="e.g. +971 50 123 4567"
+                    />
+                  </div>
+                </form>
+              }
+
+              <!-- PROJECT ADD / EDIT FORM -->
+              @if (showNewProject || selectedProjectForEdit()) {
+                <form (ngSubmit)="submitActiveOffcanvas()">
+                  @if (projectFormError()) {
+                    <div class="alert-guidance alert-warning mb-3" style="padding: 0.6rem 0.8rem; font-size: 0.8125rem;">
+                      <span class="material-symbols-outlined icon-sm">warning</span>
+                      <span>{{ projectFormError() }}</span>
+                    </div>
+                  }
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="projectClientId">Client <span class="req">*</span></label>
+                    <select
+                      id="projectClientId"
+                      class="form-control"
+                      [ngModel]="showNewProject ? newProjClientId : editProjClientId"
+                      (ngModelChange)="showNewProject ? (newProjClientId = $event) : (editProjClientId = $event)"
+                      name="projectClientId"
+                      required
+                    >
+                      <option value="">Select Client</option>
+                      @for (c of clients(); track c.id) {
+                        <option [value]="c.id">{{ c.name }} ({{ c.code }})</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="projectCode">Project Code <span class="req">*</span></label>
+                    <input
+                      id="projectCode"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewProject ? newProjCode : editProjCode"
+                      (ngModelChange)="showNewProject ? (newProjCode = $event) : (editProjCode = $event)"
+                      name="projectCode"
+                      placeholder="e.g. PRJ-001"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="projectName">Project Name <span class="req">*</span></label>
+                    <input
+                      id="projectName"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewProject ? newProjName : editProjName"
+                      (ngModelChange)="showNewProject ? (newProjName = $event) : (editProjName = $event)"
+                      name="projectName"
+                      placeholder="e.g. Downtown Tower Project"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="projectLocation">Location</label>
+                    <input
+                      id="projectLocation"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewProject ? newProjLocation : editProjLocation"
+                      (ngModelChange)="showNewProject ? (newProjLocation = $event) : (editProjLocation = $event)"
+                      name="projectLocation"
+                      placeholder="e.g. Dubai, UAE"
+                    />
+                  </div>
+                </form>
+              }
+
+              <!-- ASSIGNMENT (DEPLOYMENT) FORM -->
+              @if (showNewAssignment) {
+                <form (ngSubmit)="createAssignment()">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newAssignEmpId">Employee <span class="req">*</span></label>
+                    <select
+                      id="newAssignEmpId"
+                      class="form-control"
+                      [(ngModel)]="newAssignEmpId"
+                      name="newAssignEmpId"
+                      required
+                    >
+                      <option value="">-- Select Employee --</option>
+                      @for (e of employees(); track e.id) {
+                        <option [value]="e.id">{{ e.firstName }} {{ e.lastName }} ({{ e.employeeCode }})</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newAssignClientId">Commercial Client <span class="req">*</span></label>
+                    <select
+                      id="newAssignClientId"
+                      class="form-control"
+                      [(ngModel)]="newAssignClientId"
+                      (change)="onAssignClientChange()"
+                      name="newAssignClientId"
+                      required
+                    >
+                      <option value="">-- Select Client --</option>
+                      @for (c of clients(); track c.id) {
+                        <option [value]="c.id">{{ c.name }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newAssignProjId">Project Worksite <span class="req">*</span></label>
+                    <select
+                      id="newAssignProjId"
+                      class="form-control"
+                      [(ngModel)]="newAssignProjId"
+                      name="newAssignProjId"
+                      required
+                    >
+                      <option value="">-- Select Worksite --</option>
+                      @for (p of filteredProjects(); track p.id) {
+                        <option [value]="p.id">{{ p.name }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newAssignDesId">Designated Role <span class="req">*</span></label>
+                    <select
+                      id="newAssignDesId"
+                      class="form-control"
+                      [(ngModel)]="newAssignDesId"
+                      name="newAssignDesId"
+                      required
+                    >
+                      <option value="">-- Select Designation --</option>
+                      @for (d of designations(); track d.id) {
+                        <option [value]="d.id">{{ d.title }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newAssignFrom">Effective Start Date <span class="req">*</span></label>
+                    <input
+                      id="newAssignFrom"
+                      type="date"
+                      class="form-control"
+                      [(ngModel)]="newAssignFrom"
+                      name="newAssignFrom"
+                      required
+                    />
+                  </div>
+                </form>
+              }
+
+              <!-- EDIT ASSIGNMENT FORM -->
+              @if (selectedAssignmentForEdit(); as assign) {
+                <form (ngSubmit)="saveAssignmentEdit()">
+                  <div class="edit-banner mb-3">
+                    <div><strong>{{ assign.employeeName }}</strong> ({{ assign.employeeCode }})</div>
                     <small>{{ assign.clientName }} &bull; {{ assign.projectName }} &bull; {{ assign.designationTitle }}</small>
                   </div>
+
                   <div class="form-group mb-3">
-                    <label class="form-label">Effective End Date (Leave blank for Ongoing deployment)</label>
-                    <input type="date" [(ngModel)]="editAssignEffectiveTo" name="editAssignEffectiveTo" class="form-control" />
-                    <small class="form-hint">Setting a date in the past or today will mark this deployment as closed.</small>
+                    <label class="form-label" for="editAssignEffectiveTo">Effective End Date</label>
+                    <input
+                      id="editAssignEffectiveTo"
+                      type="date"
+                      class="form-control"
+                      [(ngModel)]="editAssignEffectiveTo"
+                      name="editAssignEffectiveTo"
+                    />
+                    <small class="form-hint">Leave blank for ongoing deployment. Setting past or today will mark deployment as closed.</small>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label">Deployment Remarks / Transfer Notes</label>
-                    <textarea [(ngModel)]="editAssignRemarks" name="editAssignRemarks" rows="3" class="form-control" placeholder="Optional notes..."></textarea>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="editAssignRemarks">Deployment Remarks / Transfer Notes</label>
+                    <textarea
+                      id="editAssignRemarks"
+                      rows="3"
+                      class="form-control"
+                      [(ngModel)]="editAssignRemarks"
+                      name="editAssignRemarks"
+                      placeholder="Optional transfer or demobilization notes..."
+                    ></textarea>
                   </div>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" (click)="selectedAssignmentForEdit.set(null)">Cancel</button>
-                  <button type="submit" class="btn btn-primary">Save Deployment</button>
-                </div>
-              </form>
+                </form>
+              }
+
+              <!-- EMPLOYEE HOURLY RATE FORM -->
+              @if (showNewEmployeeRate) {
+                <form (ngSubmit)="createEmployeeRate()">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newEmpRateEmpId">Employee <span class="req">*</span></label>
+                    <select
+                      id="newEmpRateEmpId"
+                      class="form-control"
+                      [(ngModel)]="newEmpRateEmpId"
+                      name="newEmpRateEmpId"
+                      required
+                    >
+                      <option value="">-- Select Employee --</option>
+                      @for (e of employees(); track e.id) {
+                        <option [value]="e.id">{{ e.firstName }} {{ e.lastName }} ({{ e.employeeCode }})</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newEmpRateNormal">Normal Hourly Pay Rate (AED/hr) <span class="req">*</span></label>
+                    <input
+                      id="newEmpRateNormal"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="form-control"
+                      [(ngModel)]="newEmpRateNormal"
+                      name="newEmpRateNormal"
+                      placeholder="e.g. 25.00"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newEmpRateOt">Overtime Hourly Pay Rate (AED/hr) <span class="req">*</span></label>
+                    <input
+                      id="newEmpRateOt"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="form-control"
+                      [(ngModel)]="newEmpRateOt"
+                      name="newEmpRateOt"
+                      placeholder="e.g. 31.25"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newEmpRateFrom">Effective From <span class="req">*</span></label>
+                    <input
+                      id="newEmpRateFrom"
+                      type="date"
+                      class="form-control"
+                      [(ngModel)]="newEmpRateFrom"
+                      name="newEmpRateFrom"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newEmpRateReason">Reason for Rate / Adjustment</label>
+                    <input
+                      id="newEmpRateReason"
+                      type="text"
+                      class="form-control"
+                      [(ngModel)]="newEmpRateReason"
+                      name="newEmpRateReason"
+                      placeholder="e.g. Annual revision, probation completion"
+                    />
+                  </div>
+                </form>
+              }
+
+              <!-- CLIENT BILLING RATE FORM -->
+              @if (showNewClientRate) {
+                <form (ngSubmit)="createClientRate()">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newClientRateClientId">Commercial Client <span class="req">*</span></label>
+                    <select
+                      id="newClientRateClientId"
+                      class="form-control"
+                      [(ngModel)]="newClientRateClientId"
+                      (change)="onClientRateClientChange()"
+                      name="newClientRateClientId"
+                      required
+                    >
+                      <option value="">-- Select Client --</option>
+                      @for (c of clients(); track c.id) {
+                        <option [value]="c.id">{{ c.name }} ({{ c.code }})</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newClientRateProjId">Project Worksite (Optional)</label>
+                    <select
+                      id="newClientRateProjId"
+                      class="form-control"
+                      [(ngModel)]="newClientRateProjId"
+                      name="newClientRateProjId"
+                    >
+                      <option value="">-- Client-Wide Default (All Worksites) --</option>
+                      @for (p of clientRateProjects(); track p.id) {
+                        <option [value]="p.id">{{ p.name }} (Project-Specific)</option>
+                      }
+                    </select>
+                    <small class="form-hint">Leave blank to establish client-wide default billing rate</small>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newClientRateDesId">Designated Role <span class="req">*</span></label>
+                    <select
+                      id="newClientRateDesId"
+                      class="form-control"
+                      [(ngModel)]="newClientRateDesId"
+                      name="newClientRateDesId"
+                      required
+                    >
+                      <option value="">-- Select Designation --</option>
+                      @for (d of designations(); track d.id) {
+                        <option [value]="d.id">{{ d.title }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newClientRateNormal">Normal Hourly Billing Rate (AED/hr) <span class="req">*</span></label>
+                    <input
+                      id="newClientRateNormal"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="form-control"
+                      [(ngModel)]="newClientRateNormal"
+                      name="newClientRateNormal"
+                      placeholder="e.g. 45.00"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newClientRateOt">Overtime Hourly Billing Rate (AED/hr) <span class="req">*</span></label>
+                    <input
+                      id="newClientRateOt"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="form-control"
+                      [(ngModel)]="newClientRateOt"
+                      name="newClientRateOt"
+                      placeholder="e.g. 56.25"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newClientRateFrom">Effective From <span class="req">*</span></label>
+                    <input
+                      id="newClientRateFrom"
+                      type="date"
+                      class="form-control"
+                      [(ngModel)]="newClientRateFrom"
+                      name="newClientRateFrom"
+                      required
+                    />
+                  </div>
+                </form>
+              }
+
+              <!-- DESIGNATION FORM -->
+              @if (showNewDesignation) {
+                <form (ngSubmit)="createDesignation()">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newDesCode">Designation Code <span class="req">*</span></label>
+                    <input
+                      id="newDesCode"
+                      type="text"
+                      class="form-control"
+                      [(ngModel)]="newDesCode"
+                      name="newDesCode"
+                      placeholder="e.g. DES-PLUMB"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newDesTitle">Job Title <span class="req">*</span></label>
+                    <input
+                      id="newDesTitle"
+                      type="text"
+                      class="form-control"
+                      [(ngModel)]="newDesTitle"
+                      name="newDesTitle"
+                      placeholder="e.g. Master Plumber"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="newDesDesc">Description / Responsibilities</label>
+                    <textarea
+                      id="newDesDesc"
+                      rows="3"
+                      class="form-control"
+                      [(ngModel)]="newDesDesc"
+                      name="newDesDesc"
+                      placeholder="Standard responsibilities..."
+                    ></textarea>
+                  </div>
+                </form>
+              }
+
+              <!-- SHIFT FORM -->
+              @if (showNewShift || selectedShiftForEdit()) {
+                <form (ngSubmit)="selectedShiftForEdit() ? saveShiftEdit() : createShift()">
+                  @if (shiftFormError()) {
+                    <div class="form-error-banner mb-3">
+                      <span class="material-symbols-outlined error-icon">error</span>
+                      <p class="error-msg">{{ shiftFormError() }}</p>
+                    </div>
+                  }
+
+                  @if (selectedShiftForEdit()) {
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="editShiftCode">Shift Code <span class="req">*</span></label>
+                      <input
+                        id="editShiftCode"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="editShiftCode"
+                        name="editShiftCode"
+                        placeholder="e.g. SH-DAY-8H"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="editShiftName">Shift Name <span class="req">*</span></label>
+                      <input
+                        id="editShiftName"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="editShiftName"
+                        name="editShiftName"
+                        placeholder="e.g. Standard Morning Shift"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-row-2 mb-3">
+                      <div class="form-group">
+                        <label class="form-label" for="editShiftStart">Start Time <span class="req">*</span></label>
+                        <input
+                          id="editShiftStart"
+                          type="time"
+                          class="form-control"
+                          [(ngModel)]="editShiftStart"
+                          name="editShiftStart"
+                          required
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="editShiftEnd">End Time <span class="req">*</span></label>
+                        <input
+                          id="editShiftEnd"
+                          type="time"
+                          class="form-control"
+                          [(ngModel)]="editShiftEnd"
+                          name="editShiftEnd"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div class="form-row-2 mb-3">
+                      <div class="form-group">
+                        <label class="form-label" for="editShiftBreak">Break (minutes)</label>
+                        <input
+                          id="editShiftBreak"
+                          type="number"
+                          class="form-control"
+                          [(ngModel)]="editShiftBreak"
+                          name="editShiftBreak"
+                          placeholder="60"
+                          min="0"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="editShiftHours">Work Hours</label>
+                        <input
+                          id="editShiftHours"
+                          type="text"
+                          class="form-control"
+                          [value]="editShiftWorkHoursDisplay()"
+                          disabled
+                          readonly
+                        />
+                        <small class="form-hint">Calculated automatically from start time, end time, and break.</small>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="newShiftCode">Shift Code <span class="req">*</span></label>
+                      <input
+                        id="newShiftCode"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="newShiftCode"
+                        name="newShiftCode"
+                        placeholder="e.g. SH-DAY-8H"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="newShiftName">Shift Name <span class="req">*</span></label>
+                      <input
+                        id="newShiftName"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="newShiftName"
+                        name="newShiftName"
+                        placeholder="e.g. Standard Morning Shift"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-row-2 mb-3">
+                      <div class="form-group">
+                        <label class="form-label" for="newShiftStart">Start Time <span class="req">*</span></label>
+                        <input
+                          id="newShiftStart"
+                          type="time"
+                          class="form-control"
+                          [(ngModel)]="newShiftStart"
+                          name="newShiftStart"
+                          required
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="newShiftEnd">End Time <span class="req">*</span></label>
+                        <input
+                          id="newShiftEnd"
+                          type="time"
+                          class="form-control"
+                          [(ngModel)]="newShiftEnd"
+                          name="newShiftEnd"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div class="form-row-2 mb-3">
+                      <div class="form-group">
+                        <label class="form-label" for="newShiftBreak">Break (minutes)</label>
+                        <input
+                          id="newShiftBreak"
+                          type="number"
+                          class="form-control"
+                          [(ngModel)]="newShiftBreak"
+                          name="newShiftBreak"
+                          placeholder="60"
+                          min="0"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="newShiftHours">Work Hours</label>
+                        <input
+                          id="newShiftHours"
+                          type="text"
+                          class="form-control"
+                          [value]="newShiftWorkHoursDisplay()"
+                          disabled
+                          readonly
+                        />
+                        <small class="form-hint">Calculated automatically from start time, end time, and break.</small>
+                      </div>
+                    </div>
+                  }
+                </form>
+              }
+
+              <!-- HOLIDAY FORM -->
+              @if (showNewHoliday || selectedHolidayForEdit()) {
+                <form (ngSubmit)="selectedHolidayForEdit() ? saveHolidayEdit() : createHoliday()">
+                  @if (holidayFormError()) {
+                    <div class="form-error-banner mb-3">
+                      <span class="material-symbols-outlined error-icon">error</span>
+                      <p class="error-msg">{{ holidayFormError() }}</p>
+                    </div>
+                  }
+
+                  @if (selectedHolidayForEdit()) {
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="editHolidayName">Holiday Name <span class="req">*</span></label>
+                      <input
+                        id="editHolidayName"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="editHolidayName"
+                        name="editHolidayName"
+                        placeholder="e.g. Independence Day"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="editHolidayDate">Date <span class="req">*</span></label>
+                      <input
+                        id="editHolidayDate"
+                        type="date"
+                        class="form-control"
+                        [(ngModel)]="editHolidayDate"
+                        name="editHolidayDate"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="editHolidayDesc">Description</label>
+                      <input
+                        id="editHolidayDesc"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="editHolidayDesc"
+                        name="editHolidayDesc"
+                        placeholder="e.g. Indian Independence Day celebration"
+                      />
+                    </div>
+                  } @else {
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="newHolidayName">Holiday Name <span class="req">*</span></label>
+                      <input
+                        id="newHolidayName"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="newHolidayName"
+                        name="newHolidayName"
+                        placeholder="e.g. Independence Day"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="newHolidayDate">Date <span class="req">*</span></label>
+                      <input
+                        id="newHolidayDate"
+                        type="date"
+                        class="form-control"
+                        [(ngModel)]="newHolidayDate"
+                        name="newHolidayDate"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="newHolidayDesc">Description</label>
+                      <input
+                        id="newHolidayDesc"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="newHolidayDesc"
+                        name="newHolidayDesc"
+                        placeholder="e.g. Indian Independence Day celebration"
+                      />
+                    </div>
+                  }
+                </form>
+              }
             </div>
-          </div>
+
+            <div class="offcanvas-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeOffcanvas()">
+                Cancel
+              </button>
+              <button type="button" class="btn btn-primary" (click)="submitActiveOffcanvas()">
+                <span class="material-symbols-outlined icon-sm">check</span>
+                <span>{{ offcanvasMeta().submitLabel }}</span>
+              </button>
+            </div>
+          </aside>
         }
 
         <div class="masters-container">
@@ -256,38 +989,22 @@ export type MasterTab =
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <h2>Clients Master Catalog</h2>
-                  <p class="subtitle">Commercial partner entities holding project worksites and master billing agreements.</p>
+                  <h2>Clients Master</h2>
+                  <p class="subtitle">Manage clients and their associated projects.</p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewClient = !showNewClient">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewClient ? 'close' : 'add' }}</span>
-                  <span>{{ showNewClient ? 'Cancel' : 'Add Client' }}</span>
-                </button>
               </div>
-
-              @if (showNewClient) {
-                <form class="create-form" (ngSubmit)="createClient()">
-                  <div class="form-row">
-                    <input type="text" [(ngModel)]="newClientCode" name="newClientCode" placeholder="Code (e.g. CLI-EMAAR)" required />
-                    <input type="text" [(ngModel)]="newClientName" name="newClientName" placeholder="Client Legal Name" required />
-                    <input type="text" [(ngModel)]="newClientContact" name="newClientContact" placeholder="Contact Person" />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Save Client</span>
-                    </button>
-                  </div>
-                </form>
-              }
 
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
                       <th>Code</th>
-                      <th>Company / Client Name</th>
+                      <th>Client Name</th>
                       <th>Contact Person</th>
-                      <th>Category</th>
+                      <th>Email</th>
+                      <th>Phone Number</th>
                       <th>Status</th>
+                      <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -296,12 +1013,30 @@ export type MasterTab =
                         <td><code>{{ c.code }}</code></td>
                         <td><strong>{{ c.name }}</strong></td>
                         <td>{{ c.contactPerson || '—' }}</td>
-                        <td><span class="badge">Commercial Partner</span></td>
-                        <td><span class="badge badge-active">Active</span></td>
+                        <td>{{ c.email || c.contactEmail || '—' }}</td>
+                        <td>{{ c.phoneNumber || c.contactPhone || '—' }}</td>
+                        <td>
+                          <span class="badge" [class.badge-active]="c.isActive !== false">
+                            {{ c.isActive !== false ? 'Active' : 'Inactive' }}
+                          </span>
+                        </td>
+                        <td class="text-right">
+                          <div class="action-btn-group">
+                            <button
+                              type="button"
+                              class="btn-action btn-action-edit"
+                              (click)="openEditClient(c)"
+                              title="Edit Client"
+                            >
+                              <span class="material-symbols-outlined icon-xs">edit</span>
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="5" class="empty-state">No commercial clients found.</td>
+                        <td colspan="7" class="empty-state">No clients found. Click 'Add Client' to add a client.</td>
                       </tr>
                     }
                   </tbody>
@@ -315,21 +1050,17 @@ export type MasterTab =
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <h2>Project Worksites Master</h2>
-                  <p class="subtitle">Operational worksites and deployment locations tied to commercial clients.</p>
+                  <h2>Projects Master</h2>
+                  <p class="subtitle">Manage client projects and locations.</p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewProject = !showNewProject">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewProject ? 'close' : 'add' }}</span>
-                  <span>{{ showNewProject ? 'Cancel' : 'Add Project' }}</span>
-                </button>
               </div>
 
               @if (clients().length === 0) {
                 <div class="alert-guidance alert-warning">
                   <div class="guidance-icon"><span class="material-symbols-outlined">warning</span></div>
                   <div class="guidance-content">
-                    <strong>Prerequisite Missing: Commercial Clients</strong>
-                    <p>Every Project Worksite must belong to a parent Commercial Client entity. You cannot create a project until at least one Client exists.</p>
+                    <strong>Prerequisite Missing: Clients</strong>
+                    <p>Every Project must belong to a Client. You cannot create a project until at least one Client exists.</p>
                     <div class="guidance-actions">
                       <button type="button" class="btn btn-sm btn-primary" (click)="setTab('clients')">
                         <span class="material-symbols-outlined icon-sm">corporate_fare</span>
@@ -340,35 +1071,16 @@ export type MasterTab =
                 </div>
               }
 
-              @if (showNewProject) {
-                <form class="create-form" (ngSubmit)="createProject()">
-                  <div class="form-grid">
-                    <select [(ngModel)]="newProjClientId" name="newProjClientId" required>
-                      <option value="">-- Select Client --</option>
-                      @for (c of clients(); track c.id) {
-                        <option [value]="c.id">{{ c.name }} ({{ c.code }})</option>
-                      }
-                    </select>
-                    <input type="text" [(ngModel)]="newProjCode" name="newProjCode" placeholder="Project Code (e.g. PRJ-DOWNTOWN)" required />
-                    <input type="text" [(ngModel)]="newProjName" name="newProjName" placeholder="Project Name" required />
-                    <input type="text" [(ngModel)]="newProjLocation" name="newProjLocation" placeholder="Site Location (e.g. Downtown Dubai)" />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Save Project</span>
-                    </button>
-                  </div>
-                </form>
-              }
-
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Code</th>
-                      <th>Project / Worksite Name</th>
-                      <th>Client Partner</th>
-                      <th>Site Location</th>
+                      <th>Project Code</th>
+                      <th>Project Name</th>
+                      <th>Client</th>
+                      <th>Location</th>
                       <th>Status</th>
+                      <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -377,16 +1089,33 @@ export type MasterTab =
                         <td><code>{{ p.code }}</code></td>
                         <td><strong>{{ p.name }}</strong></td>
                         <td>{{ p.clientName || p.clientId }}</td>
-                        <td>{{ p.siteLocation || '—' }}</td>
-                        <td><span class="badge badge-active">{{ p.status }}</span></td>
+                        <td>{{ p.location || p.siteLocation || '—' }}</td>
+                        <td>
+                          <span class="badge" [class.badge-active]="p.status === 'active'">
+                            {{ p.status }}
+                          </span>
+                        </td>
+                        <td class="text-right">
+                          <div class="action-btn-group">
+                            <button
+                              type="button"
+                              class="btn-action btn-action-edit"
+                              (click)="openEditProject(p)"
+                              title="Edit Project"
+                            >
+                              <span class="material-symbols-outlined icon-xs">edit</span>
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="5" class="empty-state">
+                        <td colspan="6" class="empty-state">
                           @if (clients().length === 0) {
-                            <span>No commercial clients exist yet. Create a Client first before adding Project Worksites.</span>
+                            <span>No clients exist yet. Create a Client first before adding Projects.</span>
                           } @else {
-                            <span>No project worksites found. Click 'Add Project' to configure a worksite.</span>
+                            <span>No projects found. Click 'Add Project' to configure a project.</span>
                           }
                         </td>
                       </tr>
@@ -405,10 +1134,6 @@ export type MasterTab =
                   <h2>Workforce Deployments</h2>
                   <p class="subtitle">Assign employees to clients, projects and designated roles (satisfies Onboarding Pillar 3).</p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewAssignment = !showNewAssignment">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewAssignment ? 'close' : 'add' }}</span>
-                  <span>{{ showNewAssignment ? 'Cancel' : 'Deploy Employee' }}</span>
-                </button>
               </div>
 
               @if (employees().length === 0 || projects().length === 0 || designations().length === 0) {
@@ -432,42 +1157,6 @@ export type MasterTab =
                     </div>
                   </div>
                 </div>
-              }
-
-              @if (showNewAssignment) {
-                <form class="create-form" (ngSubmit)="createAssignment()">
-                  <div class="form-grid">
-                    <select [(ngModel)]="newAssignEmpId" name="newAssignEmpId" required>
-                      <option value="">-- Select Employee --</option>
-                      @for (e of employees(); track e.id) {
-                        <option [value]="e.id">{{ e.firstName }} {{ e.lastName }} ({{ e.employeeCode }})</option>
-                      }
-                    </select>
-                    <select [(ngModel)]="newAssignClientId" (change)="onAssignClientChange()" name="newAssignClientId" required>
-                      <option value="">-- Select Client --</option>
-                      @for (c of clients(); track c.id) {
-                        <option [value]="c.id">{{ c.name }}</option>
-                      }
-                    </select>
-                    <select [(ngModel)]="newAssignProjId" name="newAssignProjId" required>
-                      <option value="">-- Select Project --</option>
-                      @for (p of filteredProjects(); track p.id) {
-                        <option [value]="p.id">{{ p.name }}</option>
-                      }
-                    </select>
-                    <select [(ngModel)]="newAssignDesId" name="newAssignDesId" required>
-                      <option value="">-- Assign Designation --</option>
-                      @for (d of designations(); track d.id) {
-                        <option [value]="d.id">{{ d.title }}</option>
-                      }
-                    </select>
-                    <input type="date" [(ngModel)]="newAssignFrom" name="newAssignFrom" placeholder="Effective From" required />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Deploy Worker</span>
-                    </button>
-                  </div>
-                </form>
               }
 
               <!-- Search & Filter Controls -->
@@ -605,10 +1294,6 @@ export type MasterTab =
                     Statutory hourly wages and overtime rates paid directly to workers (satisfies Onboarding Pillar 4). Strictly segregated from client invoices.
                   </p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewEmployeeRate = !showNewEmployeeRate">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewEmployeeRate ? 'close' : 'add' }}</span>
-                  <span>{{ showNewEmployeeRate ? 'Cancel' : 'Set Employee Pay Rate' }}</span>
-                </button>
               </div>
 
               <!-- Stream Cost Explainer Banner -->
@@ -635,54 +1320,6 @@ export type MasterTab =
                     </div>
                   </div>
                 </div>
-              }
-
-              @if (showNewEmployeeRate) {
-                <form class="create-form" (ngSubmit)="createEmployeeRate()">
-                  <div class="form-grid">
-                    <select [(ngModel)]="newEmpRateEmpId" name="newEmpRateEmpId" required>
-                      <option value="">-- Select Employee --</option>
-                      @for (e of employees(); track e.id) {
-                        <option [value]="e.id">{{ e.firstName }} {{ e.lastName }} ({{ e.employeeCode }})</option>
-                      }
-                    </select>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      [(ngModel)]="newEmpRateNormal"
-                      name="newEmpRateNormal"
-                      placeholder="Normal Pay Rate (AED/hr)"
-                      required
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      [(ngModel)]="newEmpRateOt"
-                      name="newEmpRateOt"
-                      placeholder="OT Pay Rate (AED/hr)"
-                      required
-                    />
-                    <input
-                      type="date"
-                      [(ngModel)]="newEmpRateFrom"
-                      name="newEmpRateFrom"
-                      placeholder="Effective From"
-                      required
-                    />
-                    <input
-                      type="text"
-                      [(ngModel)]="newEmpRateReason"
-                      name="newEmpRateReason"
-                      placeholder="Reason (e.g. Initial Onboarding Rate)"
-                    />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Save Worker Rate</span>
-                    </button>
-                  </div>
-                </form>
               }
 
               <div class="table-responsive">
@@ -744,10 +1381,6 @@ export type MasterTab =
                     Commercial billing rates charged to clients for workforce deployment. Supports two-tier resolution: Project-Specific Rate overrides Client-Wide Fallback.
                   </p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewClientRate = !showNewClientRate">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewClientRate ? 'close' : 'add' }}</span>
-                  <span>{{ showNewClientRate ? 'Cancel' : 'Add Billing Rate' }}</span>
-                </button>
               </div>
 
               <!-- Stream Revenue Explainer Banner -->
@@ -779,60 +1412,6 @@ export type MasterTab =
                     </div>
                   </div>
                 </div>
-              }
-
-              @if (showNewClientRate) {
-                <form class="create-form" (ngSubmit)="createClientRate()">
-                  <div class="form-grid">
-                    <select [(ngModel)]="newClientRateClientId" (change)="onClientRateClientChange()" name="newClientRateClientId" required>
-                      <option value="">-- Select Client --</option>
-                      @for (c of clients(); track c.id) {
-                        <option [value]="c.id">{{ c.name }} ({{ c.code }})</option>
-                      }
-                    </select>
-                    <select [(ngModel)]="newClientRateProjId" name="newClientRateProjId">
-                      <option value="">-- Client-Wide Default (All Projects) --</option>
-                      @for (p of clientRateProjects(); track p.id) {
-                        <option [value]="p.id">{{ p.name }} (Project-Specific)</option>
-                      }
-                    </select>
-                    <select [(ngModel)]="newClientRateDesId" name="newClientRateDesId" required>
-                      <option value="">-- Select Designation --</option>
-                      @for (d of designations(); track d.id) {
-                        <option [value]="d.id">{{ d.title }}</option>
-                      }
-                    </select>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      [(ngModel)]="newClientRateNormal"
-                      name="newClientRateNormal"
-                      placeholder="Normal Invoicing Rate (AED/hr)"
-                      required
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      [(ngModel)]="newClientRateOt"
-                      name="newClientRateOt"
-                      placeholder="OT Invoicing Rate (AED/hr)"
-                      required
-                    />
-                    <input
-                      type="date"
-                      [(ngModel)]="newClientRateFrom"
-                      name="newClientRateFrom"
-                      placeholder="Effective From"
-                      required
-                    />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Save Invoicing Rate</span>
-                    </button>
-                  </div>
-                </form>
               }
 
               <div class="table-responsive">
@@ -948,25 +1527,7 @@ export type MasterTab =
                   <h2>Designations Master Catalog</h2>
                   <p class="subtitle">Standard trade, occupational, and administrative job roles across all projects.</p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewDesignation = !showNewDesignation">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewDesignation ? 'close' : 'add' }}</span>
-                  <span>{{ showNewDesignation ? 'Cancel' : 'Add Designation' }}</span>
-                </button>
               </div>
-
-              @if (showNewDesignation) {
-                <form class="create-form" (ngSubmit)="createDesignation()">
-                  <div class="form-row">
-                    <input type="text" [(ngModel)]="newDesCode" name="newDesCode" placeholder="Code (e.g. DES-PLUMB)" required />
-                    <input type="text" [(ngModel)]="newDesTitle" name="newDesTitle" placeholder="Title (e.g. Master Plumber)" required />
-                    <input type="text" [(ngModel)]="newDesDesc" name="newDesDesc" placeholder="Description" />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Save</span>
-                    </button>
-                  </div>
-                </form>
-              }
 
               <div class="table-responsive">
                 <table class="data-table">
@@ -1005,33 +1566,11 @@ export type MasterTab =
                   <h2>Employees Master (Biographical Identity)</h2>
                   <p class="subtitle">Core biographical registry for Blue Royal workforce.</p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewEmployee = !showNewEmployee">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewEmployee ? 'close' : 'add' }}</span>
-                  <span>{{ showNewEmployee ? 'Cancel' : 'Register Employee' }}</span>
-                </button>
+                <a routerLink="/employees" class="btn btn-outline btn-sm">
+                  <span class="material-symbols-outlined icon-sm">badge</span>
+                  <span>Open Full Directory</span>
+                </a>
               </div>
-
-              @if (showNewEmployee) {
-                <form class="create-form" (ngSubmit)="createEmployee()">
-                  <div class="form-grid">
-                    <input type="text" [(ngModel)]="newEmpCode" name="newEmpCode" placeholder="Emp Code (BR-001)" required />
-                    <input type="text" [(ngModel)]="newEmpFirst" name="newEmpFirst" placeholder="First Name" required />
-                    <input type="text" [(ngModel)]="newEmpLast" name="newEmpLast" placeholder="Last Name" required />
-                    <select [(ngModel)]="newEmpGender" name="newEmpGender">
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <input type="date" [(ngModel)]="newEmpDob" name="newEmpDob" placeholder="DOB" required />
-                    <input type="text" [(ngModel)]="newEmpNat" name="newEmpNat" placeholder="Nationality" required />
-                    <input type="date" [(ngModel)]="newEmpJoining" name="newEmpJoining" placeholder="Joining Date" required />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Register Employee</span>
-                    </button>
-                  </div>
-                </form>
-              }
 
               <div class="table-responsive">
                 <table class="data-table">
@@ -1085,42 +1624,23 @@ export type MasterTab =
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <h2>Shifts & Rostering Master</h2>
-                  <p class="subtitle">Standard operational shift schedules and working hours.</p>
+                  <h2>Work Shifts</h2>
+                  <p class="subtitle">Set the start time, end time, and break for each shift.</p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewShift = !showNewShift">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewShift ? 'close' : 'add' }}</span>
-                  <span>{{ showNewShift ? 'Cancel' : 'Add Shift' }}</span>
-                </button>
               </div>
-
-              @if (showNewShift) {
-                <form class="create-form" (ngSubmit)="createShift()">
-                  <div class="form-grid">
-                    <input type="text" [(ngModel)]="newShiftCode" name="newShiftCode" placeholder="Code (e.g. SH-DAY-8H)" required />
-                    <input type="text" [(ngModel)]="newShiftName" name="newShiftName" placeholder="Shift Name" required />
-                    <input type="time" [(ngModel)]="newShiftStart" name="newShiftStart" required />
-                    <input type="time" [(ngModel)]="newShiftEnd" name="newShiftEnd" required />
-                    <input type="number" [(ngModel)]="newShiftBreak" name="newShiftBreak" placeholder="Break Mins" />
-                    <input type="number" step="0.5" [(ngModel)]="newShiftHours" name="newShiftHours" placeholder="Work Hours (8.0)" required />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Save Shift</span>
-                    </button>
-                  </div>
-                </form>
-              }
 
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
                       <th>Code</th>
-                      <th>Name</th>
-                      <th>Timings</th>
+                      <th>Shift Name</th>
+                      <th>Start Time</th>
+                      <th>End Time</th>
                       <th>Break</th>
                       <th>Work Hours</th>
                       <th>Night Shift</th>
+                      <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1128,14 +1648,32 @@ export type MasterTab =
                       <tr>
                         <td><code>{{ s.code }}</code></td>
                         <td><strong>{{ s.name }}</strong></td>
-                        <td>{{ s.startTime }} – {{ s.endTime }}</td>
-                        <td>{{ s.breakMinutes }}m</td>
+                        <td>{{ s.startTime }}</td>
+                        <td>{{ s.endTime }}</td>
+                        <td>{{ s.breakMinutes }} min</td>
                         <td>{{ s.workHours }} hrs</td>
-                        <td>{{ s.isNightShift ? 'Yes' : 'No' }}</td>
+                        <td>
+                          <span class="badge" [class.badge-active]="s.isNightShift">
+                            {{ s.isNightShift ? 'Yes' : 'No' }}
+                          </span>
+                        </td>
+                        <td class="text-right">
+                          <div class="action-btn-group">
+                            <button
+                              type="button"
+                              class="btn-action btn-action-edit"
+                              (click)="openEditShift(s)"
+                              title="Edit Work Shift"
+                            >
+                              <span class="material-symbols-outlined icon-xs">edit</span>
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="6" class="empty-state">No shifts configured.</td>
+                        <td colspan="8" class="empty-state">No work shifts found. Click 'Add Work Shift' to create one.</td>
                       </tr>
                     }
                   </tbody>
@@ -1149,51 +1687,44 @@ export type MasterTab =
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <h2>Company & Statutory Public Holidays</h2>
-                  <p class="subtitle">Authoritative holiday calendar used for attendance, overtime calculations, and leave encashment.</p>
+                  <h2>Holidays</h2>
+                  <p class="subtitle">Manage holidays for your organization.</p>
                 </div>
-                <button class="btn btn-primary" (click)="showNewHoliday = !showNewHoliday">
-                  <span class="material-symbols-outlined icon-sm">{{ showNewHoliday ? 'close' : 'add' }}</span>
-                  <span>{{ showNewHoliday ? 'Cancel' : 'Add Holiday' }}</span>
-                </button>
               </div>
-
-              @if (showNewHoliday) {
-                <form class="create-form" (ngSubmit)="createHoliday()">
-                  <div class="form-row">
-                    <input type="number" [(ngModel)]="newHolidayYear" name="newHolidayYear" placeholder="Year (2026)" required />
-                    <input type="text" [(ngModel)]="newHolidayName" name="newHolidayName" placeholder="Holiday Name" required />
-                    <input type="date" [(ngModel)]="newHolidayDate" name="newHolidayDate" required />
-                    <input type="text" [(ngModel)]="newHolidayDesc" name="newHolidayDesc" placeholder="Description" />
-                    <button type="submit" class="btn btn-success">
-                      <span class="material-symbols-outlined icon-sm">check</span>
-                      <span>Add Holiday</span>
-                    </button>
-                  </div>
-                </form>
-              }
 
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Year</th>
                       <th>Holiday Name</th>
                       <th>Date</th>
                       <th>Description</th>
+                      <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (h of holidays(); track h.id) {
                       <tr>
-                        <td>{{ h.calendarYear }}</td>
                         <td><strong>{{ h.name }}</strong></td>
-                        <td><code>{{ h.holidayDate }}</code></td>
+                        <td>{{ formatHolidayDate(h.holidayDate) }}</td>
                         <td>{{ h.description || '—' }}</td>
+                        <td class="text-right">
+                          <div class="action-btn-group">
+                            <button
+                              type="button"
+                              class="btn-action btn-action-edit"
+                              (click)="openEditHoliday(h)"
+                              title="Edit Holiday"
+                            >
+                              <span class="material-symbols-outlined icon-xs">edit</span>
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="4" class="empty-state">No public holidays found.</td>
+                        <td colspan="4" class="empty-state">No holidays found. Click 'Add Holiday' to create one.</td>
                       </tr>
                     }
                   </tbody>
@@ -2094,6 +2625,179 @@ export type MasterTab =
       .icon-sm {
         font-size: 1.125rem;
       }
+
+      /* Offcanvas Drawer & Backdrop */
+      .offcanvas-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(2px);
+        z-index: 999;
+        animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .offcanvas-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 480px;
+        max-width: 100vw;
+        background: var(--bg-surface, #ffffff);
+        box-shadow: -8px 0 32px rgba(15, 23, 42, 0.2);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes slideInRight {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
+      }
+
+      .offcanvas-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+        background: var(--bg-surface, #ffffff);
+      }
+
+      .offcanvas-header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+      }
+
+      .offcanvas-icon-pill {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-md, 8px);
+        background: var(--brand-50, #eff6ff);
+        color: var(--brand-600, #2563eb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .offcanvas-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-primary, #0f172a);
+        margin: 0;
+      }
+
+      .offcanvas-subtitle {
+        font-size: 0.8125rem;
+        color: var(--text-secondary, #64748b);
+        margin: 0.125rem 0 0 0;
+      }
+
+      .btn-offcanvas-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: var(--radius-sm, 6px);
+        color: var(--text-muted, #94a3b8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+      }
+
+      .btn-offcanvas-close:hover {
+        background: var(--bg-muted, #f1f5f9);
+        color: var(--text-primary, #0f172a);
+      }
+
+      .offcanvas-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+      }
+
+      .offcanvas-body .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+      }
+
+      .offcanvas-body .mb-3 {
+        margin-bottom: 1.125rem;
+      }
+
+      .offcanvas-body .form-row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      .offcanvas-body .form-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-primary, #1e293b);
+      }
+
+      .offcanvas-body .req {
+        color: #ef4444;
+        font-weight: 700;
+      }
+
+      .offcanvas-body .form-hint {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #64748b);
+        margin-top: 0.125rem;
+      }
+
+      .offcanvas-body .form-control {
+        width: 100%;
+        padding: 0.625rem 0.75rem;
+        font-size: 0.875rem;
+        border: 1px solid var(--border-color, #cbd5e1);
+        border-radius: var(--radius-md, 6px);
+        background: #ffffff;
+        color: var(--text-primary, #0f172a);
+        font-family: inherit;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .offcanvas-body .form-control:focus {
+        outline: none;
+        border-color: var(--brand-500, #3b82f6);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+
+      .edit-banner {
+        padding: 0.75rem 1rem;
+        background: var(--brand-50, #eff6ff);
+        border: 1px solid var(--brand-200, #bfdbfe);
+        border-radius: var(--radius-md, 6px);
+      }
+
+      .offcanvas-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--border-color, #e2e8f0);
+        background: var(--bg-surface, #ffffff);
+      }
+
+      @media (max-width: 640px) {
+        .offcanvas-panel {
+          width: 100vw;
+        }
+      }
     `,
   ],
 })
@@ -2140,16 +2844,31 @@ export class MastersHubComponent implements OnInit {
   public newEmpNat = '';
   public newEmpJoining = '';
 
-  // New Client Form State
+  // New / Edit Client Form State
   public newClientCode = '';
   public newClientName = '';
   public newClientContact = '';
+  public newClientEmail = '';
+  public newClientPhone = '';
+  public selectedClientForEdit = signal<ClientDto | null>(null);
+  public editClientCode = '';
+  public editClientName = '';
+  public editClientContact = '';
+  public editClientEmail = '';
+  public editClientPhone = '';
+  public clientFormError = signal<string | null>(null);
 
-  // New Project Form State
+  // New / Edit Project Form State
   public newProjClientId = '';
   public newProjCode = '';
   public newProjName = '';
   public newProjLocation = '';
+  public selectedProjectForEdit = signal<ProjectDto | null>(null);
+  public editProjClientId = '';
+  public editProjCode = '';
+  public editProjName = '';
+  public editProjLocation = '';
+  public projectFormError = signal<string | null>(null);
 
   // New Assignment Form State
   public newAssignEmpId = '';
@@ -2173,19 +2892,30 @@ export class MastersHubComponent implements OnInit {
   public newClientRateOt = 0;
   public newClientRateFrom = '';
 
-  // New Shift Form State
+  // New / Edit Shift Form State
   public newShiftCode = '';
   public newShiftName = '';
-  public newShiftStart = '07:00';
-  public newShiftEnd = '16:00';
+  public newShiftStart = '08:00';
+  public newShiftEnd = '17:00';
   public newShiftBreak = 60;
-  public newShiftHours = 8.0;
+  public selectedShiftForEdit = signal<ShiftDto | null>(null);
+  public editShiftCode = '';
+  public editShiftName = '';
+  public editShiftStart = '08:00';
+  public editShiftEnd = '17:00';
+  public editShiftBreak = 60;
+  public shiftFormError = signal<string | null>(null);
 
-  // New Holiday Form State
+  // New / Edit Holiday Form State
   public newHolidayYear = 2026;
   public newHolidayName = '';
   public newHolidayDate = '';
   public newHolidayDesc = '';
+  public selectedHolidayForEdit = signal<PublicHolidayDto | null>(null);
+  public editHolidayName = '';
+  public editHolidayDate = '';
+  public editHolidayDesc = '';
+  public holidayFormError = signal<string | null>(null);
 
   // Resolution Tester State
   public resolutionEmpId = '';
@@ -2251,10 +2981,10 @@ export class MastersHubComponent implements OnInit {
         };
       case 'clients':
         return {
-          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbGroup: 'ORGANIZATION MASTER',
           breadcrumbPage: 'Clients',
           title: 'Clients',
-          subtitle: 'Manage commercial clients and their associated work.',
+          subtitle: 'Manage clients and their associated projects.',
           ctaLabel: 'Add Client',
           ctaIcon: 'add',
           isFlowTab: true,
@@ -2262,10 +2992,10 @@ export class MastersHubComponent implements OnInit {
         };
       case 'projects':
         return {
-          breadcrumbGroup: 'ORGANIZATION SETUP',
-          breadcrumbPage: 'Projects & Worksites',
-          title: 'Projects & Worksites',
-          subtitle: 'Manage client projects and worksite locations.',
+          breadcrumbGroup: 'ORGANIZATION MASTER',
+          breadcrumbPage: 'Projects',
+          title: 'Projects',
+          subtitle: 'Manage client projects and locations.',
           ctaLabel: 'Add Project',
           ctaIcon: 'add',
           isFlowTab: true,
@@ -2273,7 +3003,7 @@ export class MastersHubComponent implements OnInit {
         };
       case 'designations':
         return {
-          breadcrumbGroup: isSuperAdmin ? 'ORGANIZATION SETUP' : 'ORGANIZATION REFERENCE',
+          breadcrumbGroup: 'ORGANIZATION MASTER',
           breadcrumbPage: 'Job Designations',
           title: 'Job Designations',
           subtitle: 'Manage job/designation master data.',
@@ -2284,21 +3014,21 @@ export class MastersHubComponent implements OnInit {
         };
       case 'shifts':
         return {
-          breadcrumbGroup: 'ORGANIZATION SETUP',
-          breadcrumbPage: 'Work Shifts & Hours',
-          title: 'Work Shifts & Hours',
-          subtitle: 'Manage employee work schedules.',
-          ctaLabel: 'Add Shift',
+          breadcrumbGroup: 'ORGANIZATION MASTER',
+          breadcrumbPage: 'Work Shift',
+          title: 'Work Shift',
+          subtitle: 'Manage employee working shifts and hours.',
+          ctaLabel: 'Add Work Shift',
           ctaIcon: 'add',
           isFlowTab: false,
           flowStep: 0,
         };
       case 'calendar':
         return {
-          breadcrumbGroup: 'ORGANIZATION SETUP',
-          breadcrumbPage: 'Holidays & Weekly Offs',
-          title: 'Holidays & Weekly Offs',
-          subtitle: 'Manage organization calendar.',
+          breadcrumbGroup: 'ORGANIZATION MASTER',
+          breadcrumbPage: 'Holidays',
+          title: 'Holidays',
+          subtitle: 'Manage organization holidays.',
           ctaLabel: 'Add Holiday',
           ctaIcon: 'add',
           isFlowTab: false,
@@ -2306,7 +3036,7 @@ export class MastersHubComponent implements OnInit {
         };
       case 'salary':
         return {
-          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbGroup: 'ORGANIZATION MASTER',
           breadcrumbPage: 'Salary Packages',
           title: 'Salary Packages',
           subtitle: 'Manage standard compensation structures.',
@@ -2362,7 +3092,7 @@ export class MastersHubComponent implements OnInit {
       case 'overview':
       default:
         return {
-          breadcrumbGroup: 'ORGANIZATION SETUP',
+          breadcrumbGroup: 'ORGANIZATION MASTER',
           breadcrumbPage: 'Master Catalogs',
           title: 'Master Catalogs & Operations Overview',
           subtitle: 'Authoritative commercial entities, deployment worksites, and dual-stream rate architecture.',
@@ -2374,35 +3104,220 @@ export class MastersHubComponent implements OnInit {
     }
   });
 
-  public isPrimaryFormOpen(): boolean {
-    switch (this.activeTab()) {
-      case 'assignments': return this.showNewAssignment;
-      case 'clients': return this.showNewClient;
-      case 'projects': return this.showNewProject;
-      case 'designations': return this.showNewDesignation;
-      case 'shifts': return this.showNewShift;
-      case 'calendar': return this.showNewHoliday;
-      case 'employee-rates': return this.showNewEmployeeRate;
-      case 'client-rates': return this.showNewClientRate;
-      case 'employees': return this.showNewEmployee;
-      default: return false;
+  public isOffcanvasOpen(): boolean {
+    return (
+      this.showNewClient ||
+      this.selectedClientForEdit() !== null ||
+      this.showNewProject ||
+      this.selectedProjectForEdit() !== null ||
+      this.showNewAssignment ||
+      this.showNewEmployeeRate ||
+      this.showNewClientRate ||
+      this.showNewDesignation ||
+      this.showNewShift ||
+      this.selectedShiftForEdit() !== null ||
+      this.showNewHoliday ||
+      this.selectedHolidayForEdit() !== null ||
+      this.selectedAssignmentForEdit() !== null
+    );
+  }
+
+  public openPrimaryForm(): void {
+    this.closeOffcanvas();
+    const tab = this.activeTab();
+    switch (tab) {
+      case 'clients':
+        this.showNewClient = true;
+        break;
+      case 'projects':
+        this.showNewProject = true;
+        break;
+      case 'assignments':
+        this.showNewAssignment = true;
+        break;
+      case 'employee-rates':
+        this.showNewEmployeeRate = true;
+        break;
+      case 'client-rates':
+        this.showNewClientRate = true;
+        break;
+      case 'designations':
+        this.showNewDesignation = true;
+        break;
+      case 'shifts':
+        this.showNewShift = true;
+        break;
+      case 'calendar':
+        this.showNewHoliday = true;
+        break;
+      case 'employees':
+        this.router.navigate(['/employees']);
+        break;
     }
   }
 
-  public togglePrimaryForm(): void {
-    switch (this.activeTab()) {
-      case 'assignments': this.showNewAssignment = !this.showNewAssignment; break;
-      case 'clients': this.showNewClient = !this.showNewClient; break;
-      case 'projects': this.showNewProject = !this.showNewProject; break;
-      case 'designations': this.showNewDesignation = !this.showNewDesignation; break;
-      case 'shifts': this.showNewShift = !this.showNewShift; break;
-      case 'calendar': this.showNewHoliday = !this.showNewHoliday; break;
-      case 'employee-rates': this.showNewEmployeeRate = !this.showNewEmployeeRate; break;
-      case 'client-rates': this.showNewClientRate = !this.showNewClientRate; break;
-      case 'employees': this.showNewEmployee = !this.showNewEmployee; break;
-    }
+  public closeOffcanvas(): void {
+    this.showNewClient = false;
+    this.selectedClientForEdit.set(null);
+    this.clientFormError.set(null);
+    this.showNewProject = false;
+    this.selectedProjectForEdit.set(null);
+    this.projectFormError.set(null);
+    this.showNewAssignment = false;
+    this.showNewEmployeeRate = false;
+    this.showNewClientRate = false;
+    this.showNewDesignation = false;
+    this.showNewShift = false;
+    this.selectedShiftForEdit.set(null);
+    this.shiftFormError.set(null);
+    this.showNewHoliday = false;
+    this.selectedHolidayForEdit.set(null);
+    this.holidayFormError.set(null);
+    this.selectedAssignmentForEdit.set(null);
   }
 
+  public offcanvasMeta(): { title: string; subtitle: string; icon: string; submitLabel: string } {
+    if (this.selectedClientForEdit()) {
+      return {
+        title: 'Edit Client',
+        subtitle: 'Update client information',
+        icon: 'corporate_fare',
+        submitLabel: 'Save Changes',
+      };
+    }
+    if (this.showNewClient) {
+      return {
+        title: 'Add Client',
+        subtitle: 'Add a new client',
+        icon: 'corporate_fare',
+        submitLabel: 'Save Client',
+      };
+    }
+    if (this.selectedProjectForEdit()) {
+      return {
+        title: 'Edit Project',
+        subtitle: 'Update project information',
+        icon: 'folder_open',
+        submitLabel: 'Save Changes',
+      };
+    }
+    if (this.showNewProject) {
+      return {
+        title: 'Add Project',
+        subtitle: 'Add a new project',
+        icon: 'folder_open',
+        submitLabel: 'Save Project',
+      };
+    }
+    if (this.selectedAssignmentForEdit()) {
+      return {
+        title: 'Edit Deployment',
+        subtitle: 'Update effective duration and transfer notes',
+        icon: 'edit_calendar',
+        submitLabel: 'Save Changes',
+      };
+    }
+    if (this.showNewAssignment) {
+      return {
+        title: 'Deploy Workforce Employee',
+        subtitle: 'Assign worker to client project & designation',
+        icon: 'badge',
+        submitLabel: 'Deploy Worker',
+      };
+    }
+    if (this.showNewEmployeeRate) {
+      return {
+        title: 'Set Employee Pay Rate',
+        subtitle: 'Configure internal remuneration cost stream',
+        icon: 'payments',
+        submitLabel: 'Save Worker Rate',
+      };
+    }
+    if (this.showNewClientRate) {
+      return {
+        title: 'Set Client Billing Rate',
+        subtitle: 'Configure commercial invoice revenue stream',
+        icon: 'receipt_long',
+        submitLabel: 'Save Invoicing Rate',
+      };
+    }
+    if (this.showNewDesignation) {
+      return {
+        title: 'Add Job Designation',
+        subtitle: 'Create standard role in catalog',
+        icon: 'work',
+        submitLabel: 'Save Designation',
+      };
+    }
+    if (this.selectedShiftForEdit()) {
+      return {
+        title: 'Edit Work Shift',
+        subtitle: 'Update the shift working hours.',
+        icon: 'schedule',
+        submitLabel: 'Save Changes',
+      };
+    }
+    if (this.showNewShift) {
+      return {
+        title: 'Add Work Shift',
+        subtitle: 'Set the working hours for this shift.',
+        icon: 'schedule',
+        submitLabel: 'Save Shift',
+      };
+    }
+    if (this.selectedHolidayForEdit()) {
+      return {
+        title: 'Edit Holiday',
+        subtitle: 'Update holiday information',
+        icon: 'event',
+        submitLabel: 'Save Changes',
+      };
+    }
+    if (this.showNewHoliday) {
+      return {
+        title: 'Add Holiday',
+        subtitle: 'Add a new holiday',
+        icon: 'event',
+        submitLabel: 'Save Holiday',
+      };
+    }
+    return {
+      title: 'Form',
+      subtitle: '',
+      icon: 'add',
+      submitLabel: 'Submit',
+    };
+  }
+
+  public submitActiveOffcanvas(): void {
+    if (this.selectedClientForEdit()) {
+      this.saveClientEdit();
+    } else if (this.showNewClient) {
+      this.createClient();
+    } else if (this.selectedProjectForEdit()) {
+      this.saveProjectEdit();
+    } else if (this.showNewProject) {
+      this.createProject();
+    } else if (this.selectedAssignmentForEdit()) {
+      this.saveAssignmentEdit();
+    } else if (this.showNewAssignment) {
+      this.createAssignment();
+    } else if (this.showNewEmployeeRate) {
+      this.createEmployeeRate();
+    } else if (this.showNewClientRate) {
+      this.createClientRate();
+    } else if (this.showNewDesignation) {
+      this.createDesignation();
+    } else if (this.selectedShiftForEdit()) {
+      this.saveShiftEdit();
+    } else if (this.showNewShift) {
+      this.createShift();
+    } else if (this.selectedHolidayForEdit()) {
+      this.saveHolidayEdit();
+    } else if (this.showNewHoliday) {
+      this.createHoliday();
+    }
+  }
   public openViewAssignment(assign: EmployeeAssignmentDto): void {
     this.selectedAssignmentForView.set(assign);
   }
@@ -2521,36 +3436,199 @@ export class MastersHubComponent implements OnInit {
       });
   }
 
+  public openEditClient(client: ClientDto): void {
+    this.closeOffcanvas();
+    this.selectedClientForEdit.set(client);
+    this.editClientCode = client.code || '';
+    this.editClientName = client.name || '';
+    this.editClientContact = client.contactPerson || '';
+    this.editClientEmail = client.email || client.contactEmail || '';
+    this.editClientPhone = client.phoneNumber || client.contactPhone || '';
+    this.clientFormError.set(null);
+  }
+
   public createClient(): void {
-    if (!this.newClientCode || !this.newClientName) return;
+    this.clientFormError.set(null);
+    const code = this.newClientCode.trim();
+    const name = this.newClientName.trim();
+    const contactPerson = this.newClientContact.trim();
+    const email = this.newClientEmail.trim();
+    const phoneNumber = this.newClientPhone.trim();
+
+    if (!code) {
+      this.clientFormError.set('Client Code is required');
+      return;
+    }
+    if (!name) {
+      this.clientFormError.set('Client Name is required');
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.clientFormError.set('Please enter a valid email address');
+      return;
+    }
+
     this.masterService
       .createClient({
-        code: this.newClientCode,
-        name: this.newClientName,
-        contactPerson: this.newClientContact || null,
+        code,
+        name,
+        contactPerson: contactPerson || undefined,
+        email: email || undefined,
+        phoneNumber: phoneNumber || undefined,
       })
-      .subscribe(() => {
-        this.showNewClient = false;
-        this.newClientCode = '';
-        this.newClientName = '';
-        this.refreshAll();
+      .subscribe({
+        next: () => {
+          this.showNewClient = false;
+          this.newClientCode = '';
+          this.newClientName = '';
+          this.newClientContact = '';
+          this.newClientEmail = '';
+          this.newClientPhone = '';
+          this.clientFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.clientFormError.set(err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to create client');
+        },
       });
   }
 
+  public saveClientEdit(): void {
+    const client = this.selectedClientForEdit();
+    if (!client) return;
+    this.clientFormError.set(null);
+
+    const code = this.editClientCode.trim();
+    const name = this.editClientName.trim();
+    const contactPerson = this.editClientContact.trim();
+    const email = this.editClientEmail.trim();
+    const phoneNumber = this.editClientPhone.trim();
+
+    if (!code) {
+      this.clientFormError.set('Client Code is required');
+      return;
+    }
+    if (!name) {
+      this.clientFormError.set('Client Name is required');
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.clientFormError.set('Please enter a valid email address');
+      return;
+    }
+
+    this.masterService
+      .updateClient(client.id, {
+        code,
+        name,
+        contactPerson: contactPerson || null,
+        email: email || null,
+        phoneNumber: phoneNumber || null,
+      })
+      .subscribe({
+        next: () => {
+          this.selectedClientForEdit.set(null);
+          this.clientFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.clientFormError.set(err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to update client');
+        },
+      });
+  }
+
+  public openEditProject(project: ProjectDto): void {
+    this.closeOffcanvas();
+    this.selectedProjectForEdit.set(project);
+    this.editProjClientId = project.clientId || '';
+    this.editProjCode = project.code || '';
+    this.editProjName = project.name || '';
+    this.editProjLocation = project.location || project.siteLocation || '';
+    this.projectFormError.set(null);
+  }
+
   public createProject(): void {
-    if (!this.newProjClientId || !this.newProjCode || !this.newProjName) return;
+    this.projectFormError.set(null);
+    const clientId = this.newProjClientId.trim();
+    const code = this.newProjCode.trim();
+    const name = this.newProjName.trim();
+    const location = this.newProjLocation.trim();
+
+    if (!clientId) {
+      this.projectFormError.set('Client is required');
+      return;
+    }
+    if (!code) {
+      this.projectFormError.set('Project Code is required');
+      return;
+    }
+    if (!name) {
+      this.projectFormError.set('Project Name is required');
+      return;
+    }
+
     this.masterService
       .createProject({
-        clientId: this.newProjClientId,
-        code: this.newProjCode,
-        name: this.newProjName,
-        siteLocation: this.newProjLocation || null,
+        clientId,
+        code,
+        name,
+        location: location || undefined,
       })
-      .subscribe(() => {
-        this.showNewProject = false;
-        this.newProjCode = '';
-        this.newProjName = '';
-        this.refreshAll();
+      .subscribe({
+        next: () => {
+          this.showNewProject = false;
+          this.newProjClientId = '';
+          this.newProjCode = '';
+          this.newProjName = '';
+          this.newProjLocation = '';
+          this.projectFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.projectFormError.set(err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to create project');
+        },
+      });
+  }
+
+  public saveProjectEdit(): void {
+    const project = this.selectedProjectForEdit();
+    if (!project) return;
+    this.projectFormError.set(null);
+
+    const clientId = this.editProjClientId.trim();
+    const code = this.editProjCode.trim();
+    const name = this.editProjName.trim();
+    const location = this.editProjLocation.trim();
+
+    if (!clientId) {
+      this.projectFormError.set('Client is required');
+      return;
+    }
+    if (!code) {
+      this.projectFormError.set('Project Code is required');
+      return;
+    }
+    if (!name) {
+      this.projectFormError.set('Project Name is required');
+      return;
+    }
+
+    this.masterService
+      .updateProject(project.id, {
+        clientId,
+        code,
+        name,
+        location: location || null,
+      })
+      .subscribe({
+        next: () => {
+          this.selectedProjectForEdit.set(null);
+          this.projectFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.projectFormError.set(err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to update project');
+        },
       });
   }
 
@@ -2629,35 +3707,289 @@ export class MastersHubComponent implements OnInit {
       });
   }
 
+  public calculateShiftWorkHours(start: string, end: string, breakMins: number): {
+    workHours: number | null;
+    isNightShift: boolean;
+    errorMessage: string | null;
+  } {
+    if (!start || !end) return { workHours: null, isNightShift: false, errorMessage: null };
+    const [sH, sM] = start.split(':').map(Number);
+    const [eH, eM] = end.split(':').map(Number);
+    const startMins = (sH || 0) * 60 + (sM || 0);
+    const endMins = (eH || 0) * 60 + (eM || 0);
+
+    if (startMins === endMins) {
+      return {
+        workHours: null,
+        isNightShift: false,
+        errorMessage: 'Start time and end time cannot be the same.',
+      };
+    }
+
+    let durationMins = endMins - startMins;
+    const isNightShift = endMins < startMins;
+    if (isNightShift) {
+      durationMins += 1440;
+    }
+
+    const cleanBreak = breakMins !== undefined && !isNaN(Number(breakMins)) ? Number(breakMins) : 0;
+    if (cleanBreak < 0) {
+      return {
+        workHours: null,
+        isNightShift,
+        errorMessage: 'Break time cannot be negative.',
+      };
+    }
+    if (cleanBreak >= durationMins) {
+      return {
+        workHours: null,
+        isNightShift,
+        errorMessage: 'Break time cannot be greater than the shift duration.',
+      };
+    }
+
+    const netMins = durationMins - cleanBreak;
+    const hours = Math.round((netMins / 60) * 100) / 100;
+    return {
+      workHours: hours,
+      isNightShift,
+      errorMessage: null,
+    };
+  }
+
+  public newShiftWorkHoursDisplay(): string {
+    const res = this.calculateShiftWorkHours(this.newShiftStart, this.newShiftEnd, this.newShiftBreak);
+    if (res.workHours !== null) return `${res.workHours.toFixed(2)} hrs`;
+    return '—';
+  }
+
+  public editShiftWorkHoursDisplay(): string {
+    const res = this.calculateShiftWorkHours(this.editShiftStart, this.editShiftEnd, this.editShiftBreak);
+    if (res.workHours !== null) return `${res.workHours.toFixed(2)} hrs`;
+    return '—';
+  }
+
+  public openEditShift(s: ShiftDto): void {
+    this.closeOffcanvas();
+    this.selectedShiftForEdit.set(s);
+    this.editShiftCode = s.code;
+    this.editShiftName = s.name;
+    this.editShiftStart = s.startTime?.slice(0, 5) || '08:00';
+    this.editShiftEnd = s.endTime?.slice(0, 5) || '17:00';
+    this.editShiftBreak = s.breakMinutes !== undefined ? s.breakMinutes : 60;
+    this.shiftFormError.set(null);
+  }
+
+  public saveShiftEdit(): void {
+    const shift = this.selectedShiftForEdit();
+    if (!shift) return;
+    this.shiftFormError.set(null);
+
+    const code = this.editShiftCode.trim();
+    const name = this.editShiftName.trim();
+    const startTime = this.editShiftStart;
+    const endTime = this.editShiftEnd;
+    const breakMinutes = Number(this.editShiftBreak) >= 0 ? Number(this.editShiftBreak) : 0;
+
+    if (!code) {
+      this.shiftFormError.set('Shift Code is required');
+      return;
+    }
+    if (!name) {
+      this.shiftFormError.set('Shift Name is required');
+      return;
+    }
+    if (!startTime || !endTime) {
+      this.shiftFormError.set('Start Time and End Time are required');
+      return;
+    }
+
+    const metrics = this.calculateShiftWorkHours(startTime, endTime, breakMinutes);
+    if (metrics.errorMessage) {
+      this.shiftFormError.set(metrics.errorMessage);
+      return;
+    }
+
+    this.masterService
+      .updateShift(shift.id, {
+        code,
+        name,
+        startTime,
+        endTime,
+        breakMinutes,
+        workHours: metrics.workHours || 0,
+      })
+      .subscribe({
+        next: () => {
+          this.selectedShiftForEdit.set(null);
+          this.shiftFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.shiftFormError.set(
+            err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to update shift'
+          );
+        },
+      });
+  }
+
   public createShift(): void {
-    if (!this.newShiftCode || !this.newShiftName) return;
+    this.shiftFormError.set(null);
+    const code = this.newShiftCode.trim();
+    const name = this.newShiftName.trim();
+    const startTime = this.newShiftStart;
+    const endTime = this.newShiftEnd;
+    const breakMinutes = Number(this.newShiftBreak) >= 0 ? Number(this.newShiftBreak) : 0;
+
+    if (!code) {
+      this.shiftFormError.set('Shift Code is required');
+      return;
+    }
+    if (!name) {
+      this.shiftFormError.set('Shift Name is required');
+      return;
+    }
+    if (!startTime || !endTime) {
+      this.shiftFormError.set('Start Time and End Time are required');
+      return;
+    }
+
+    const metrics = this.calculateShiftWorkHours(startTime, endTime, breakMinutes);
+    if (metrics.errorMessage) {
+      this.shiftFormError.set(metrics.errorMessage);
+      return;
+    }
+
     this.masterService
       .createShift({
-        code: this.newShiftCode,
-        name: this.newShiftName,
-        startTime: this.newShiftStart,
-        endTime: this.newShiftEnd,
-        breakMinutes: this.newShiftBreak,
-        workHours: this.newShiftHours,
+        code,
+        name,
+        startTime,
+        endTime,
+        breakMinutes,
+        workHours: metrics.workHours || 0,
       })
-      .subscribe(() => {
-        this.showNewShift = false;
-        this.refreshAll();
+      .subscribe({
+        next: () => {
+          this.showNewShift = false;
+          this.newShiftCode = '';
+          this.newShiftName = '';
+          this.newShiftStart = '08:00';
+          this.newShiftEnd = '17:00';
+          this.newShiftBreak = 60;
+          this.shiftFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.shiftFormError.set(
+            err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to create shift'
+          );
+        },
+      });
+  }
+
+  public formatHolidayDate(dateStr: string): string {
+    if (!dateStr) return '—';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = parts[2].padStart(2, '0');
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const month = months[monthIdx] || parts[1];
+      const year = parts[0];
+      return `${day} ${month} ${year}`;
+    }
+    return dateStr;
+  }
+
+  public openEditHoliday(h: PublicHolidayDto): void {
+    this.closeOffcanvas();
+    this.selectedHolidayForEdit.set(h);
+    this.editHolidayName = h.name;
+    this.editHolidayDate = h.holidayDate;
+    this.editHolidayDesc = h.description || '';
+    this.holidayFormError.set(null);
+  }
+
+  public saveHolidayEdit(): void {
+    const holiday = this.selectedHolidayForEdit();
+    if (!holiday) return;
+    this.holidayFormError.set(null);
+
+    const name = this.editHolidayName.trim();
+    const date = this.editHolidayDate;
+    const desc = this.editHolidayDesc.trim();
+
+    if (!name) {
+      this.holidayFormError.set('Holiday Name is required');
+      return;
+    }
+    if (!date) {
+      this.holidayFormError.set('Date is required');
+      return;
+    }
+
+    const year = Number(date.split('-')[0]) || holiday.calendarYear;
+
+    this.masterService
+      .updatePublicHoliday(holiday.id, {
+        name,
+        holidayDate: date,
+        calendarYear: year,
+        description: desc || null,
+      })
+      .subscribe({
+        next: () => {
+          this.selectedHolidayForEdit.set(null);
+          this.holidayFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.holidayFormError.set(
+            err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to update holiday'
+          );
+        },
       });
   }
 
   public createHoliday(): void {
-    if (!this.newHolidayName || !this.newHolidayDate) return;
+    this.holidayFormError.set(null);
+    const name = this.newHolidayName.trim();
+    const date = this.newHolidayDate;
+    const desc = this.newHolidayDesc.trim();
+
+    if (!name) {
+      this.holidayFormError.set('Holiday Name is required');
+      return;
+    }
+    if (!date) {
+      this.holidayFormError.set('Date is required');
+      return;
+    }
+
+    const year = Number(date.split('-')[0]) || Number(this.newHolidayYear) || new Date().getFullYear();
+
     this.masterService
       .createPublicHoliday({
-        calendarYear: Number(this.newHolidayYear),
-        name: this.newHolidayName,
-        holidayDate: this.newHolidayDate,
-        description: this.newHolidayDesc || null,
+        calendarYear: year,
+        name,
+        holidayDate: date,
+        description: desc || null,
       })
-      .subscribe(() => {
-        this.showNewHoliday = false;
-        this.refreshAll();
+      .subscribe({
+        next: () => {
+          this.showNewHoliday = false;
+          this.newHolidayName = '';
+          this.newHolidayDate = '';
+          this.newHolidayDesc = '';
+          this.holidayFormError.set(null);
+          this.refreshAll();
+        },
+        error: (err) => {
+          this.holidayFormError.set(
+            err?.error?.error?.message || err?.error?.message || err?.message || 'Failed to create holiday'
+          );
+        },
       });
   }
 

@@ -3,14 +3,41 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MasterService } from '../../core/services/master.service';
+import { DocumentService } from '../../core/services/document.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AppShellComponent } from '../../core/layout/app-shell.component';
 import {
   EmployeeDto,
-  CreateEmployeeDto,
   EmployeeAssignmentDto,
   DesignationDto,
+  EmployeeDocumentDto,
+  EMPLOYEE_COUNTRIES,
+  EmployeeGender,
+  EmploymentType,
+  RemunerationBasis,
+  EmployeeStatus,
 } from '@blue-royal/contracts';
+
+interface EmployeeFormState {
+  id?: string;
+  employeeCode: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  gender: EmployeeGender;
+  dateOfBirth: string;
+  nationality: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  country: string;
+  employmentType: EmploymentType;
+  dateOfJoining: string;
+  contractEndDate?: string;
+  remunerationBasis: RemunerationBasis;
+  status: EmployeeStatus;
+  profilePhoto?: string | null;
+}
 
 @Component({
   selector: 'app-employees',
@@ -22,17 +49,17 @@ import {
         <!-- Page Header -->
         <div class="page-header">
           <div>
-            <div class="breadcrumb">PEOPLE / EMPLOYEES</div>
-            <h1 class="page-title">Employee Directory & Workforce Roster</h1>
+            <div class="breadcrumb">EMPLOYEES</div>
+            <h1 class="page-title">Employees</h1>
             <p class="page-desc">
-              Manage centralized biographical profiles, statutory contract parameters, and organizational deployments.
+              Manage employee information and profiles.
             </p>
           </div>
           <div class="header-actions">
             @if (authService.hasPermission('employees:create')) {
-              <button class="btn btn-primary" (click)="openRegisterDrawer()">
+              <button class="btn btn-primary" (click)="openAddDrawer()">
                 <span class="material-symbols-outlined icon-sm">person_add</span>
-                <span>Register Employee</span>
+                <span>Add Employee</span>
               </button>
             }
             <button class="btn btn-secondary" (click)="loadData()">
@@ -42,27 +69,47 @@ import {
           </div>
         </div>
 
-        <!-- Metric Pulse Cards -->
+        <!-- 3 KPI Cards -->
         <div class="kpi-grid">
+          <!-- Card 1: Total Headcount -->
           <div class="kpi-card">
-            <span class="kpi-label">Total Roster Headcount</span>
-            <span class="kpi-value">{{ employees().length }}</span>
-            <span class="kpi-sub">Active corporate profiles</span>
+            <span class="kpi-label">Total Headcount</span>
+            <span class="kpi-value">{{ totalHeadcount() }}</span>
+            <span class="kpi-sub">Total employee population</span>
           </div>
+
+          <!-- Card 2: Employment Type -->
           <div class="kpi-card">
-            <span class="kpi-label">Full-Time Personnel</span>
-            <span class="kpi-value text-primary">{{ fullTimeCount() }}</span>
-            <span class="kpi-sub">Permanent contracts</span>
+            <span class="kpi-label">Employment Type</span>
+            <div class="kpi-dual-values">
+              <div class="kpi-dual-col">
+                <span class="kpi-dual-val text-primary">{{ fullTimeCount() }}</span>
+                <span class="kpi-dual-lbl">Full-Time</span>
+              </div>
+              <div class="kpi-dual-divider"></div>
+              <div class="kpi-dual-col">
+                <span class="kpi-dual-val text-accent">{{ contractCount() }}</span>
+                <span class="kpi-dual-lbl">Contract</span>
+              </div>
+            </div>
+            <span class="kpi-sub">Contractual distribution</span>
           </div>
+
+          <!-- Card 3: Employee Status -->
           <div class="kpi-card">
-            <span class="kpi-label">Contracted Workers</span>
-            <span class="kpi-value text-accent">{{ contractCount() }}</span>
-            <span class="kpi-sub">Fixed-term deployments</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Active Deployments</span>
-            <span class="kpi-value text-success">{{ assignments().length }}</span>
-            <span class="kpi-sub">Effective project assignments</span>
+            <span class="kpi-label">Employee Status</span>
+            <div class="kpi-dual-values">
+              <div class="kpi-dual-col">
+                <span class="kpi-dual-val text-success">{{ activeCount() }}</span>
+                <span class="kpi-dual-lbl">Active</span>
+              </div>
+              <div class="kpi-dual-divider"></div>
+              <div class="kpi-dual-col">
+                <span class="kpi-dual-val text-muted">{{ inactiveCount() }}</span>
+                <span class="kpi-dual-lbl">Inactive</span>
+              </div>
+            </div>
+            <span class="kpi-sub">Operational status</span>
           </div>
         </div>
 
@@ -90,7 +137,7 @@ import {
               <input
                 type="text"
                 [(ngModel)]="searchQuery"
-                placeholder="Search by name, employee code, or email..."
+                placeholder="Search by name, employee code, email, or country..."
                 class="form-control search-input"
               />
             </div>
@@ -120,9 +167,9 @@ import {
               <h3>No Employees Found</h3>
               <p>No employee profiles match the current filter or search criteria.</p>
               @if (authService.hasPermission('employees:create')) {
-                <button class="btn btn-primary" (click)="openRegisterDrawer()">
+                <button class="btn btn-primary" (click)="openAddDrawer()">
                   <span class="material-symbols-outlined icon-sm">person_add</span>
-                  <span>Register First Employee</span>
+                  <span>Add First Employee</span>
                 </button>
               }
             </div>
@@ -134,10 +181,9 @@ import {
                     <th class="col-sticky-left">Employee</th>
                     <th>Code</th>
                     <th class="col-hide-mobile">Email</th>
+                    <th>Country</th>
                     <th>Employment Type</th>
-                    <th class="col-hide-tablet">Date of Joining</th>
-                    <th class="col-hide-tablet">Contract End</th>
-                    <th class="col-hide-mobile">Remuneration</th>
+                    <th>Status</th>
                     <th class="col-actions col-sticky-right">Actions</th>
                   </tr>
                 </thead>
@@ -146,8 +192,12 @@ import {
                     <tr>
                       <td class="col-sticky-left">
                         <div class="emp-cell">
-                          <div class="emp-avatar">
-                            {{ emp.firstName.charAt(0) }}{{ emp.lastName.charAt(0) }}
+                          <div class="emp-avatar" [class.has-photo]="emp.profilePhoto">
+                            @if (emp.profilePhoto) {
+                              <img [src]="getPhotoUrl(emp.id)" alt="Photo" class="emp-avatar-img" (error)="onAvatarError($event)" />
+                            } @else {
+                              {{ emp.firstName.charAt(0) }}{{ emp.lastName.charAt(0) }}
+                            }
                           </div>
                           <div class="emp-names">
                             <span class="emp-fullname">{{ emp.firstName }} {{ emp.lastName }}</span>
@@ -160,6 +210,9 @@ import {
                       </td>
                       <td class="text-secondary col-hide-mobile">{{ emp.email || '—' }}</td>
                       <td>
+                        <span class="country-badge">{{ emp.country || '—' }}</span>
+                      </td>
+                      <td>
                         <span
                           class="status-badge"
                           [class.status-approved]="emp.employmentType === 'full_time'"
@@ -168,29 +221,38 @@ import {
                           {{ emp.employmentType === 'full_time' ? 'FULL-TIME' : 'CONTRACT' }}
                         </span>
                       </td>
-                      <td class="text-secondary col-hide-tablet">{{ emp.dateOfJoining }}</td>
-                      <td class="text-secondary col-hide-tablet">
-                        @if (emp.contractEndDate) {
-                          <span>{{ emp.contractEndDate }}</span>
-                        } @else {
-                          <span class="text-muted">Permanent</span>
-                        }
-                      </td>
-                      <td class="col-hide-mobile">
-                        <span class="remuneration-pill" [class.hourly]="emp.remunerationBasis === 'hourly'">
-                          {{ (emp.remunerationBasis || 'hourly') | uppercase }}
+                      <td>
+                        <span
+                          class="status-badge"
+                          [class.status-approved]="emp.status === 'active' || emp.status === 'probation'"
+                          [class.status-rejected]="emp.status === 'terminated' || emp.status === 'inactive' || emp.status === 'resigned'"
+                        >
+                          {{ (emp.status || 'active') | uppercase }}
                         </span>
                       </td>
                       <td class="col-actions col-sticky-right">
-                        <button
-                          type="button"
-                          class="btn btn-secondary btn-sm"
-                          (click)="openProfileDrawer(emp)"
-                          title="View Profile Workspace"
-                        >
-                          <span class="material-symbols-outlined icon-sm">visibility</span>
-                          <span>Profile</span>
-                        </button>
+                        <div class="action-btn-group">
+                          @if (authService.hasPermission('employees:update')) {
+                            <button
+                              type="button"
+                              class="btn btn-secondary btn-sm"
+                              (click)="openEditDrawer(emp)"
+                              title="Edit Employee"
+                            >
+                              <span class="material-symbols-outlined icon-sm">edit</span>
+                              <span>Edit</span>
+                            </button>
+                          }
+                          <button
+                            type="button"
+                            class="btn btn-secondary btn-sm"
+                            (click)="openProfileDrawer(emp)"
+                            title="View Profile"
+                          >
+                            <span class="material-symbols-outlined icon-sm">visibility</span>
+                            <span>Profile</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   }
@@ -201,7 +263,7 @@ import {
         </div>
       </div>
 
-      <!-- CONTEXTUAL DRAWER: EMPLOYEE PROFILE & REGISTRATION -->
+      <!-- CONTEXTUAL OFFCANVAS DRAWER: ADD / EDIT / PROFILE -->
       @if (isDrawerOpen()) {
         <div class="drawer-backdrop" (click)="closeDrawer()">
           <div class="drawer-panel" (click)="$event.stopPropagation()">
@@ -209,10 +271,22 @@ import {
             <div class="drawer-header">
               <div class="drawer-header-content">
                 <h2 class="drawer-title">
-                  {{ drawerMode() === 'register' ? 'Register New Employee' : 'Employee Profile Workspace' }}
+                  {{
+                    drawerMode() === 'add'
+                      ? 'Add Employee'
+                      : drawerMode() === 'edit'
+                      ? 'Edit Employee'
+                      : 'Employee Profile'
+                  }}
                 </h2>
                 <p class="drawer-subtitle">
-                  {{ drawerMode() === 'register' ? 'Enter statutory identity and contractual onboarding details.' : selectedEmployee()?.employeeCode + ' • ' + selectedEmployee()?.firstName + ' ' + selectedEmployee()?.lastName }}
+                  {{
+                    drawerMode() === 'add'
+                      ? 'Enter employee details and required documents.'
+                      : drawerMode() === 'edit'
+                      ? 'Update employee profile and details.'
+                      : (selectedEmployee()?.employeeCode + ' • ' + selectedEmployee()?.firstName + ' ' + selectedEmployee()?.lastName)
+                  }}
                 </p>
               </div>
               <button type="button" class="drawer-close" (click)="closeDrawer()" aria-label="Close drawer">
@@ -222,35 +296,79 @@ import {
 
             <!-- Drawer Body -->
             <div class="drawer-body">
-              @if (drawerMode() === 'register') {
-                <form (ngSubmit)="onSaveNewEmployee()" class="drawer-form" id="employeeForm">
-                  <!-- Section 1: Biographical Identity -->
+              @if (drawerError()) {
+                <div class="alert alert-danger mb-3" role="alert">
+                  <span class="material-symbols-outlined icon-sm">error</span>
+                  <span>{{ drawerError() }}</span>
+                </div>
+              }
+
+              @if (drawerMode() === 'add' || drawerMode() === 'edit') {
+                <form (ngSubmit)="onSaveEmployee()" class="drawer-form" id="employeeForm">
+                  <!-- Section 1: Profile Photo -->
+                  <div class="form-section photo-card-section">
+                    <div class="form-section-title">
+                      <span class="material-symbols-outlined icon-sm">photo_camera</span>
+                      <span>Profile Photo</span>
+                    </div>
+                    <div class="photo-upload-row">
+                      <div class="photo-avatar-preview">
+                        @if (photoPreview()) {
+                          <img [src]="photoPreview()" alt="Preview" class="preview-img" />
+                        } @else if (formEmployee.profilePhoto && drawerMode() === 'edit' && !isPhotoRemoved()) {
+                          <img [src]="getPhotoUrl(formEmployee.id!)" alt="Profile" class="preview-img" (error)="onAvatarError($event)" />
+                        } @else {
+                          <span class="material-symbols-outlined photo-placeholder-icon">person</span>
+                        }
+                      </div>
+                      <div class="photo-controls">
+                        <div class="photo-btn-group">
+                          <label class="btn btn-secondary btn-sm file-upload-label">
+                            <span class="material-symbols-outlined icon-sm">upload</span>
+                            <span>{{ (photoPreview() || (formEmployee.profilePhoto && !isPhotoRemoved())) ? 'Change Photo' : 'Upload Photo' }}</span>
+                            <input type="file" (change)="onPhotoFileChange($event)" accept="image/*" class="sr-only" />
+                          </label>
+                          @if (photoPreview() || (formEmployee.profilePhoto && !isPhotoRemoved())) {
+                            <button type="button" class="btn btn-secondary btn-sm text-danger" (click)="onRemovePhoto()">
+                              <span class="material-symbols-outlined icon-sm">delete</span>
+                              <span>Remove</span>
+                            </button>
+                          }
+                        </div>
+                        <span class="text-hint">PNG, JPG, or WebP. Suggested square aspect ratio.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Section 2: Employee Basic Details -->
                   <div class="form-section">
                     <div class="form-section-title">
-                      <span class="material-symbols-outlined icon-sm">person</span>
-                      <span>Biographical Identity</span>
+                      <span class="material-symbols-outlined icon-sm">badge</span>
+                      <span>Basic Details</span>
                     </div>
                     <div class="form-grid-2">
                       <div class="form-group">
-                        <label for="regCode">Employee Code *</label>
+                        <label for="empCode">Employee Code *</label>
                         <input
-                          id="regCode"
+                          id="empCode"
                           type="text"
-                          [(ngModel)]="newEmployee.employeeCode"
-                          name="regCode"
-                          placeholder="e.g. BR-010"
+                          [(ngModel)]="formEmployee.employeeCode"
+                          name="empCode"
+                          placeholder="e.g. EMP-001"
                           required
+                          [disabled]="drawerMode() === 'edit'"
                           class="form-control"
                         />
                       </div>
                       <div class="form-group">
-                        <label for="regEmail">Work Email</label>
+                        <label for="empEmail">Email *</label>
                         <input
-                          id="regEmail"
+                          id="empEmail"
                           type="email"
-                          [(ngModel)]="newEmployee.email"
-                          name="regEmail"
-                          placeholder="name@blueroyal.local"
+                          [(ngModel)]="formEmployee.email"
+                          name="empEmail"
+                          placeholder="name@company.com"
+                          required
                           class="form-control"
                         />
                       </div>
@@ -258,67 +376,155 @@ import {
 
                     <div class="form-grid-3">
                       <div class="form-group">
-                        <label for="regFirst">First Name *</label>
+                        <label for="empFirst">First Name *</label>
                         <input
-                          id="regFirst"
+                          id="empFirst"
                           type="text"
-                          [(ngModel)]="newEmployee.firstName"
-                          name="regFirst"
+                          [(ngModel)]="formEmployee.firstName"
+                          name="empFirst"
+                          placeholder="First name"
                           required
                           class="form-control"
                         />
                       </div>
                       <div class="form-group">
-                        <label for="regMiddle">Middle Name</label>
+                        <label for="empMiddle">Middle Name</label>
                         <input
-                          id="regMiddle"
+                          id="empMiddle"
                           type="text"
-                          [(ngModel)]="newEmployee.middleName"
-                          name="regMiddle"
+                          [(ngModel)]="formEmployee.middleName"
+                          name="empMiddle"
+                          placeholder="Middle name (optional)"
                           class="form-control"
                         />
                       </div>
                       <div class="form-group">
-                        <label for="regLast">Last Name *</label>
+                        <label for="empLast">Last Name *</label>
                         <input
-                          id="regLast"
+                          id="empLast"
                           type="text"
-                          [(ngModel)]="newEmployee.lastName"
-                          name="regLast"
+                          [(ngModel)]="formEmployee.lastName"
+                          name="empLast"
+                          placeholder="Last name"
                           required
                           class="form-control"
                         />
                       </div>
                     </div>
-                  </div>
 
-                  <!-- Section 2: Employment & Contract -->
-                  <div class="form-section">
-                    <div class="form-section-title">
-                      <span class="material-symbols-outlined icon-sm">work</span>
-                      <span>Contractual & Legal Parameters</span>
-                    </div>
-                    <div class="form-grid-2">
+                    <div class="form-grid-3">
                       <div class="form-group">
-                        <label for="regEmpType">Employment Type *</label>
+                        <label for="empGender">Gender</label>
                         <select
-                          id="regEmpType"
-                          [(ngModel)]="newEmployee.employmentType"
-                          name="regEmpType"
-                          required
+                          id="empGender"
+                          [(ngModel)]="formEmployee.gender"
+                          name="empGender"
                           class="form-control"
                         >
-                          <option value="full_time">Full-Time (Permanent)</option>
-                          <option value="contract">Fixed Contract</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                          <option value="prefer_not_to_say">Prefer not to say</option>
                         </select>
                       </div>
                       <div class="form-group">
-                        <label for="regDoj">Date of Joining *</label>
+                        <label for="empDob">Date of Birth</label>
                         <input
-                          id="regDoj"
+                          id="empDob"
                           type="date"
-                          [(ngModel)]="newEmployee.dateOfJoining"
-                          name="regDoj"
+                          [(ngModel)]="formEmployee.dateOfBirth"
+                          name="empDob"
+                          class="form-control"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label for="empPhone">Phone Number</label>
+                        <input
+                          id="empPhone"
+                          type="tel"
+                          [(ngModel)]="formEmployee.phoneNumber"
+                          name="empPhone"
+                          placeholder="+971 50 123 4567"
+                          class="form-control"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label for="empCountry">Country *</label>
+                        <select
+                          id="empCountry"
+                          [(ngModel)]="formEmployee.country"
+                          name="empCountry"
+                          required
+                          class="form-control"
+                        >
+                          <option value="" disabled>Select Country</option>
+                          @for (c of countriesList; track c) {
+                            <option [value]="c">{{ c }}</option>
+                          }
+                        </select>
+                        <span class="text-hint">Feeds Dashboard Employees by Region</span>
+                      </div>
+                      @if (drawerMode() === 'edit') {
+                        <div class="form-group">
+                          <label for="empStatus">Employee Status</label>
+                          <select
+                            id="empStatus"
+                            [(ngModel)]="formEmployee.status"
+                            name="empStatus"
+                            class="form-control"
+                          >
+                            <option value="active">Active</option>
+                            <option value="probation">Probation</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="terminated">Terminated</option>
+                          </select>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="form-group">
+                      <label for="empAddress">Address</label>
+                      <textarea
+                        id="empAddress"
+                        [(ngModel)]="formEmployee.address"
+                        name="empAddress"
+                        rows="2"
+                        placeholder="Street address, building, city..."
+                        class="form-control"
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  <!-- Section 3: Employment Parameters -->
+                  <div class="form-section">
+                    <div class="form-section-title">
+                      <span class="material-symbols-outlined icon-sm">work</span>
+                      <span>Employment & Contract</span>
+                    </div>
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label for="empType">Employment Type *</label>
+                        <select
+                          id="empType"
+                          [(ngModel)]="formEmployee.employmentType"
+                          name="empType"
+                          required
+                          class="form-control"
+                        >
+                          <option value="full_time">Full-Time</option>
+                          <option value="contract">Contract</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="empDoj">Date of Joining *</label>
+                        <input
+                          id="empDoj"
+                          type="date"
+                          [(ngModel)]="formEmployee.dateOfJoining"
+                          name="empDoj"
                           required
                           class="form-control"
                         />
@@ -327,22 +533,26 @@ import {
 
                     <div class="form-grid-2">
                       <div class="form-group">
-                        <label for="regContractEnd">Contract End Date</label>
+                        <label for="empContractEnd">Contract End Date</label>
                         <input
-                          id="regContractEnd"
+                          id="empContractEnd"
                           type="date"
-                          [(ngModel)]="newEmployee.contractEndDate"
-                          name="regContractEnd"
-                          [disabled]="newEmployee.employmentType !== 'contract'"
+                          [(ngModel)]="formEmployee.contractEndDate"
+                          name="empContractEnd"
+                          [required]="formEmployee.employmentType === 'contract'"
+                          [disabled]="formEmployee.employmentType !== 'contract'"
                           class="form-control"
                         />
+                        @if (formEmployee.employmentType === 'contract') {
+                          <span class="text-hint text-warning">Required for contract employees</span>
+                        }
                       </div>
                       <div class="form-group">
-                        <label for="regRemuneration">Remuneration Basis *</label>
+                        <label for="empRemun">Remuneration Basis *</label>
                         <select
-                          id="regRemuneration"
-                          [(ngModel)]="newEmployee.remunerationBasis"
-                          name="regRemuneration"
+                          id="empRemun"
+                          [(ngModel)]="formEmployee.remunerationBasis"
+                          name="empRemun"
                           required
                           class="form-control"
                         >
@@ -352,25 +562,133 @@ import {
                       </div>
                     </div>
                   </div>
+
+                  <!-- Section 4: Mandatory Statutory Documents -->
+                  <div class="form-section">
+                    <div class="form-section-title">
+                      <span class="material-symbols-outlined icon-sm">description</span>
+                      <span>Statutory Documents</span>
+                    </div>
+
+                    <!-- Passport Upload -->
+                    <div class="doc-upload-box">
+                      <div class="doc-upload-header">
+                        <span class="doc-upload-title">
+                          Passport {{ drawerMode() === 'add' ? '*' : '' }}
+                        </span>
+                        @if (existingPassportDoc()) {
+                          <span class="badge badge-success">On File</span>
+                        } @else if (drawerMode() === 'edit') {
+                          <span class="badge badge-muted">Not uploaded</span>
+                        }
+                      </div>
+
+                      @if (existingPassportDoc(); as pDoc) {
+                        <div class="existing-doc-row">
+                          <span class="material-symbols-outlined icon-sm text-primary">check_circle</span>
+                          <span class="doc-name">{{ pDoc.fileName }}</span>
+                          <a [href]="documentService.getDownloadUrl(pDoc.id)" target="_blank" class="btn btn-secondary btn-xs">
+                            <span class="material-symbols-outlined icon-xs">download</span>
+                            <span>Download</span>
+                          </a>
+                        </div>
+                      }
+
+                      <div class="file-picker-row">
+                        <label class="btn btn-secondary btn-sm file-upload-label">
+                          <span class="material-symbols-outlined icon-sm">attach_file</span>
+                          <span>{{ selectedPassportFile ? 'Change Passport File' : (existingPassportDoc() ? 'Replace Passport File' : 'Select Passport File *') }}</span>
+                          <input type="file" (change)="onPassportFileChange($event)" accept=".pdf,image/*" class="sr-only" />
+                        </label>
+                        @if (selectedPassportFile) {
+                          <div class="selected-file-badge">
+                            <span class="material-symbols-outlined icon-xs">description</span>
+                            <span class="file-name-text">{{ selectedPassportFile.name }}</span>
+                            <span class="file-size-text">({{ formatBytes(selectedPassportFile.size) }})</span>
+                            <button type="button" class="clear-file-btn" (click)="clearPassportFile()">×</button>
+                          </div>
+                        } @else if (drawerMode() === 'add') {
+                          <span class="text-hint text-warning">Mandatory document for registration</span>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Visa Upload -->
+                    <div class="doc-upload-box">
+                      <div class="doc-upload-header">
+                        <span class="doc-upload-title">
+                          Visa {{ drawerMode() === 'add' ? '*' : '' }}
+                        </span>
+                        @if (existingVisaDoc()) {
+                          <span class="badge badge-success">On File</span>
+                        } @else if (drawerMode() === 'edit') {
+                          <span class="badge badge-muted">Not uploaded</span>
+                        }
+                      </div>
+
+                      @if (existingVisaDoc(); as vDoc) {
+                        <div class="existing-doc-row">
+                          <span class="material-symbols-outlined icon-sm text-primary">check_circle</span>
+                          <span class="doc-name">{{ vDoc.fileName }}</span>
+                          <a [href]="documentService.getDownloadUrl(vDoc.id)" target="_blank" class="btn btn-secondary btn-xs">
+                            <span class="material-symbols-outlined icon-xs">download</span>
+                            <span>Download</span>
+                          </a>
+                        </div>
+                      }
+
+                      <div class="file-picker-row">
+                        <label class="btn btn-secondary btn-sm file-upload-label">
+                          <span class="material-symbols-outlined icon-sm">attach_file</span>
+                          <span>{{ selectedVisaFile ? 'Change Visa File' : (existingVisaDoc() ? 'Replace Visa File' : 'Select Visa File *') }}</span>
+                          <input type="file" (change)="onVisaFileChange($event)" accept=".pdf,image/*" class="sr-only" />
+                        </label>
+                        @if (selectedVisaFile) {
+                          <div class="selected-file-badge">
+                            <span class="material-symbols-outlined icon-xs">description</span>
+                            <span class="file-name-text">{{ selectedVisaFile.name }}</span>
+                            <span class="file-size-text">({{ formatBytes(selectedVisaFile.size) }})</span>
+                            <button type="button" class="clear-file-btn" (click)="clearVisaFile()">×</button>
+                          </div>
+                        } @else if (drawerMode() === 'add') {
+                          <span class="text-hint text-warning">Mandatory document for registration</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
                 </form>
               } @else {
+                <!-- Profile Inspection Mode -->
                 @if (selectedEmployee(); as emp) {
-                  <!-- Profile Inspection Mode -->
                   <div class="profile-card">
                     <div class="profile-header">
-                      <div class="profile-avatar-lg">
-                        {{ emp.firstName.charAt(0) }}{{ emp.lastName.charAt(0) }}
+                      <div class="profile-avatar-lg" [class.has-photo]="emp.profilePhoto">
+                        @if (emp.profilePhoto) {
+                          <img [src]="getPhotoUrl(emp.id)" alt="Photo" class="profile-avatar-img" (error)="onAvatarError($event)" />
+                        } @else {
+                          {{ emp.firstName.charAt(0) }}{{ emp.lastName.charAt(0) }}
+                        }
                       </div>
                       <div>
                         <h3 class="profile-name">{{ emp.firstName }} {{ emp.lastName }}</h3>
                         <span class="profile-sub">{{ emp.employeeCode }} • {{ emp.email || 'No email' }}</span>
+                        <div class="profile-tag-row">
+                          <span class="country-badge">{{ emp.country || 'No country set' }}</span>
+                          <span
+                            class="status-badge"
+                            [class.status-approved]="emp.status === 'active' || emp.status === 'probation'"
+                            [class.status-rejected]="emp.status === 'terminated' || emp.status === 'inactive' || emp.status === 'resigned'"
+                          >
+                            {{ (emp.status || 'active') | uppercase }}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <div class="profile-metrics">
                       <div class="p-metric">
                         <span class="p-label">Contract Type</span>
-                        <span class="p-val">{{ emp.employmentType === 'full_time' ? 'Full-Time' : 'Fixed Contract' }}</span>
+                        <span class="p-val">{{ emp.employmentType === 'full_time' ? 'Full-Time' : 'Contract' }}</span>
                       </div>
                       <div class="p-metric">
                         <span class="p-label">Joined On</span>
@@ -378,11 +696,97 @@ import {
                       </div>
                       <div class="p-metric">
                         <span class="p-label">Contract Expiry</span>
-                        <span class="p-val">{{ emp.contractEndDate || 'Ongoing / Permanent' }}</span>
+                        <span class="p-val">{{ emp.contractEndDate || 'Permanent' }}</span>
                       </div>
                       <div class="p-metric">
                         <span class="p-label">Payroll Basis</span>
                         <span class="p-val">{{ (emp.remunerationBasis || 'hourly') | uppercase }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Biographical Info -->
+                    <div class="profile-info-box">
+                      <div class="summary-title">
+                        <span class="material-symbols-outlined icon-sm">person</span>
+                        <span>Biographical & Contact</span>
+                      </div>
+                      <div class="profile-info-grid">
+                        <div class="info-item">
+                          <span class="info-lbl">Gender:</span>
+                          <span class="info-val">{{ formatGender(emp.gender) }}</span>
+                        </div>
+                        <div class="info-item">
+                          <span class="info-lbl">Date of Birth:</span>
+                          <span class="info-val">{{ emp.dateOfBirth || '—' }}</span>
+                        </div>
+                        <div class="info-item">
+                          <span class="info-lbl">Phone:</span>
+                          <span class="info-val">{{ emp.phoneNumber || '—' }}</span>
+                        </div>
+                        <div class="info-item">
+                          <span class="info-lbl">Country:</span>
+                          <span class="info-val">{{ emp.country || '—' }}</span>
+                        </div>
+                        <div class="info-item col-span-2">
+                          <span class="info-lbl">Address:</span>
+                          <span class="info-val">{{ emp.address || '—' }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Statutory Documents Status -->
+                    <div class="profile-info-box">
+                      <div class="summary-title">
+                        <span class="material-symbols-outlined icon-sm">verified_user</span>
+                        <span>Statutory Compliance Documents</span>
+                      </div>
+
+                      <div class="doc-status-list">
+                        <!-- Passport -->
+                        <div class="doc-status-item">
+                          <div class="doc-status-info">
+                            <span class="material-symbols-outlined icon-sm" [class.text-success]="getEmployeePassportDoc(emp.id)" [class.text-muted]="!getEmployeePassportDoc(emp.id)">
+                              {{ getEmployeePassportDoc(emp.id) ? 'check_circle' : 'pending' }}
+                            </span>
+                            <div class="doc-status-text">
+                              <span class="doc-status-name">Passport</span>
+                              @if (getEmployeePassportDoc(emp.id); as doc) {
+                                <span class="doc-status-sub">{{ doc.fileName }}</span>
+                              } @else {
+                                <span class="doc-status-sub text-muted">Passport — Not uploaded</span>
+                              }
+                            </div>
+                          </div>
+                          @if (getEmployeePassportDoc(emp.id); as doc) {
+                            <a [href]="documentService.getDownloadUrl(doc.id)" target="_blank" class="btn btn-secondary btn-xs">
+                              <span class="material-symbols-outlined icon-xs">download</span>
+                              <span>Download</span>
+                            </a>
+                          }
+                        </div>
+
+                        <!-- Visa -->
+                        <div class="doc-status-item">
+                          <div class="doc-status-info">
+                            <span class="material-symbols-outlined icon-sm" [class.text-success]="getEmployeeVisaDoc(emp.id)" [class.text-muted]="!getEmployeeVisaDoc(emp.id)">
+                              {{ getEmployeeVisaDoc(emp.id) ? 'check_circle' : 'pending' }}
+                            </span>
+                            <div class="doc-status-text">
+                              <span class="doc-status-name">Visa</span>
+                              @if (getEmployeeVisaDoc(emp.id); as doc) {
+                                <span class="doc-status-sub">{{ doc.fileName }}</span>
+                              } @else {
+                                <span class="doc-status-sub text-muted">Visa — Not uploaded</span>
+                              }
+                            </div>
+                          </div>
+                          @if (getEmployeeVisaDoc(emp.id); as doc) {
+                            <a [href]="documentService.getDownloadUrl(doc.id)" target="_blank" class="btn btn-secondary btn-xs">
+                              <span class="material-symbols-outlined icon-xs">download</span>
+                              <span>Download</span>
+                            </a>
+                          }
+                        </div>
                       </div>
                     </div>
 
@@ -396,7 +800,11 @@ import {
                         <div class="assign-details">
                           <div class="assign-row">
                             <span class="a-label">Client / Project:</span>
-                            <span class="a-val">{{ assign.clientId }} / {{ assign.projectId }}</span>
+                            <span class="a-val">{{ assign.clientName || assign.clientId }} / {{ assign.projectName || assign.projectId }}</span>
+                          </div>
+                          <div class="assign-row">
+                            <span class="a-label">Designation:</span>
+                            <span class="a-val">{{ assign.designationTitle || 'Assigned Worker' }}</span>
                           </div>
                           <div class="assign-row">
                             <span class="a-label">Effective From:</span>
@@ -419,18 +827,28 @@ import {
               <button type="button" class="btn btn-secondary" (click)="closeDrawer()">
                 Close
               </button>
-              @if (drawerMode() === 'register') {
+
+              @if (drawerMode() === 'profile' && selectedEmployee()) {
+                @if (authService.hasPermission('employees:update')) {
+                  <button type="button" class="btn btn-primary" (click)="openEditDrawer(selectedEmployee()!)">
+                    <span class="material-symbols-outlined icon-sm">edit</span>
+                    <span>Edit Profile</span>
+                  </button>
+                }
+              }
+
+              @if (drawerMode() === 'add' || drawerMode() === 'edit') {
                 <button
                   type="submit"
                   form="employeeForm"
                   class="btn btn-primary"
-                  [disabled]="isSubmitting() || !newEmployee.employeeCode || !newEmployee.firstName || !newEmployee.lastName || !newEmployee.dateOfJoining"
+                  [disabled]="isSubmitting()"
                 >
                   @if (isSubmitting()) {
                     <span>Saving...</span>
                   } @else {
                     <span class="material-symbols-outlined icon-sm">save</span>
-                    <span>Save Employee Profile</span>
+                    <span>{{ drawerMode() === 'add' ? 'Save Employee' : 'Save Changes' }}</span>
                   }
                 </button>
               }
@@ -479,6 +897,82 @@ import {
     .header-actions {
       display: flex;
       gap: 0.625rem;
+    }
+
+    /* 3 KPI Cards Layout */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    @media (max-width: 900px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .kpi-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 0.375rem;
+    }
+
+    .kpi-sub {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .kpi-dual-values {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.25rem 0 0.5rem;
+    }
+
+    .kpi-dual-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kpi-dual-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .kpi-dual-lbl {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .kpi-dual-divider {
+      width: 1px;
+      height: 2.25rem;
+      background-color: var(--border-default);
     }
 
     .panel {
@@ -550,8 +1044,8 @@ import {
     }
 
     .emp-avatar {
-      width: 34px;
-      height: 34px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--brand-600), var(--brand-800));
       color: #ffffff;
@@ -561,6 +1055,13 @@ import {
       font-weight: 700;
       font-size: 0.75rem;
       flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .emp-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
     .emp-names {
@@ -590,25 +1091,21 @@ import {
       color: var(--text-secondary);
     }
 
-    .remuneration-pill {
+    .country-badge {
       display: inline-block;
-      font-size: 0.6875rem;
-      font-weight: 700;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      background-color: var(--brand-50);
-      color: var(--brand-700);
-      border: 1px solid var(--brand-200);
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.15rem 0.5rem;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: var(--text-secondary);
     }
 
-    .remuneration-pill.hourly {
-      background-color: #f0fdf4;
-      color: #166534;
-      border-color: #bbf7d0;
-    }
-
-    .col-actions {
-      text-align: right;
+    .action-btn-group {
+      display: flex;
+      gap: 0.375rem;
+      justify-content: flex-end;
     }
 
     .empty-state {
@@ -632,6 +1129,323 @@ import {
       font-size: 1.75rem;
     }
 
+    /* Offcanvas Drawer */
+    .drawer-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .drawer-panel {
+      background: #ffffff;
+      width: 100%;
+      max-width: 580px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.25s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    .drawer-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-default);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      background: var(--bg-surface-subtle);
+    }
+
+    .drawer-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem;
+      color: var(--text-primary);
+    }
+
+    .drawer-subtitle {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .drawer-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      border-radius: 4px;
+    }
+    .drawer-close:hover {
+      background: var(--border-default);
+      color: var(--text-primary);
+    }
+
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .drawer-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border-default);
+      background: var(--bg-surface-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+
+    /* Form Styles */
+    .drawer-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .form-section {
+      background: #ffffff;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .form-section-title {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-default);
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.875rem;
+    }
+
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.875rem;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid-2, .form-grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .form-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .text-hint {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+    }
+
+    /* Photo Upload Component */
+    .photo-upload-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .photo-avatar-preview {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--bg-surface-subtle);
+      border: 2px dashed var(--border-default);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-placeholder-icon {
+      font-size: 2rem;
+      color: var(--text-muted);
+    }
+
+    .photo-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .photo-btn-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .file-upload-label {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      margin: 0;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    /* Document Upload Box */
+    .doc-upload-box {
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 0.875rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+    }
+
+    .doc-upload-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .doc-upload-title {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .existing-doc-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #ffffff;
+      border: 1px solid var(--border-default);
+      padding: 0.375rem 0.625rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+
+    .existing-doc-row .doc-name {
+      flex: 1;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .selected-file-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      max-width: 100%;
+    }
+
+    .file-name-text {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    .file-size-text {
+      color: #0284c7;
+      font-size: 0.6875rem;
+    }
+
+    .clear-file-btn {
+      background: none;
+      border: none;
+      color: #0369a1;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.875rem;
+      padding: 0 0.125rem;
+      line-height: 1;
+    }
+
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 12px;
+    }
+
+    .badge-muted {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 12px;
+    }
+
+    /* Profile View Styles */
     .profile-card {
       display: flex;
       flex-direction: column;
@@ -641,34 +1455,50 @@ import {
     .profile-header {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 1.25rem;
       padding-bottom: 1.25rem;
       border-bottom: 1px solid var(--border-default);
     }
 
     .profile-avatar-lg {
-      width: 52px;
-      height: 52px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--brand-600), var(--brand-900));
       color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.125rem;
+      font-size: 1.5rem;
       font-weight: 700;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .profile-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
     .profile-name {
       font-size: 1.25rem;
       font-weight: 700;
       color: var(--text-primary);
-      margin: 0;
+      margin: 0 0 0.25rem;
     }
 
     .profile-sub {
       font-size: 0.8125rem;
       color: var(--text-muted);
+      display: block;
+      margin-bottom: 0.375rem;
+    }
+
+    .profile-tag-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
     }
 
     .profile-metrics {
@@ -701,7 +1531,7 @@ import {
       font-size: 0.875rem;
     }
 
-    .assignment-summary-box {
+    .profile-info-box {
       background: var(--bg-surface-subtle);
       border: 1px solid var(--border-default);
       border-radius: 6px;
@@ -716,6 +1546,80 @@ import {
       align-items: center;
       gap: 0.375rem;
       margin-bottom: 0.75rem;
+    }
+
+    .profile-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.625rem 1rem;
+      font-size: 0.8125rem;
+    }
+
+    .col-span-2 {
+      grid-column: span 2;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+
+    .info-lbl {
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      font-weight: 500;
+    }
+
+    .info-val {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .doc-status-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+    }
+
+    .doc-status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--border-default);
+      padding: 0.625rem 0.875rem;
+      border-radius: 4px;
+    }
+
+    .doc-status-info {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .doc-status-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+
+    .doc-status-name {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .doc-status-sub {
+      font-size: 0.6875rem;
+      color: var(--text-secondary);
+    }
+
+    .assignment-summary-box {
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 1rem;
     }
 
     .assign-details {
@@ -738,41 +1642,74 @@ import {
       font-weight: 600;
       color: var(--text-primary);
     }
+
+    .btn-xs {
+      padding: 0.15rem 0.5rem;
+      font-size: 0.6875rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .icon-xs {
+      font-size: 0.875rem !important;
+    }
   `]
 })
 export class EmployeesComponent implements OnInit {
   public employees = signal<EmployeeDto[]>([]);
   public assignments = signal<EmployeeAssignmentDto[]>([]);
   public designations = signal<DesignationDto[]>([]);
+  public profileDocuments = signal<EmployeeDocumentDto[]>([]);
+
   public isLoading = signal(true);
   public isSubmitting = signal(false);
   public errorMessage = signal<string | null>(null);
   public successMessage = signal<string | null>(null);
+  public drawerError = signal<string | null>(null);
 
   // Filters
   public searchQuery = '';
   public typeFilter = '';
 
-  // Drawer state
+  // Drawer State
   public isDrawerOpen = signal(false);
-  public drawerMode = signal<'register' | 'profile'>('register');
+  public drawerMode = signal<'add' | 'edit' | 'profile'>('add');
   public selectedEmployee = signal<EmployeeDto | null>(null);
 
+  // Countries Master Reference
+  public countriesList = EMPLOYEE_COUNTRIES;
+
   // Form Model
-  public newEmployee: CreateEmployeeDto = {
-    employeeCode: '',
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    gender: 'male',
-    dateOfBirth: '1992-05-15',
-    nationality: 'Emirati',
-    email: '',
-    employmentType: 'full_time',
-    dateOfJoining: new Date().toISOString().slice(0, 10),
-    contractEndDate: undefined,
-    remunerationBasis: 'hourly',
-  };
+  public formEmployee: EmployeeFormState = this.getInitialFormState();
+
+  // Photo state
+  public photoPreview = signal<string | null>(null);
+  public selectedPhotoFile: File | null = null;
+  public isPhotoRemoved = signal(false);
+
+  // Document file states
+  public selectedPassportFile: File | null = null;
+  public selectedVisaFile: File | null = null;
+
+  // KPIs
+  public totalHeadcount = computed(() => this.employees().length);
+
+  public fullTimeCount = computed(() => {
+    return this.employees().filter((e) => e.employmentType === 'full_time').length;
+  });
+
+  public contractCount = computed(() => {
+    return this.employees().filter((e) => e.employmentType === 'contract').length;
+  });
+
+  public activeCount = computed(() => {
+    return this.employees().filter((e) => ['active', 'probation', 'on_leave'].includes(e.status)).length;
+  });
+
+  public inactiveCount = computed(() => {
+    return this.employees().filter((e) => ['inactive', 'terminated', 'resigned'].includes(e.status)).length;
+  });
 
   public filteredEmployees = computed(() => {
     const list = this.employees();
@@ -785,21 +1722,28 @@ export class EmployeesComponent implements OnInit {
         !query ||
         e.employeeCode.toLowerCase().includes(query) ||
         `${e.firstName} ${e.lastName}`.toLowerCase().includes(query) ||
-        (e.email && e.email.toLowerCase().includes(query));
+        (e.email && e.email.toLowerCase().includes(query)) ||
+        (e.country && e.country.toLowerCase().includes(query));
       return matchesType && matchesQuery;
     });
   });
 
-  public fullTimeCount = computed(() => {
-    return this.employees().filter((e) => e.employmentType === 'full_time').length;
+  // Existing documents helpers
+  public existingPassportDoc = computed(() => {
+    return this.profileDocuments().find(
+      (d) => d.documentTypeCode === 'PASSPORT' || (d as any).documentType?.code === 'PASSPORT',
+    );
   });
 
-  public contractCount = computed(() => {
-    return this.employees().filter((e) => e.employmentType === 'contract').length;
+  public existingVisaDoc = computed(() => {
+    return this.profileDocuments().find(
+      (d) => d.documentTypeCode === 'VISA' || (d as any).documentType?.code === 'VISA',
+    );
   });
 
   constructor(
     private masterService: MasterService,
+    public documentService: DocumentService,
     public authService: AuthService,
   ) {}
 
@@ -817,20 +1761,32 @@ export class EmployeesComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.error?.message || 'Failed to load employees roster.');
+        this.errorMessage.set(err.error?.error?.message || 'Failed to load employees.');
         this.isLoading.set(false);
-      }
+      },
     });
 
     this.masterService.getAssignments().subscribe({
       next: (res) => this.assignments.set(res.data),
-      error: () => {}
+      error: () => {},
     });
 
     this.masterService.getDesignations().subscribe({
       next: (res) => this.designations.set(res.data),
-      error: () => {}
+      error: () => {},
     });
+  }
+
+  public getPhotoUrl(employeeId: string): string {
+    const token = this.authService.getAccessToken();
+    return this.masterService.getEmployeePhotoUrl(employeeId, token || undefined);
+  }
+
+  public onAvatarError(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (target) {
+      target.style.display = 'none';
+    }
   }
 
   public getEmployeeAssignment(empId: string): EmployeeAssignmentDto | undefined {
@@ -840,55 +1796,286 @@ export class EmployeesComponent implements OnInit {
     );
   }
 
-  public openRegisterDrawer(): void {
-    this.drawerMode.set('register');
-    this.newEmployee = {
-      employeeCode: '',
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      gender: 'male',
-      dateOfBirth: '1992-05-15',
-      nationality: 'Emirati',
-      email: '',
-      employmentType: 'full_time',
-      dateOfJoining: new Date().toISOString().slice(0, 10),
-      contractEndDate: undefined,
-      remunerationBasis: 'hourly',
+  public getEmployeePassportDoc(empId: string): EmployeeDocumentDto | undefined {
+    return this.profileDocuments().find(
+      (d) => d.documentTypeCode === 'PASSPORT' || (d as any).documentType?.code === 'PASSPORT',
+    );
+  }
+
+  public getEmployeeVisaDoc(empId: string): EmployeeDocumentDto | undefined {
+    return this.profileDocuments().find(
+      (d) => d.documentTypeCode === 'VISA' || (d as any).documentType?.code === 'VISA',
+    );
+  }
+
+  public openAddDrawer(): void {
+    this.drawerMode.set('add');
+    this.drawerError.set(null);
+    this.formEmployee = this.getInitialFormState();
+    this.photoPreview.set(null);
+    this.selectedPhotoFile = null;
+    this.isPhotoRemoved.set(false);
+    this.selectedPassportFile = null;
+    this.selectedVisaFile = null;
+    this.profileDocuments.set([]);
+    this.isDrawerOpen.set(true);
+  }
+
+  public openEditDrawer(emp: EmployeeDto): void {
+    this.drawerMode.set('edit');
+    this.drawerError.set(null);
+    this.selectedEmployee.set(emp);
+    this.formEmployee = {
+      id: emp.id,
+      employeeCode: emp.employeeCode,
+      firstName: emp.firstName,
+      middleName: emp.middleName || '',
+      lastName: emp.lastName,
+      gender: emp.gender || 'prefer_not_to_say',
+      dateOfBirth: emp.dateOfBirth || '',
+      nationality: emp.nationality || '',
+      email: emp.email || '',
+      phoneNumber: emp.phoneNumber || '',
+      address: emp.address || '',
+      country: emp.country || '',
+      employmentType: emp.employmentType || 'full_time',
+      dateOfJoining: emp.dateOfJoining || new Date().toISOString().slice(0, 10),
+      contractEndDate: emp.contractEndDate || undefined,
+      remunerationBasis: emp.remunerationBasis || 'hourly',
+      status: emp.status || 'active',
+      profilePhoto: emp.profilePhoto,
     };
+    this.photoPreview.set(null);
+    this.selectedPhotoFile = null;
+    this.isPhotoRemoved.set(false);
+    this.selectedPassportFile = null;
+    this.selectedVisaFile = null;
+
+    // Load documents for existing employee
+    this.loadEmployeeDocuments(emp.id);
     this.isDrawerOpen.set(true);
   }
 
   public openProfileDrawer(emp: EmployeeDto): void {
     this.selectedEmployee.set(emp);
     this.drawerMode.set('profile');
+    this.drawerError.set(null);
+    this.loadEmployeeDocuments(emp.id);
     this.isDrawerOpen.set(true);
   }
 
   public closeDrawer(): void {
     this.isDrawerOpen.set(false);
+    this.drawerError.set(null);
   }
 
-  public onSaveNewEmployee(): void {
-    if (!this.newEmployee.employeeCode || !this.newEmployee.firstName || !this.newEmployee.lastName || !this.newEmployee.dateOfJoining) {
-      this.errorMessage.set('Please provide all required fields: code, first name, last name, and date of joining.');
+  public onPhotoFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      this.selectedPhotoFile = file;
+      this.isPhotoRemoved.set(false);
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.photoPreview.set(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  public onRemovePhoto(): void {
+    this.photoPreview.set(null);
+    this.selectedPhotoFile = null;
+    this.isPhotoRemoved.set(true);
+  }
+
+  public onPassportFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.selectedPassportFile = input.files[0];
+    }
+  }
+
+  public clearPassportFile(): void {
+    this.selectedPassportFile = null;
+  }
+
+  public onVisaFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.selectedVisaFile = input.files[0];
+    }
+  }
+
+  public clearVisaFile(): void {
+    this.selectedVisaFile = null;
+  }
+
+  public formatBytes(bytes: number): string {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  public formatGender(gender?: string): string {
+    if (!gender) return '—';
+    switch (gender) {
+      case 'male': return 'Male';
+      case 'female': return 'Female';
+      case 'other': return 'Other';
+      case 'prefer_not_to_say': return 'Prefer not to say';
+      default: return gender;
+    }
+  }
+
+  public onSaveEmployee(): void {
+    this.drawerError.set(null);
+
+    // Basic details validation
+    if (!this.formEmployee.employeeCode?.trim()) {
+      this.drawerError.set('Employee Code is required.');
+      return;
+    }
+    if (!this.formEmployee.firstName?.trim() || !this.formEmployee.lastName?.trim()) {
+      this.drawerError.set('First Name and Last Name are required.');
+      return;
+    }
+    const email = this.formEmployee.email?.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      this.drawerError.set('A valid Email address is required.');
+      return;
+    }
+    if (!this.formEmployee.country) {
+      this.drawerError.set('Country is required.');
+      return;
+    }
+    if (!this.formEmployee.dateOfJoining) {
+      this.drawerError.set('Date of Joining is required.');
+      return;
+    }
+    if (this.formEmployee.employmentType === 'contract' && !this.formEmployee.contractEndDate) {
+      this.drawerError.set('Contract End Date is required for contract employees.');
       return;
     }
 
-    this.isSubmitting.set(true);
-    this.errorMessage.set(null);
-
-    this.masterService.createEmployee(this.newEmployee).subscribe({
-      next: () => {
-        this.isSubmitting.set(false);
-        this.closeDrawer();
-        this.successMessage.set(`Employee ${this.newEmployee.employeeCode} registered successfully.`);
-        this.loadData();
-      },
-      error: (err) => {
-        this.isSubmitting.set(false);
-        this.errorMessage.set(err.error?.error?.message || 'Failed to register employee.');
+    // Strict validation for new employee: Passport and Visa are mandatory
+    if (this.drawerMode() === 'add') {
+      if (!this.selectedPassportFile) {
+        this.drawerError.set('Passport document is mandatory for new employee registration.');
+        return;
       }
+      if (!this.selectedVisaFile) {
+        this.drawerError.set('Visa document is mandatory for new employee registration.');
+        return;
+      }
+    }
+
+    this.isSubmitting.set(true);
+
+    const formData = new FormData();
+    formData.append('employeeCode', this.formEmployee.employeeCode.trim());
+    formData.append('firstName', this.formEmployee.firstName.trim());
+    formData.append('middleName', this.formEmployee.middleName?.trim() || '');
+    formData.append('lastName', this.formEmployee.lastName.trim());
+    formData.append('gender', this.formEmployee.gender);
+    formData.append('dateOfBirth', this.formEmployee.dateOfBirth || '');
+    formData.append('email', email);
+    formData.append('phoneNumber', this.formEmployee.phoneNumber?.trim() || '');
+    formData.append('country', this.formEmployee.country);
+    formData.append('nationality', this.formEmployee.nationality || this.formEmployee.country);
+    formData.append('address', this.formEmployee.address?.trim() || '');
+    formData.append('employmentType', this.formEmployee.employmentType);
+    formData.append('dateOfJoining', this.formEmployee.dateOfJoining);
+    formData.append('remunerationBasis', this.formEmployee.remunerationBasis);
+    if (this.formEmployee.contractEndDate) {
+      formData.append('contractEndDate', this.formEmployee.contractEndDate);
+    }
+    if (this.drawerMode() === 'edit' && this.formEmployee.status) {
+      formData.append('status', this.formEmployee.status);
+    }
+
+    // Append files if selected
+    if (this.selectedPhotoFile) {
+      formData.append('photo', this.selectedPhotoFile);
+    } else if (this.isPhotoRemoved()) {
+      formData.append('removePhoto', 'true');
+    }
+
+    if (this.selectedPassportFile) {
+      formData.append('passport', this.selectedPassportFile);
+    }
+    if (this.selectedVisaFile) {
+      formData.append('visa', this.selectedVisaFile);
+    }
+
+    if (this.drawerMode() === 'add') {
+      this.masterService.createEmployeeFormData(formData).subscribe({
+        next: (res) => {
+          this.isSubmitting.set(false);
+          this.closeDrawer();
+          this.successMessage.set(`Employee ${res.data.employeeCode} created successfully.`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.isSubmitting.set(false);
+          this.drawerError.set(err.error?.error?.message || 'Failed to create employee.');
+        },
+      });
+    } else {
+      const empId = this.formEmployee.id!;
+      this.masterService.updateEmployee(empId, formData).subscribe({
+        next: (res) => {
+          this.isSubmitting.set(false);
+          this.closeDrawer();
+          this.successMessage.set(`Employee ${res.data.employeeCode} updated successfully.`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.isSubmitting.set(false);
+          this.drawerError.set(err.error?.error?.message || 'Failed to update employee.');
+        },
+      });
+    }
+  }
+
+  private loadEmployeeDocuments(employeeId: string): void {
+    this.masterService.getEmployeeById(employeeId).subscribe({
+      next: (res) => {
+        const empAny = res.data as any;
+        if (empAny.documents) {
+          this.profileDocuments.set(empAny.documents);
+        } else {
+          this.profileDocuments.set([]);
+        }
+      },
+      error: () => {
+        this.profileDocuments.set([]);
+      },
     });
+  }
+
+  private getInitialFormState(): EmployeeFormState {
+    return {
+      employeeCode: '',
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      gender: 'male',
+      dateOfBirth: '1995-01-01',
+      nationality: 'India',
+      email: '',
+      phoneNumber: '',
+      address: '',
+      country: 'India',
+      employmentType: 'full_time',
+      dateOfJoining: new Date().toISOString().slice(0, 10),
+      contractEndDate: undefined,
+      remunerationBasis: 'hourly',
+      status: 'active',
+      profilePhoto: null,
+    };
   }
 }

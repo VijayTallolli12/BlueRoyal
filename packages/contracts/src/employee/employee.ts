@@ -1,7 +1,26 @@
-export type EmployeeGender = 'male' | 'female' | 'other';
-export type EmployeeStatus = 'active' | 'on_leave' | 'probation' | 'terminated' | 'resigned';
+export type EmployeeGender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
+export type EmployeeStatus = 'active' | 'on_leave' | 'probation' | 'terminated' | 'resigned' | 'inactive';
 export type EmploymentType = 'full_time' | 'contract';
 export type RemunerationBasis = 'hourly' | 'salaried';
+
+export const EMPLOYEE_COUNTRIES: readonly string[] = [
+  'India',
+  'United Arab Emirates',
+  'Saudi Arabia',
+  'Qatar',
+  'Oman',
+  'Kuwait',
+  'Bahrain',
+  'Philippines',
+  'Egypt',
+  'United Kingdom',
+  'United States',
+  'Pakistan',
+  'Bangladesh',
+  'Sri Lanka',
+  'Nepal',
+  'Other',
+] as const;
 
 export interface EmployeeDto {
   id: string;
@@ -15,6 +34,9 @@ export interface EmployeeDto {
   nationality: string;
   email: string | null;
   phoneNumber: string | null;
+  address?: string | null;
+  country?: string | null;
+  profilePhoto?: string | null;
   dateOfJoining: string;
   employmentType: EmploymentType;
   remunerationBasis: RemunerationBasis;
@@ -52,6 +74,9 @@ export interface CreateEmployeeDto {
   nationality: string;
   email?: string | null;
   phoneNumber?: string | null;
+  address?: string | null;
+  country?: string | null;
+  profilePhoto?: string | null;
   dateOfJoining: string;
   employmentType?: EmploymentType;
   remunerationBasis?: RemunerationBasis;
@@ -61,6 +86,7 @@ export interface CreateEmployeeDto {
 }
 
 export interface UpdateEmployeeDto {
+  employeeCode?: string;
   userId?: string | null;
   firstName?: string;
   middleName?: string | null;
@@ -70,6 +96,9 @@ export interface UpdateEmployeeDto {
   nationality?: string;
   email?: string | null;
   phoneNumber?: string | null;
+  address?: string | null;
+  country?: string | null;
+  profilePhoto?: string | null;
   dateOfJoining?: string;
   employmentType?: EmploymentType;
   remunerationBasis?: RemunerationBasis;
@@ -77,3 +106,4 @@ export interface UpdateEmployeeDto {
   probationEndDate?: string | null;
   status?: EmployeeStatus;
 }
+

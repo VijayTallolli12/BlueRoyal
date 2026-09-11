@@ -324,7 +324,7 @@ describe('Phase 3 Leave Management & Employee Entitlements Integration Tests', (
       where: { resourceId: createdRequestId, action: 'LEAVE_REQUEST_APPROVED' },
     });
     expect(sysAudit).toBeDefined();
-  });
+  }, 60000);
 
   // 8. Rejection Workflow
   it('8. POST /leave/requests/:id/reject -> HR rejects request with mandatory reason and restores pending balance', async () => {

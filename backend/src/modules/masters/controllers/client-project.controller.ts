@@ -35,7 +35,26 @@ export class ClientController {
 
   public static async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { code, name, contactPerson, contactEmail, contactPhone, billingAddress, isActive } = req.body;
+      const code = req.body.code ? String(req.body.code).trim() : '';
+      const name = req.body.name ? String(req.body.name).trim() : '';
+      const contactPerson = req.body.contactPerson ? String(req.body.contactPerson).trim() : null;
+      const rawEmail = req.body.email !== undefined ? req.body.email : req.body.contactEmail;
+      const contactEmail = rawEmail ? String(rawEmail).trim() : null;
+      const rawPhone = req.body.phoneNumber !== undefined ? req.body.phoneNumber : (req.body.phone !== undefined ? req.body.phone : req.body.contactPhone);
+      const contactPhone = rawPhone ? String(rawPhone).trim() : null;
+      const billingAddress = req.body.billingAddress ? String(req.body.billingAddress).trim() : null;
+      const isActive = req.body.isActive !== undefined ? Boolean(req.body.isActive) : true;
+
+      if (!code) {
+        throw AppError.badRequest('Client Code is required');
+      }
+      if (!name) {
+        throw AppError.badRequest('Client Name is required');
+      }
+      if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+        throw AppError.badRequest('Valid email address is required');
+      }
+
       const existing = await Client.findOne({ where: { code } });
       if (existing) {
         throw AppError.conflict(`Client code ${code} already exists`);
@@ -47,7 +66,7 @@ export class ClientController {
         contactEmail,
         contactPhone,
         billingAddress,
-        isActive: isActive !== undefined ? isActive : true,
+        isActive,
       });
 
       await AuditService.recordEvent({
@@ -74,7 +93,37 @@ export class ClientController {
       if (!item) {
         throw AppError.notFound(`Client with ID ${id} not found`);
       }
-      const { code, name, contactPerson, contactEmail, contactPhone, billingAddress, isActive } = req.body;
+
+      const code = req.body.code !== undefined ? String(req.body.code).trim() : item.code;
+      const name = req.body.name !== undefined ? String(req.body.name).trim() : item.name;
+      const contactPerson = req.body.contactPerson !== undefined
+        ? (req.body.contactPerson ? String(req.body.contactPerson).trim() : null)
+        : item.contactPerson;
+      
+      const rawEmail = req.body.email !== undefined ? req.body.email : req.body.contactEmail;
+      const contactEmail = rawEmail !== undefined
+        ? (rawEmail ? String(rawEmail).trim() : null)
+        : item.contactEmail;
+
+      const rawPhone = req.body.phoneNumber !== undefined ? req.body.phoneNumber : (req.body.phone !== undefined ? req.body.phone : req.body.contactPhone);
+      const contactPhone = rawPhone !== undefined
+        ? (rawPhone ? String(rawPhone).trim() : null)
+        : item.contactPhone;
+
+      const billingAddress = req.body.billingAddress !== undefined
+        ? (req.body.billingAddress ? String(req.body.billingAddress).trim() : null)
+        : item.billingAddress;
+
+      // Preserve existing isActive unless explicitly supplied
+      const isActive = req.body.isActive !== undefined ? Boolean(req.body.isActive) : item.isActive;
+
+      if (req.body.name !== undefined && !name) {
+        throw AppError.badRequest('Client Name cannot be empty');
+      }
+      if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+        throw AppError.badRequest('Valid email address is required');
+      }
+
       if (code && code !== item.code) {
         const existing = await Client.findOne({ where: { code } });
         if (existing) {
@@ -165,8 +214,27 @@ export class ProjectController {
 
   public static async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { clientId, code, name, siteLocation, startDate, endDate, status } = req.body;
-      const client = await Client.findByPk(String(clientId));
+      const rawClientId = req.body.clientId;
+      const rawCode = req.body.code;
+      const rawName = req.body.name;
+      const rawLocation = req.body.location !== undefined ? req.body.location : req.body.siteLocation;
+
+      const clientId = rawClientId ? String(rawClientId).trim() : '';
+      const code = rawCode ? String(rawCode).trim() : '';
+      const name = rawName ? String(rawName).trim() : '';
+      const siteLocation = rawLocation ? String(rawLocation).trim() : null;
+
+      if (!clientId) {
+        throw AppError.badRequest('Client is required');
+      }
+      if (!code) {
+        throw AppError.badRequest('Project Code is required');
+      }
+      if (!name) {
+        throw AppError.badRequest('Project Name is required');
+      }
+
+      const client = await Client.findByPk(clientId);
       if (!client) {
         throw AppError.badRequest(`Referenced client ${clientId} does not exist`);
       }
@@ -179,9 +247,9 @@ export class ProjectController {
         code,
         name,
         siteLocation,
-        startDate,
-        endDate,
-        status: status || 'active',
+        startDate: req.body.startDate || null,
+        endDate: req.body.endDate || null,
+        status: req.body.status || 'active',
       });
 
       await AuditService.recordEvent({
@@ -208,9 +276,35 @@ export class ProjectController {
       if (!item) {
         throw AppError.notFound(`Project with ID ${id} not found`);
       }
-      const { clientId, code, name, siteLocation, startDate, endDate, status } = req.body;
+
+      const rawClientId = req.body.clientId;
+      const clientId = rawClientId !== undefined ? String(rawClientId).trim() : item.clientId;
+
+      const rawCode = req.body.code;
+      const code = rawCode !== undefined ? String(rawCode).trim() : item.code;
+
+      const rawName = req.body.name;
+      const name = rawName !== undefined ? String(rawName).trim() : item.name;
+
+      const rawLocation = req.body.location !== undefined ? req.body.location : req.body.siteLocation;
+      const siteLocation = rawLocation !== undefined
+        ? (rawLocation ? String(rawLocation).trim() : null)
+        : item.siteLocation;
+
+      const startDate = req.body.startDate !== undefined ? req.body.startDate : item.startDate;
+      const endDate = req.body.endDate !== undefined ? req.body.endDate : item.endDate;
+      // Preserve existing status unless explicitly specified
+      const status = req.body.status !== undefined ? req.body.status : item.status;
+
+      if (req.body.clientId !== undefined && !clientId) {
+        throw AppError.badRequest('Client is required');
+      }
+      if (req.body.name !== undefined && !name) {
+        throw AppError.badRequest('Project Name is required');
+      }
+
       if (clientId && clientId !== item.clientId) {
-        const client = await Client.findByPk(String(clientId));
+        const client = await Client.findByPk(clientId);
         if (!client) {
           throw AppError.badRequest(`Referenced client ${clientId} does not exist`);
         }
