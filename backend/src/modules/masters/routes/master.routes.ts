@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../../../core/middleware/auth.middleware';
-import { requirePermission } from '../../../core/middleware/rbac.middleware';
+import { requirePermission, requireAnyPermission } from '../../../core/middleware/rbac.middleware';
 import { DesignationController } from '../controllers/designation.controller';
 import { ClientController, ProjectController } from '../controllers/client-project.controller';
 import { EmployeeController } from '../controllers/employee.controller';
@@ -80,9 +80,10 @@ router.post('/calendar/holidays', authenticate, requirePermission('calendar:crea
 router.put('/calendar/holidays/:id', authenticate, requirePermission('calendar:update'), CalendarController.updateHoliday);
 router.delete('/calendar/holidays/:id', authenticate, requirePermission('calendar:delete'), CalendarController.deleteHoliday);
 
-// 9. Salary Components & Structures
 router.get('/salary/components', authenticate, requirePermission('salary:read'), SalaryController.listComponents);
 router.post('/salary/components', authenticate, requirePermission('salary:create'), SalaryController.createComponent);
+router.put('/salary/components/:id', authenticate, requireAnyPermission('salary:update', 'salary:create'), SalaryController.updateComponent);
+router.delete('/salary/components/:id', authenticate, requireAnyPermission('salary:delete', 'salary:update', 'salary:create'), SalaryController.deleteComponent);
 router.get('/salary/structures', authenticate, requirePermission('salary:read'), SalaryController.listStructures);
 router.post('/salary/structures', authenticate, requirePermission('salary:create'), SalaryController.createStructure);
 

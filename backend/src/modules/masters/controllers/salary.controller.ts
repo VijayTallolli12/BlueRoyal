@@ -6,6 +6,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { EffectiveDateService } from '../../../core/services/effective-date.service';
 import { runInTransaction } from '../../../core/database/transactions';
 import { AuditService } from '../../../core/audit/audit.service';
+import { PayrollItemLine } from '../../payroll/models/payroll-item-line.model';
 
 export class SalaryController {
   // 1. Salary Component Masters
@@ -35,8 +36,13 @@ export class SalaryController {
         isActive,
       } = req.body;
 
-      const existing = await SalaryComponent.findOne({ where: { code } });
-      if (existing) throw AppError.conflict(`Salary component ${code} already exists`);
+      if (!code || !name || !type || !calculationType) {
+        throw AppError.badRequest('Code, Component Name, Type, and Calculation Type are required');
+      }
+
+      const cleanCode = String(code).trim().toUpperCase();
+      const existing = await SalaryComponent.findOne({ where: { code: cleanCode } });
+      if (existing) throw AppError.conflict(`Salary component code ${cleanCode} already exists`);
 
       if (percentageBasisComponentId) {
         const basis = await SalaryComponent.findByPk(String(percentageBasisComponentId));
@@ -44,15 +50,15 @@ export class SalaryController {
       }
 
       const comp = await SalaryComponent.create({
-        code,
-        name,
+        code: cleanCode,
+        name: String(name).trim(),
         type,
         calculationType,
-        percentageBasisComponentId: percentageBasisComponentId || null,
-        isRecurring: isRecurring !== undefined ? isRecurring : true,
-        isWpsBasic: isWpsBasic || false,
-        isWpsHousing: isWpsHousing || false,
-        isActive: isActive !== undefined ? isActive : true,
+        percentageBasisComponentId: calculationType === 'percentage' ? (percentageBasisComponentId || null) : null,
+        isRecurring: isRecurring !== undefined ? Boolean(isRecurring) : true,
+        isWpsBasic: isWpsBasic ? Boolean(isWpsBasic) : false,
+        isWpsHousing: isWpsHousing ? Boolean(isWpsHousing) : false,
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
       });
 
       await AuditService.recordEvent({
@@ -66,7 +72,143 @@ export class SalaryController {
         correlationId: req.headers['x-correlation-id'] as string,
       });
 
-      sendSuccess(req, res, comp, 201);
+      const createdWithIncludes = await SalaryComponent.findByPk(comp.id, {
+        include: [{ model: SalaryComponent, as: 'percentageBasisComponent' }],
+      });
+
+      sendSuccess(req, res, createdWithIncludes || comp, 201);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async updateComponent(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = String(req.params.id);
+      const comp = await SalaryComponent.findByPk(id);
+      if (!comp) {
+        throw AppError.notFound(`Salary component with ID ${id} not found`);
+      }
+
+      const {
+        code,
+        name,
+        type,
+        calculationType,
+        percentageBasisComponentId,
+        isRecurring,
+        isWpsBasic,
+        isWpsHousing,
+        isActive,
+      } = req.body;
+
+      if (code) {
+        const cleanCode = String(code).trim().toUpperCase();
+        if (cleanCode !== comp.code) {
+          const existing = await SalaryComponent.findOne({ where: { code: cleanCode } });
+          if (existing && existing.id !== comp.id) {
+            throw AppError.conflict(`Salary component code ${cleanCode} already exists`);
+          }
+        }
+      }
+
+      if (percentageBasisComponentId) {
+        if (percentageBasisComponentId === id) {
+          throw AppError.badRequest('A component cannot reference itself as a percentage basis');
+        }
+        const basis = await SalaryComponent.findByPk(String(percentageBasisComponentId));
+        if (!basis) {
+          throw AppError.badRequest('Referenced percentage basis component not found');
+        }
+      }
+
+      const oldValues = comp.toJSON();
+      await comp.update({
+        code: code !== undefined ? String(code).trim().toUpperCase() : comp.code,
+        name: name !== undefined ? String(name).trim() : comp.name,
+        type: type !== undefined ? type : comp.type,
+        calculationType: calculationType !== undefined ? calculationType : comp.calculationType,
+        percentageBasisComponentId:
+          calculationType === 'fixed_amount'
+            ? null
+            : percentageBasisComponentId !== undefined
+              ? (percentageBasisComponentId || null)
+              : comp.percentageBasisComponentId,
+        isRecurring: isRecurring !== undefined ? Boolean(isRecurring) : comp.isRecurring,
+        isWpsBasic: isWpsBasic !== undefined ? Boolean(isWpsBasic) : comp.isWpsBasic,
+        isWpsHousing: isWpsHousing !== undefined ? Boolean(isWpsHousing) : comp.isWpsHousing,
+        isActive: isActive !== undefined ? Boolean(isActive) : comp.isActive,
+      });
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'SALARY_COMPONENT_UPDATED',
+        resourceType: 'SalaryComponent',
+        resourceId: comp.id,
+        oldValues,
+        newValues: comp.toJSON(),
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
+      const updated = await SalaryComponent.findByPk(comp.id, {
+        include: [{ model: SalaryComponent, as: 'percentageBasisComponent' }],
+      });
+
+      sendSuccess(req, res, updated);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async deleteComponent(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = String(req.params.id);
+      const comp = await SalaryComponent.findByPk(id);
+      if (!comp) {
+        throw AppError.notFound(`Salary component with ID ${id} not found`);
+      }
+
+      // 1. Check if assigned to employee salary structures
+      const structureCount = await EmployeeSalaryStructure.count({ where: { componentId: id } });
+      if (structureCount > 0) {
+        throw AppError.conflict(
+          `Cannot delete salary package "${comp.name}" (${comp.code}) because it is currently assigned to ${structureCount} employee structure(s). Deactivate it instead.`
+        );
+      }
+
+      // 2. Check if referenced in historical payroll lines
+      const payrollCount = await PayrollItemLine.count({ where: { salaryComponentId: id } });
+      if (payrollCount > 0) {
+        throw AppError.conflict(
+          `Cannot delete salary package "${comp.name}" (${comp.code}) because it is referenced in ${payrollCount} payroll calculation record(s). Deactivate it instead.`
+        );
+      }
+
+      // 3. Check if used as a percentage basis by another component
+      const basisCount = await SalaryComponent.count({ where: { percentageBasisComponentId: id } });
+      if (basisCount > 0) {
+        throw AppError.conflict(
+          `Cannot delete salary package "${comp.name}" (${comp.code}) because it is used as the calculation basis for ${basisCount} other component(s).`
+        );
+      }
+
+      const oldValues = comp.toJSON();
+      await comp.destroy();
+
+      await AuditService.recordEvent({
+        actorId: req.user?.id,
+        actorIp: req.ip || req.socket.remoteAddress,
+        actorUserAgent: req.headers['user-agent'],
+        action: 'SALARY_COMPONENT_DELETED',
+        resourceType: 'SalaryComponent',
+        resourceId: id,
+        oldValues,
+        correlationId: req.headers['x-correlation-id'] as string,
+      });
+
+      sendSuccess(req, res, { message: `Salary package "${comp.name}" deleted successfully.` });
     } catch (err) {
       next(err);
     }

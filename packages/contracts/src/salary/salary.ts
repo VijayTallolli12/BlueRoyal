@@ -30,6 +30,7 @@ export interface CreateSalaryComponentDto {
 }
 
 export interface UpdateSalaryComponentDto {
+  code?: string;
   name?: string;
   type?: SalaryComponentType;
   calculationType?: CalculationType;

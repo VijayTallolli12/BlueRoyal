@@ -32,6 +32,7 @@ import {
   UpdatePublicHolidayDto,
   SalaryComponentDto,
   CreateSalaryComponentDto,
+  UpdateSalaryComponentDto,
   EmployeeSalaryStructureDto,
   CreateEmployeeSalaryStructureDto,
 } from '@blue-royal/contracts';
@@ -204,6 +205,14 @@ export class MasterService {
 
   public createSalaryComponent(dto: CreateSalaryComponentDto): Observable<ApiSuccessResponse<SalaryComponentDto>> {
     return this.http.post<ApiSuccessResponse<SalaryComponentDto>>(`${this.apiUrl}/salary/components`, dto);
+  }
+
+  public updateSalaryComponent(id: string, dto: UpdateSalaryComponentDto): Observable<ApiSuccessResponse<SalaryComponentDto>> {
+    return this.http.put<ApiSuccessResponse<SalaryComponentDto>>(`${this.apiUrl}/salary/components/${id}`, dto);
+  }
+
+  public deleteSalaryComponent(id: string): Observable<ApiSuccessResponse<{ message: string }>> {
+    return this.http.delete<ApiSuccessResponse<{ message: string }>>(`${this.apiUrl}/salary/components/${id}`);
   }
 
   public getSalaryStructures(employeeId?: string): Observable<ApiSuccessResponse<EmployeeSalaryStructureDto[]>> {

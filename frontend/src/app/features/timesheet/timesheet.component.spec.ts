@@ -216,7 +216,7 @@ describe('TimesheetComponent', () => {
 
     expect(component.selectedMonthIndex()).toBe(9);
     expect(component.selectedMonth()).toBe('2026-10');
-    expect(component.formattedSelectedMonth()).toBe('October 2026');
+    expect(component.formattedSelectedMonth()).toBe('October, 2026');
     expect(attendanceApi.listPeriods).toHaveBeenCalled();
   });
 
@@ -226,8 +226,52 @@ describe('TimesheetComponent', () => {
 
     expect(component.selectedYear()).toBe(2027);
     expect(component.selectedMonth()).toBe('2027-09');
-    expect(component.formattedSelectedMonth()).toBe('September 2027');
+    expect(component.formattedSelectedMonth()).toBe('September, 2027');
     expect(attendanceApi.listPeriods).toHaveBeenCalled();
+  });
+
+  it('should navigate to previous month on onPreviousMonth()', () => {
+    component.selectedYear.set(2026);
+    component.selectedMonthIndex.set(8); // September 2026
+    component.onPreviousMonth();
+
+    expect(component.selectedMonthIndex()).toBe(7); // August
+    expect(component.selectedYear()).toBe(2026);
+    expect(component.selectedMonth()).toBe('2026-08');
+    expect(component.formattedSelectedMonth()).toBe('August, 2026');
+  });
+
+  it('should navigate across year boundary on onPreviousMonth() from January', () => {
+    component.selectedYear.set(2026);
+    component.selectedMonthIndex.set(0); // January 2026
+    component.onPreviousMonth();
+
+    expect(component.selectedMonthIndex()).toBe(11); // December
+    expect(component.selectedYear()).toBe(2025);
+    expect(component.selectedMonth()).toBe('2025-12');
+    expect(component.formattedSelectedMonth()).toBe('December, 2025');
+  });
+
+  it('should navigate to next month on onNextMonth()', () => {
+    component.selectedYear.set(2026);
+    component.selectedMonthIndex.set(8); // September 2026
+    component.onNextMonth();
+
+    expect(component.selectedMonthIndex()).toBe(9); // October
+    expect(component.selectedYear()).toBe(2026);
+    expect(component.selectedMonth()).toBe('2026-10');
+    expect(component.formattedSelectedMonth()).toBe('October, 2026');
+  });
+
+  it('should navigate across year boundary on onNextMonth() from December', () => {
+    component.selectedYear.set(2026);
+    component.selectedMonthIndex.set(11); // December 2026
+    component.onNextMonth();
+
+    expect(component.selectedMonthIndex()).toBe(0); // January
+    expect(component.selectedYear()).toBe(2027);
+    expect(component.selectedMonth()).toBe('2027-01');
+    expect(component.formattedSelectedMonth()).toBe('January, 2027');
   });
 
   it('should trigger single employee Excel download without throwing', () => {

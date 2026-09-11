@@ -16,6 +16,10 @@ import {
   ShiftDto,
   PublicHolidayDto,
   SalaryComponentDto,
+  SalaryComponentType,
+  CalculationType,
+  CreateSalaryComponentDto,
+  UpdateSalaryComponentDto,
 } from '@blue-royal/contracts';
 
 import { AppShellComponent } from '../../core/layout/app-shell.component';
@@ -872,6 +876,144 @@ export type MasterTab =
                   }
                 </form>
               }
+
+              <!-- SALARY PACKAGE (COMPONENT) ADD / EDIT FORM -->
+              @if (showNewSalaryComponent || selectedSalaryComponentForEdit()) {
+                <form (ngSubmit)="submitActiveOffcanvas()">
+                  @if (salaryComponentFormError()) {
+                    <div class="alert-guidance alert-warning mb-3" style="padding: 0.6rem 0.8rem; font-size: 0.8125rem;">
+                      <span class="material-symbols-outlined icon-sm">warning</span>
+                      <span>{{ salaryComponentFormError() }}</span>
+                    </div>
+                  }
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="salaryCode">Code <span class="req">*</span></label>
+                    <input
+                      id="salaryCode"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewSalaryComponent ? newSalaryCode : editSalaryCode"
+                      (ngModelChange)="showNewSalaryComponent ? (newSalaryCode = $event) : (editSalaryCode = $event)"
+                      name="salaryCode"
+                      placeholder="e.g. BASIC, HRA, TRANSPORT"
+                      required
+                    />
+                    <span class="form-hint">Unique identifier for this salary component</span>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="salaryName">Component Name <span class="req">*</span></label>
+                    <input
+                      id="salaryName"
+                      type="text"
+                      class="form-control"
+                      [ngModel]="showNewSalaryComponent ? newSalaryName : editSalaryName"
+                      (ngModelChange)="showNewSalaryComponent ? (newSalaryName = $event) : (editSalaryName = $event)"
+                      name="salaryName"
+                      placeholder="e.g. Basic Salary, Housing Allowance"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-row-2 mb-3">
+                    <div class="form-group">
+                      <label class="form-label" for="salaryType">Type <span class="req">*</span></label>
+                      <select
+                        id="salaryType"
+                        class="form-control"
+                        [ngModel]="showNewSalaryComponent ? newSalaryType : editSalaryType"
+                        (ngModelChange)="showNewSalaryComponent ? (newSalaryType = $event) : (editSalaryType = $event)"
+                        name="salaryType"
+                      >
+                        <option value="earning">Earning</option>
+                        <option value="deduction">Deduction</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" for="salaryCalculationType">Calculation <span class="req">*</span></label>
+                      <select
+                        id="salaryCalculationType"
+                        class="form-control"
+                        [ngModel]="showNewSalaryComponent ? newSalaryCalculationType : editSalaryCalculationType"
+                        (ngModelChange)="showNewSalaryComponent ? (newSalaryCalculationType = $event) : (editSalaryCalculationType = $event)"
+                        name="salaryCalculationType"
+                      >
+                        <option value="fixed_amount">Fixed Amount</option>
+                        <option value="percentage">Percentage</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  @if ((showNewSalaryComponent ? newSalaryCalculationType : editSalaryCalculationType) === 'percentage') {
+                    <div class="form-group mb-3">
+                      <label class="form-label" for="salaryPercentageBasis">Percentage Basis Component <span class="req">*</span></label>
+                      <select
+                        id="salaryPercentageBasis"
+                        class="form-control"
+                        [ngModel]="showNewSalaryComponent ? newSalaryPercentageBasisId : editSalaryPercentageBasisId"
+                        (ngModelChange)="showNewSalaryComponent ? (newSalaryPercentageBasisId = $event) : (editSalaryPercentageBasisId = $event)"
+                        name="salaryPercentageBasis"
+                      >
+                        <option value="">-- Select Basis Component --</option>
+                        @for (basis of getEligiblePercentageBasisComponents(); track basis.id) {
+                          <option [value]="basis.id">{{ basis.name }} ({{ basis.code }})</option>
+                        }
+                      </select>
+                      <span class="form-hint">Component on which percentage will be calculated (e.g. Basic Salary)</span>
+                    </div>
+                  }
+
+                  <div class="form-group mb-3">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                      <input
+                        type="checkbox"
+                        [ngModel]="showNewSalaryComponent ? newSalaryIsRecurring : editSalaryIsRecurring"
+                        (ngModelChange)="showNewSalaryComponent ? (newSalaryIsRecurring = $event) : (editSalaryIsRecurring = $event)"
+                        name="salaryIsRecurring"
+                      />
+                      <span><strong>Recurring</strong> (Include in standard monthly payroll cycles)</span>
+                    </label>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                      <input
+                        type="checkbox"
+                        [ngModel]="showNewSalaryComponent ? newSalaryIsWpsBasic : editSalaryIsWpsBasic"
+                        (ngModelChange)="showNewSalaryComponent ? (newSalaryIsWpsBasic = $event) : (editSalaryIsWpsBasic = $event)"
+                        name="salaryIsWpsBasic"
+                      />
+                      <span><strong>WPS Basic</strong> (Classify as basic wage under Wage Protection System)</span>
+                    </label>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                      <input
+                        type="checkbox"
+                        [ngModel]="showNewSalaryComponent ? newSalaryIsWpsHousing : editSalaryIsWpsHousing"
+                        (ngModelChange)="showNewSalaryComponent ? (newSalaryIsWpsHousing = $event) : (editSalaryIsWpsHousing = $event)"
+                        name="salaryIsWpsHousing"
+                      />
+                      <span><strong>WPS Housing</strong> (Classify as housing allowance under Wage Protection System)</span>
+                    </label>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                      <input
+                        type="checkbox"
+                        [ngModel]="showNewSalaryComponent ? newSalaryIsActive : editSalaryIsActive"
+                        (ngModelChange)="showNewSalaryComponent ? (newSalaryIsActive = $event) : (editSalaryIsActive = $event)"
+                        name="salaryIsActive"
+                      />
+                      <span><strong>Active</strong> (Available for employee compensation structures)</span>
+                    </label>
+                  </div>
+                </form>
+              }
             </div>
 
             <div class="offcanvas-footer">
@@ -1699,13 +1841,13 @@ export type MasterTab =
             </div>
           }
 
-          <!-- TAB: SALARY COMPONENTS -->
+          <!-- TAB: SALARY PACKAGES -->
           @if (activeTab() === 'salary') {
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <h2>Salary Components Master (Monthly Remuneration)</h2>
-                  <p class="subtitle">Authoritative compensation structure components for monthly salaried personnel (WPS Compliant).</p>
+                  <h2>Salary Packages</h2>
+                  <p class="subtitle">Manage salary components and compensation structures.</p>
                 </div>
               </div>
               <div class="table-responsive">
@@ -1716,9 +1858,11 @@ export type MasterTab =
                       <th>Component Name</th>
                       <th>Type</th>
                       <th>Calculation</th>
+                      <th>Recurring</th>
                       <th>WPS Basic</th>
                       <th>WPS Housing</th>
-                      <th>Recurring</th>
+                      <th>Status</th>
+                      <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1726,15 +1870,52 @@ export type MasterTab =
                       <tr>
                         <td><code>{{ sc.code }}</code></td>
                         <td><strong>{{ sc.name }}</strong></td>
-                        <td><span class="badge" [class.badge-active]="sc.type === 'earning'">{{ sc.type | uppercase }}</span></td>
-                        <td>{{ sc.calculationType }}</td>
-                        <td>{{ sc.isWpsBasic ? '✓' : '—' }}</td>
-                        <td>{{ sc.isWpsHousing ? '✓' : '—' }}</td>
+                        <td>
+                          <span class="badge" [class.badge-active]="sc.type === 'earning'">
+                            {{ sc.type === 'earning' ? 'Earning' : 'Deduction' }}
+                          </span>
+                        </td>
+                        <td>
+                          @if (sc.calculationType === 'percentage') {
+                            <span>Percentage (% of {{ getPercentageBasisName(sc) }})</span>
+                          } @else {
+                            <span>Fixed Amount</span>
+                          }
+                        </td>
                         <td>{{ sc.isRecurring ? 'Yes' : 'No' }}</td>
+                        <td>{{ sc.isWpsBasic ? 'Yes' : '—' }}</td>
+                        <td>{{ sc.isWpsHousing ? 'Yes' : '—' }}</td>
+                        <td>
+                          <span class="badge" [class.badge-active]="sc.isActive">
+                            {{ sc.isActive ? 'Active' : 'Inactive' }}
+                          </span>
+                        </td>
+                        <td class="text-right">
+                          <div class="action-btn-group">
+                            <button
+                              type="button"
+                              class="btn-action btn-action-edit"
+                              (click)="openEditSalaryComponent(sc)"
+                              title="Edit Salary Package"
+                            >
+                              <span class="material-symbols-outlined icon-xs">edit</span>
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-action btn-action-danger"
+                              (click)="deleteSalaryComponent(sc)"
+                              title="Delete Salary Package"
+                            >
+                              <span class="material-symbols-outlined icon-xs">delete</span>
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="7" class="empty-state">No salary components found.</td>
+                        <td colspan="9" class="empty-state">No salary packages found. Click 'Add Salary Package' to create one.</td>
                       </tr>
                     }
                   </tbody>
@@ -2795,6 +2976,31 @@ export class MastersHubComponent implements OnInit {
   public showNewClientRate = false;
   public showNewShift = false;
   public showNewHoliday = false;
+  public showNewSalaryComponent = false;
+
+  public selectedSalaryComponentForEdit = signal<SalaryComponentDto | null>(null);
+  public salaryComponentFormError = signal<string | null>(null);
+
+  // New / Edit Salary Component Form State
+  public newSalaryCode = '';
+  public newSalaryName = '';
+  public newSalaryType: SalaryComponentType = 'earning';
+  public newSalaryCalculationType: CalculationType = 'fixed_amount';
+  public newSalaryPercentageBasisId = '';
+  public newSalaryIsRecurring = true;
+  public newSalaryIsWpsBasic = false;
+  public newSalaryIsWpsHousing = false;
+  public newSalaryIsActive = true;
+
+  public editSalaryCode = '';
+  public editSalaryName = '';
+  public editSalaryType: SalaryComponentType = 'earning';
+  public editSalaryCalculationType: CalculationType = 'fixed_amount';
+  public editSalaryPercentageBasisId = '';
+  public editSalaryIsRecurring = true;
+  public editSalaryIsWpsBasic = false;
+  public editSalaryIsWpsHousing = false;
+  public editSalaryIsActive = true;
 
   // New Designation Form State
   public newDesCode = '';
@@ -3005,9 +3211,9 @@ export class MastersHubComponent implements OnInit {
           breadcrumbGroup: 'ORGANIZATION MASTER',
           breadcrumbPage: 'Salary Packages',
           title: 'Salary Packages',
-          subtitle: 'Manage standard compensation structures.',
-          ctaLabel: null as string | null,
-          ctaIcon: '',
+          subtitle: 'Manage salary components and compensation structures.',
+          ctaLabel: 'Add Salary Package',
+          ctaIcon: 'add',
           isFlowTab: false,
           flowStep: 0,
         };
@@ -3084,7 +3290,9 @@ export class MastersHubComponent implements OnInit {
       this.selectedShiftForEdit() !== null ||
       this.showNewHoliday ||
       this.selectedHolidayForEdit() !== null ||
-      this.selectedAssignmentForEdit() !== null
+      this.selectedAssignmentForEdit() !== null ||
+      this.showNewSalaryComponent ||
+      this.selectedSalaryComponentForEdit() !== null
     );
   }
 
@@ -3116,6 +3324,9 @@ export class MastersHubComponent implements OnInit {
       case 'calendar':
         this.showNewHoliday = true;
         break;
+      case 'salary':
+        this.openAddSalaryPackage();
+        break;
       case 'employees':
         this.router.navigate(['/employees']);
         break;
@@ -3140,6 +3351,9 @@ export class MastersHubComponent implements OnInit {
     this.selectedHolidayForEdit.set(null);
     this.holidayFormError.set(null);
     this.selectedAssignmentForEdit.set(null);
+    this.showNewSalaryComponent = false;
+    this.selectedSalaryComponentForEdit.set(null);
+    this.salaryComponentFormError.set(null);
   }
 
   public offcanvasMeta(): { title: string; subtitle: string; icon: string; submitLabel: string } {
@@ -3247,6 +3461,22 @@ export class MastersHubComponent implements OnInit {
         submitLabel: 'Save Holiday',
       };
     }
+    if (this.selectedSalaryComponentForEdit()) {
+      return {
+        title: 'Edit Salary Package',
+        subtitle: 'Update salary package information.',
+        icon: 'account_balance_wallet',
+        submitLabel: 'Save Changes',
+      };
+    }
+    if (this.showNewSalaryComponent) {
+      return {
+        title: 'Add Salary Package',
+        subtitle: 'Manage salary components and compensation structures.',
+        icon: 'account_balance_wallet',
+        submitLabel: 'Save Salary Package',
+      };
+    }
     return {
       title: 'Form',
       subtitle: '',
@@ -3282,6 +3512,10 @@ export class MastersHubComponent implements OnInit {
       this.saveHolidayEdit();
     } else if (this.showNewHoliday) {
       this.createHoliday();
+    } else if (this.selectedSalaryComponentForEdit()) {
+      this.saveSalaryComponentEdit();
+    } else if (this.showNewSalaryComponent) {
+      this.createSalaryComponent();
     }
   }
   public openViewAssignment(assign: EmployeeAssignmentDto): void {
@@ -3966,5 +4200,180 @@ export class MastersHubComponent implements OnInit {
       .subscribe((res) => {
         this.resolvedRate.set(res.data);
       });
+  }
+
+  // Salary Packages CRUD
+  public openAddSalaryPackage(): void {
+    this.closeOffcanvas();
+    this.showNewSalaryComponent = true;
+    this.salaryComponentFormError.set(null);
+    this.newSalaryCode = '';
+    this.newSalaryName = '';
+    this.newSalaryType = 'earning';
+    this.newSalaryCalculationType = 'fixed_amount';
+    this.newSalaryPercentageBasisId = '';
+    this.newSalaryIsRecurring = true;
+    this.newSalaryIsWpsBasic = false;
+    this.newSalaryIsWpsHousing = false;
+    this.newSalaryIsActive = true;
+  }
+
+  public openEditSalaryComponent(sc: SalaryComponentDto): void {
+    this.closeOffcanvas();
+    this.selectedSalaryComponentForEdit.set(sc);
+    this.salaryComponentFormError.set(null);
+    this.editSalaryCode = sc.code;
+    this.editSalaryName = sc.name;
+    this.editSalaryType = sc.type;
+    this.editSalaryCalculationType = sc.calculationType;
+    this.editSalaryPercentageBasisId = sc.percentageBasisComponentId || '';
+    this.editSalaryIsRecurring = sc.isRecurring;
+    this.editSalaryIsWpsBasic = sc.isWpsBasic;
+    this.editSalaryIsWpsHousing = sc.isWpsHousing;
+    this.editSalaryIsActive = sc.isActive;
+  }
+
+  public getEligiblePercentageBasisComponents(): SalaryComponentDto[] {
+    const currentEdit = this.selectedSalaryComponentForEdit();
+    return this.salaryComponents().filter(
+      (c) => c.type === 'earning' && (!currentEdit || c.id !== currentEdit.id)
+    );
+  }
+
+  public getPercentageBasisName(sc: SalaryComponentDto): string {
+    if (sc.percentageBasisComponentName) {
+      return sc.percentageBasisComponentName;
+    }
+    if (sc.percentageBasisComponentId) {
+      const match = this.salaryComponents().find((c) => c.id === sc.percentageBasisComponentId);
+      if (match) return match.name;
+    }
+    return 'Base';
+  }
+
+  public createSalaryComponent(): void {
+    this.salaryComponentFormError.set(null);
+    const code = this.newSalaryCode.trim().toUpperCase();
+    const name = this.newSalaryName.trim();
+    const type = this.newSalaryType;
+    const calculationType = this.newSalaryCalculationType;
+    const basisId = this.newSalaryPercentageBasisId;
+
+    if (!code) {
+      this.salaryComponentFormError.set('Component Code is required.');
+      return;
+    }
+    if (!name) {
+      this.salaryComponentFormError.set('Component Name is required.');
+      return;
+    }
+
+    const duplicate = this.salaryComponents().find((c) => c.code.toUpperCase() === code);
+    if (duplicate) {
+      this.salaryComponentFormError.set(`A salary package with code "${code}" already exists.`);
+      return;
+    }
+
+    if (calculationType === 'percentage' && !basisId) {
+      this.salaryComponentFormError.set('Please select a Percentage Basis Component for percentage calculation.');
+      return;
+    }
+
+    const payload: CreateSalaryComponentDto = {
+      code,
+      name,
+      type,
+      calculationType,
+      percentageBasisComponentId: calculationType === 'percentage' ? basisId : null,
+      isRecurring: this.newSalaryIsRecurring,
+      isWpsBasic: this.newSalaryIsWpsBasic,
+      isWpsHousing: this.newSalaryIsWpsHousing,
+      isActive: this.newSalaryIsActive,
+    };
+
+    this.masterService.createSalaryComponent(payload).subscribe({
+      next: () => {
+        this.closeOffcanvas();
+        this.refreshAll();
+      },
+      error: (err) => {
+        this.salaryComponentFormError.set(
+          err?.error?.error?.message || err?.error?.message || 'Failed to create salary package.'
+        );
+      },
+    });
+  }
+
+  public saveSalaryComponentEdit(): void {
+    const comp = this.selectedSalaryComponentForEdit();
+    if (!comp) return;
+    this.salaryComponentFormError.set(null);
+
+    const code = this.editSalaryCode.trim().toUpperCase();
+    const name = this.editSalaryName.trim();
+    const type = this.editSalaryType;
+    const calculationType = this.editSalaryCalculationType;
+    const basisId = this.editSalaryPercentageBasisId;
+
+    if (!code) {
+      this.salaryComponentFormError.set('Component Code is required.');
+      return;
+    }
+    if (!name) {
+      this.salaryComponentFormError.set('Component Name is required.');
+      return;
+    }
+
+    const duplicate = this.salaryComponents().find((c) => c.code.toUpperCase() === code && c.id !== comp.id);
+    if (duplicate) {
+      this.salaryComponentFormError.set(`A salary package with code "${code}" already exists.`);
+      return;
+    }
+
+    if (calculationType === 'percentage' && !basisId) {
+      this.salaryComponentFormError.set('Please select a Percentage Basis Component for percentage calculation.');
+      return;
+    }
+
+    const payload: UpdateSalaryComponentDto = {
+      code,
+      name,
+      type,
+      calculationType,
+      percentageBasisComponentId: calculationType === 'percentage' ? basisId : null,
+      isRecurring: this.editSalaryIsRecurring,
+      isWpsBasic: this.editSalaryIsWpsBasic,
+      isWpsHousing: this.editSalaryIsWpsHousing,
+      isActive: this.editSalaryIsActive,
+    };
+
+    this.masterService.updateSalaryComponent(comp.id, payload).subscribe({
+      next: () => {
+        this.closeOffcanvas();
+        this.refreshAll();
+      },
+      error: (err) => {
+        this.salaryComponentFormError.set(
+          err?.error?.error?.message || err?.error?.message || 'Failed to update salary package.'
+        );
+      },
+    });
+  }
+
+  public deleteSalaryComponent(sc: SalaryComponentDto): void {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete salary package "${sc.name}" (${sc.code})?\n\nNote: If this component is assigned to any employees or referenced in historical payroll records, deletion will be safely blocked.`
+    );
+    if (!confirmed) return;
+
+    this.masterService.deleteSalaryComponent(sc.id).subscribe({
+      next: () => {
+        this.refreshAll();
+      },
+      error: (err) => {
+        const msg = err?.error?.error?.message || err?.error?.message || 'Failed to delete salary package.';
+        window.alert(msg);
+      },
+    });
   }
 }

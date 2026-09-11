@@ -1,10 +1,28 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal, Directive, ElementRef, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AppShellComponent } from '../../core/layout/app-shell.component';
 import { AttendanceApiService } from '../../core/services/attendance-api.service';
 import { MasterService } from '../../core/services/master.service';
 import { AttendancePeriodDto, AttendanceGridResponseDto, EmployeeDto } from '@blue-royal/contracts';
+
+@Directive({
+  selector: '[appAutofocusCell]',
+  standalone: true,
+})
+export class AutofocusCellDirective implements AfterViewInit {
+  constructor(private hostEl: ElementRef<HTMLInputElement>) {}
+
+  public ngAfterViewInit(): void {
+    setTimeout(() => {
+      const el = this.hostEl.nativeElement;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    }, 0);
+  }
+}
 
 export interface TimesheetDayCell {
   recordId?: string;
@@ -34,45 +52,51 @@ export interface TimesheetEmployeeRow {
 @Component({
   selector: 'app-timesheet',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppShellComponent],
+  imports: [CommonModule, FormsModule, AppShellComponent, AutofocusCellDirective],
   template: `
     <app-shell>
       <div class="timesheet-page">
-        <!-- Top Header: Month Selector (Top Left), Actions (Top Right) -->
+        <!-- Title and Subtitle -->
+        <div class="title-bar">
+          <h1 class="page-title">Timesheet</h1>
+          <p class="subtitle">Monthly employee timesheet hours, overtime tracking, and export</p>
+        </div>
+
+        <!-- Header Actions: Month Navigation (Left) and Buttons (Right) on SAME HORIZONTAL ROW -->
         <header class="page-header">
           <div class="header-left">
-            <div class="title-group">
-              <h1 class="page-title">Timesheet</h1>
-              <p class="subtitle">Monthly employee timesheet hours, overtime tracking, and export</p>
+            <button
+              class="btn-nav"
+              type="button"
+              (click)="onPreviousMonth()"
+              title="Previous Month"
+              aria-label="Previous Month"
+            >
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+
+            <div class="month-pill" (click)="openMonthPicker(monthPickerInput)" title="Click to select Month and Year">
+              <span class="material-symbols-outlined icon-calendar">calendar_month</span>
+              <span class="month-label">{{ formattedSelectedMonth() }}</span>
+              <input
+                #monthPickerInput
+                type="month"
+                class="hidden-month-input"
+                [ngModel]="selectedMonth()"
+                (ngModelChange)="onMonthChange($event)"
+                aria-label="Select Month and Year"
+              />
             </div>
-            <div class="month-selector-group">
-              <div class="month-picker-pill">
-                <span class="material-symbols-outlined icon-sm month-icon">calendar_month</span>
-                <select
-                  class="month-select"
-                  [ngModel]="selectedMonthIndex()"
-                  (ngModelChange)="onMonthIndexChange($event)"
-                  aria-label="Select Month"
-                >
-                  @for (m of monthNames; track $index) {
-                    <option [value]="$index">{{ m }}</option>
-                  }
-                </select>
-                <select
-                  class="year-select"
-                  [ngModel]="selectedYear()"
-                  (ngModelChange)="onYearChange($event)"
-                  aria-label="Select Year"
-                >
-                  @for (y of availableYears; track y) {
-                    <option [value]="y">{{ y }}</option>
-                  }
-                </select>
-              </div>
-              <button (click)="loadTimesheetData()" class="btn-refresh" title="Refresh Timesheet">
-                <span class="material-symbols-outlined icon-sm">sync</span>
-              </button>
-            </div>
+
+            <button
+              class="btn-nav"
+              type="button"
+              (click)="onNextMonth()"
+              title="Next Month"
+              aria-label="Next Month"
+            >
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
           </div>
 
           <div class="header-right">
@@ -148,8 +172,17 @@ export interface TimesheetEmployeeRow {
           @if (isLoading()) {
             <div class="loading-state">Loading monthly timesheet grid...</div>
           } @else {
-            <div class="table-wrap">
+            <div #tableWrap class="table-wrap">
               <table class="data-table">
+                <colgroup>
+                  <col class="cg-emp" />
+                  <col class="cg-total" />
+                  <col class="cg-ot" />
+                  @for (day of daysInMonth(); track day) {
+                    <col class="cg-day" />
+                  }
+                  <col class="cg-download" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th class="col-sticky-emp">Employee</th>
@@ -180,6 +213,7 @@ export interface TimesheetEmployeeRow {
                         >
                           @if (isEditing(employee.id, day)) {
                             <input
+                              appAutofocusCell
                               type="number"
                               class="cell-edit-input"
                               step="0.5"
@@ -188,8 +222,10 @@ export interface TimesheetEmployeeRow {
                               [(ngModel)]="editValue"
                               (blur)="onCellBlur(employee, day)"
                               (keydown.enter)="onCellEnter($event, employee, day)"
-                              (keydown.escape)="cancelCellEdit()"
+                              (keydown.tab)="onCellEnter($event, employee, day)"
+                              (keydown.escape)="cancelCellEdit($event)"
                               (click)="$event.stopPropagation()"
+                              (mousedown)="$event.stopPropagation()"
                             />
                           } @else {
                             <span class="cell-display-val">
@@ -235,28 +271,10 @@ export interface TimesheetEmployeeRow {
         flex-direction: column;
         gap: 1.25rem;
       }
-      .page-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-      }
-      .header-left {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-      }
-      .header-right {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-      }
-      .title-group {
+      .title-bar {
         display: flex;
         flex-direction: column;
+        gap: 0.25rem;
       }
       .page-title {
         margin: 0;
@@ -265,59 +283,88 @@ export interface TimesheetEmployeeRow {
         color: var(--text-primary, #1e293b);
       }
       .subtitle {
-        margin: 0.25rem 0 0;
+        margin: 0;
         color: var(--text-secondary, #64748b);
         font-size: 0.8125rem;
       }
-      .month-selector-group {
+      .page-header {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: nowrap;
       }
-      .month-picker-pill {
+      .header-left {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
-        padding: 0.35rem 0.65rem;
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        gap: 0.5rem;
+        flex-shrink: 0;
       }
-      .month-icon {
-        color: #475569;
+      .header-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-shrink: 0;
       }
-      .month-select,
-      .year-select {
-        border: none;
-        background: transparent;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        color: #1e293b;
-        cursor: pointer;
-        padding: 0.2rem 0.25rem;
-        outline: none;
-      }
-      .month-select:hover,
-      .year-select:hover {
-        color: #2563eb;
-      }
-      .btn-refresh {
+      .btn-nav {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 34px;
-        height: 34px;
+        width: 38px;
+        height: 38px;
         border: 1px solid #cbd5e1;
         border-radius: 0.5rem;
         background: #ffffff;
-        color: #475569;
+        color: #334155;
         cursor: pointer;
         transition: all 0.15s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        padding: 0;
       }
-      .btn-refresh:hover {
+      .btn-nav:hover {
         background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #0f172a;
+      }
+      .btn-nav:active {
+        transform: scale(0.96);
+      }
+      .month-pill {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        height: 38px;
+        padding: 0 1rem;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        user-select: none;
+      }
+      .month-pill:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+      }
+      .icon-calendar {
+        color: #475569;
+        font-size: 1.2rem;
+      }
+      .month-label {
+        font-size: 0.9375rem;
+        font-weight: 600;
         color: #1e293b;
+        white-space: nowrap;
+      }
+      .hidden-month-input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
       }
       .kpi-grid {
         display: grid;
@@ -370,18 +417,28 @@ export interface TimesheetEmployeeRow {
         color: #1e293b;
       }
       .table-wrap {
-        overflow: auto;
-        max-height: 62vh;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 65vh;
         position: relative;
         border-top: 1px solid #edf2f7;
+        scroll-behavior: auto;
+        margin: 0;
+        padding: 0;
       }
       .data-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        min-width: 1100px;
+        margin: 0;
         font-size: 0.8125rem;
       }
+      col.cg-emp { width: 220px; min-width: 220px; }
+      col.cg-total { width: 100px; min-width: 100px; }
+      col.cg-ot { width: 80px; min-width: 80px; }
+      col.cg-day { width: 48px; min-width: 48px; }
+      col.cg-download { width: 140px; min-width: 140px; }
+
       .data-table th,
       .data-table td {
         padding: 0.65rem 0.5rem;
@@ -404,24 +461,25 @@ export interface TimesheetEmployeeRow {
       /* Sticky Column 1: Employee */
       .col-sticky-emp {
         position: sticky;
-        left: 0;
-        width: 210px;
-        min-width: 210px;
-        max-width: 210px;
+        left: 0px;
+        width: 220px;
+        min-width: 220px;
+        max-width: 220px;
         background-color: #ffffff;
         z-index: 20;
         box-sizing: border-box;
         text-align: left;
         padding-left: 1rem !important;
+        padding-right: 0.75rem !important;
       }
 
       /* Sticky Column 2: Total Hours */
       .col-sticky-total {
         position: sticky;
-        left: 210px;
-        width: 95px;
-        min-width: 95px;
-        max-width: 95px;
+        left: 220px;
+        width: 100px;
+        min-width: 100px;
+        max-width: 100px;
         background-color: #ffffff;
         z-index: 20;
         box-sizing: border-box;
@@ -431,7 +489,7 @@ export interface TimesheetEmployeeRow {
       /* Sticky Column 3: OT */
       .col-sticky-ot {
         position: sticky;
-        left: 305px;
+        left: 320px;
         width: 80px;
         min-width: 80px;
         max-width: 80px;
@@ -440,29 +498,29 @@ export interface TimesheetEmployeeRow {
         box-sizing: border-box;
         text-align: center !important;
         border-right: 2px solid #cbd5e1 !important;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+        box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
       }
 
-      /* Top Intersection: Headers must be sticky to top and left with z-index 30 */
+      /* Top Intersection: Headers must be sticky to top and left with z-index 35 */
       th.col-sticky-emp {
         top: 0;
-        left: 0;
-        z-index: 30;
+        left: 0px;
+        z-index: 35;
         background-color: #f8fafc;
       }
       th.col-sticky-total {
         top: 0;
-        left: 210px;
-        z-index: 30;
+        left: 220px;
+        z-index: 35;
         background-color: #f8fafc;
       }
       th.col-sticky-ot {
         top: 0;
-        left: 305px;
-        z-index: 30;
+        left: 320px;
+        z-index: 35;
         background-color: #f8fafc;
         border-right: 2px solid #cbd5e1 !important;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+        box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
       }
 
       /* Sticky row background handling */
@@ -491,14 +549,18 @@ export interface TimesheetEmployeeRow {
       }
       .col-day {
         text-align: center;
-        min-width: 44px;
-        max-width: 52px;
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        box-sizing: border-box;
         padding: 0.65rem 0.25rem !important;
       }
       .col-day-cell {
         text-align: center;
-        min-width: 44px;
-        max-width: 52px;
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        box-sizing: border-box;
         padding: 0.35rem 0.25rem !important;
         cursor: pointer;
         user-select: none;
@@ -509,7 +571,7 @@ export interface TimesheetEmployeeRow {
       }
       .col-day-cell.is-editing {
         background-color: #dbeafe !important;
-        padding: 0.2rem 0.25rem !important;
+        padding: 0.15rem !important;
       }
       .cell-display-val {
         display: inline-block;
@@ -530,19 +592,23 @@ export interface TimesheetEmployeeRow {
       }
       .cell-edit-input {
         width: 100%;
-        max-width: 46px;
-        padding: 0.2rem 0.2rem;
+        max-width: 44px;
+        height: 28px;
+        padding: 0.1rem 0.2rem;
         font-size: 0.8125rem;
-        font-weight: 600;
+        font-weight: 700;
         text-align: center;
         border: 2px solid #2563eb;
         border-radius: 4px;
         background-color: #ffffff;
         color: #0f172a;
         outline: none;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
         margin: 0 auto;
         display: block;
+        box-sizing: border-box;
+        user-select: text !important;
+        pointer-events: auto !important;
       }
       .cell-edit-input::-webkit-outer-spin-button,
       .cell-edit-input::-webkit-inner-spin-button {
@@ -555,8 +621,10 @@ export interface TimesheetEmployeeRow {
 
       .col-download {
         text-align: center;
-        min-width: 135px;
-        width: 135px;
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+        box-sizing: border-box;
         padding: 0.35rem 0.5rem !important;
       }
       .btn-download-row {
@@ -645,7 +713,9 @@ export interface TimesheetEmployeeRow {
     `,
   ],
 })
-export class TimesheetComponent implements OnInit {
+export class TimesheetComponent implements OnInit, AfterViewInit {
+  @ViewChild('tableWrap') public tableWrapRef?: ElementRef<HTMLDivElement>;
+
   public readonly monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -667,12 +737,12 @@ export class TimesheetComponent implements OnInit {
   public successMessage = signal<string | null>(null);
 
   // In-place Cell Editing
-  public editingCell: { employeeId: string; day: number } | null = null;
+  public editingCell = signal<{ employeeId: string; day: number } | null>(null);
   public editValue = '';
-  private isSavingCell = false;
+  private editOpenTimestamp = 0;
 
   public formattedSelectedMonth = computed(() => {
-    return `${this.monthNames[this.selectedMonthIndex()]} ${this.selectedYear()}`;
+    return `${this.monthNames[this.selectedMonthIndex()]}, ${this.selectedYear()}`;
   });
 
   public totalHours = computed(() =>
@@ -706,6 +776,42 @@ export class TimesheetComponent implements OnInit {
     this.loadTimesheetData();
   }
 
+  public ngAfterViewInit(): void {
+    this.resetTableScroll();
+  }
+
+  public onPreviousMonth(): void {
+    let yr = this.selectedYear();
+    let mIdx = this.selectedMonthIndex() - 1;
+    if (mIdx < 0) {
+      mIdx = 11;
+      yr -= 1;
+    }
+    const mStr = String(mIdx + 1).padStart(2, '0');
+    this.onMonthChange(`${yr}-${mStr}`);
+  }
+
+  public onNextMonth(): void {
+    let yr = this.selectedYear();
+    let mIdx = this.selectedMonthIndex() + 1;
+    if (mIdx > 11) {
+      mIdx = 0;
+      yr += 1;
+    }
+    const mStr = String(mIdx + 1).padStart(2, '0');
+    this.onMonthChange(`${yr}-${mStr}`);
+  }
+
+  public openMonthPicker(inputEl: HTMLInputElement): void {
+    try {
+      if (typeof inputEl.showPicker === 'function') {
+        inputEl.showPicker();
+      }
+    } catch {
+      // Handled natively by browser input click
+    }
+  }
+
   public onMonthIndexChange(index: number | string): void {
     const idx = Number(index);
     this.selectedMonthIndex.set(idx);
@@ -722,6 +828,7 @@ export class TimesheetComponent implements OnInit {
   }
 
   public onMonthChange(month: string): void {
+    if (!month) return;
     this.cancelCellEdit();
     this.selectedMonth.set(month);
     const [y, m] = month.split('-').map(Number);
@@ -751,6 +858,7 @@ export class TimesheetComponent implements OnInit {
             next: (gridRes) => {
               this.populateFromGrid(gridRes.data);
               this.isLoading.set(false);
+              this.resetTableScroll();
             },
             error: () => {
               this.loadFallbackEmployees();
@@ -764,6 +872,14 @@ export class TimesheetComponent implements OnInit {
         this.loadFallbackEmployees();
       },
     });
+  }
+
+  private resetTableScroll(): void {
+    setTimeout(() => {
+      if (this.tableWrapRef?.nativeElement) {
+        this.tableWrapRef.nativeElement.scrollLeft = 0;
+      }
+    }, 0);
   }
 
   private populateFromGrid(grid: AttendanceGridResponseDto): void {
@@ -849,10 +965,12 @@ export class TimesheetComponent implements OnInit {
           this.selectedEmployeeId.set(rows[0].id);
         }
         this.isLoading.set(false);
+        this.resetTableScroll();
       },
       error: () => {
         this.employeeRows.set([]);
         this.isLoading.set(false);
+        this.resetTableScroll();
       },
     });
   }
@@ -863,37 +981,42 @@ export class TimesheetComponent implements OnInit {
 
   // Cell Edit Actions
   public isEditing(employeeId: string, day: number): boolean {
-    return this.editingCell?.employeeId === employeeId && this.editingCell?.day === day;
+    const c = this.editingCell();
+    return c?.employeeId === employeeId && c?.day === day;
   }
 
-  public startCellEdit(employee: TimesheetEmployeeRow, day: number, event: MouseEvent): void {
-    event.stopPropagation();
-    if (this.isSavingCell) return;
+  public startCellEdit(employee: TimesheetEmployeeRow, day: number, event?: MouseEvent): void {
+    event?.stopPropagation();
+    const current = this.editingCell();
+    if (current?.employeeId === employee.id && current?.day === day) {
+      return;
+    }
     this.selectedEmployeeId.set(employee.id);
     const currentVal = this.getCellValue(employee, day);
-    this.editingCell = { employeeId: employee.id, day };
-    this.editValue = currentVal > 0 ? String(currentVal) : '';
-
-    setTimeout(() => {
-      const input = document.querySelector('.cell-edit-input') as HTMLInputElement;
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    }, 10);
+    this.editValue = currentVal > 0 ? String(currentVal) : '0';
+    this.editOpenTimestamp = Date.now();
+    this.editingCell.set({ employeeId: employee.id, day });
   }
 
   public onCellEnter(event: Event, employee: TimesheetEmployeeRow, day: number): void {
-    (event.target as HTMLInputElement)?.blur();
+    event.preventDefault();
+    event.stopPropagation();
+    this.commitCellEdit(employee, day);
   }
 
-  public cancelCellEdit(): void {
-    this.editingCell = null;
+  public cancelCellEdit(event?: Event): void {
+    event?.stopPropagation();
+    this.editingCell.set(null);
     this.editValue = '';
   }
 
   public onCellBlur(employee: TimesheetEmployeeRow, day: number): void {
-    if (!this.editingCell || this.editingCell.employeeId !== employee.id || this.editingCell.day !== day) {
+    this.commitCellEdit(employee, day);
+  }
+
+  public commitCellEdit(employee: TimesheetEmployeeRow, day: number): void {
+    const current = this.editingCell();
+    if (!current || current.employeeId !== employee.id || current.day !== day) {
       return;
     }
 
@@ -908,13 +1031,13 @@ export class TimesheetComponent implements OnInit {
     }
 
     const currentVal = this.getCellValue(employee, day);
+    this.cancelCellEdit();
+
     if (parsed === currentVal) {
-      this.cancelCellEdit();
       return;
     }
 
     // Immediately close edit mode and optimistically update display
-    this.cancelCellEdit();
     employee.dailyHours[day] = parsed;
     this.recalculateEmployeeHours(employee);
 
@@ -973,13 +1096,21 @@ export class TimesheetComponent implements OnInit {
       return;
     }
 
-    this.isSavingCell = true;
+    const recordId = cell?.recordId;
+    if (!recordId) {
+      this.errorMessage.set(`No attendance record found for ${employee.name} on ${dateStr}. Please import attendance first.`);
+      employee.dailyHours[day] = oldHours;
+      this.recalculateEmployeeHours(employee);
+      setTimeout(() => this.errorMessage.set(null), 5000);
+      return;
+    }
+
     this.attendanceApi
       .batchUpdateRecords(period.id, {
         batchReason: 'Timesheet daily hours adjusted',
         records: [
           {
-            recordId: cell?.recordId,
+            recordId,
             employeeId: employee.id,
             workDate: dateStr,
             actualHours: newHours,
@@ -989,12 +1120,10 @@ export class TimesheetComponent implements OnInit {
       })
       .subscribe({
         next: () => {
-          this.isSavingCell = false;
           this.successMessage.set(`Saved: ${employee.name} Day ${day} = ${newHours}h`);
           setTimeout(() => this.successMessage.set(null), 3000);
         },
         error: (err) => {
-          this.isSavingCell = false;
           // Rollback on API error
           employee.dailyHours[day] = oldHours;
           this.recalculateEmployeeHours(employee);
@@ -1036,10 +1165,10 @@ export class TimesheetComponent implements OnInit {
         this.isImporting.set(false);
         input.value = '';
         const valid = res.data?.validRows ?? 0;
-        const errors = res.data?.errorRows ?? 0;
-        if (errors > 0) {
+        const errorCount = res.data?.errors?.length ?? 0;
+        if (errorCount > 0) {
           this.successMessage.set(
-            `Attendance imported: ${valid} row(s) updated with ${errors} warning(s). Timesheet refreshed.`,
+            `Attendance imported: ${valid} row(s) updated with ${errorCount} warning(s). Timesheet refreshed.`,
           );
         } else {
           this.successMessage.set(
