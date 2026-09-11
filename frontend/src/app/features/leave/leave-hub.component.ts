@@ -1,4 +1,3 @@
-import { Component, OnInit, signal } from '@angular/core';
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -27,10 +26,8 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       <!-- Header -->
       <div class="hub-header">
         <div>
-          <h2>Leave Management & Entitlements Hub</h2>
           <h2>Leave Management</h2>
           <p class="subtitle">
-            Enterprise leave approval pipeline, policy configurations, and annual employee entitlement allocations.
             Manage employee leave requests, approvals, and entitlements.
           </p>
         </div>
@@ -93,19 +90,9 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       @if (activeTab() === 'requests') {
         <div class="panel">
           <div class="panel-bar">
-            <div class="filter-group">
-              <label>Status Filter:</label>
-              <select [(ngModel)]="statusFilter" (change)="loadRequests()" class="form-select">
-                <option value="">All Statuses</option>
-                <option value="PENDING">Pending Review</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
             <div class="panel-title-area">
               <h3>Leave Management</h3>
             </div>
-            <button (click)="loadRequests()" class="btn btn-secondary">Refresh</button>
             <div class="panel-actions">
               <div class="filter-group">
                 <label>Status Filter:</label>
@@ -131,12 +118,10 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                     <th class="col-sticky-left">Request #</th>
                     <th>Employee</th>
                     <th>Leave Type</th>
-                    <th>Date Range</th>
-                    <th>Duration</th>
-                    <th class="col-hide-mobile">Reason</th>
                     <th>From</th>
                     <th>To</th>
                     <th>Days</th>
+                    <th class="col-hide-mobile">Reason</th>
                     <th>Status</th>
                     <th class="col-sticky-right text-right">Actions</th>
                   </tr>
@@ -156,9 +141,6 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                       </td>
                       <td>{{ r.startDate }}</td>
                       <td>{{ r.endDate }}</td>
-                      <td>
-                        <strong>{{ r.startDate }}</strong> ➔ <strong>{{ r.endDate }}</strong>
-                      </td>
                       <td>
                         <strong>{{ r.totalDays }}</strong> day(s)
                       </td>
@@ -193,8 +175,7 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="8" class="empty-cell">No leave requests found matching filters.</td>
-                      <td colspan="7" class="empty-cell">No leave requests found matching filters.</td>
+                      <td colspan="9" class="empty-cell">No leave requests found matching filters.</td>
                     </tr>
                   }
                 </tbody>

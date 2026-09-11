@@ -10,7 +10,6 @@ import {
   AttendanceGridResponseDto,
   AttendanceGridRowDto,
   AttendanceImportResultDto,
-  AttendanceAuditLogDto,
   ClientDto,
   ProjectDto,
 } from '@blue-royal/contracts';
@@ -24,669 +23,435 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
   template: `
     <app-shell>
       <div class="attendance-container">
-      <!-- Top Action Bar -->
-      <div class="header-bar">
-        <div class="title-section">
-          <h2>Attendance & Overtime Management</h2>
-          <span class="subtitle">Monthly Point-in-Time Deployment & Timesheet Engine</span>
-          <h2>Attendance</h2>
-          <span class="subtitle">Employee attendance records, absence tracking, and status verification</span>
-        </div>
-
-        <div class="period-controls">
-          <label for="periodSelect">Period:</label>
-          <select
-            id="periodSelect"
-            [ngModel]="selectedPeriodId()"
-            (ngModelChange)="onPeriodChange($event)"
-            class="select-input"
-          >
-            @for (p of periods(); track p.id) {
-              <option [value]="p.id">
-                {{ p.periodCode }} ({{ p.name }}) - {{ p.status | uppercase }}
-              </option>
-            }
-          </select>
-
-          <button (click)="showCreatePeriodModal.set(true)" class="btn btn-secondary">
-            <span class="material-symbols-outlined icon-sm">add</span>
-            <span>New Period</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Messages -->
-      @if (errorMessage()) {
-        <div class="alert alert-danger">{{ errorMessage() }}</div>
-      }
-      @if (successMessage()) {
-        <div class="alert alert-success">{{ successMessage() }}</div>
-      }
-
-      @if (selectedPeriod(); as period) {
-        <!-- Status Banner and Lifecycle Actions -->
-        <div class="lifecycle-banner status-{{ period.status }}">
-          <div class="status-info">
-            <span class="status-badge status-{{ period.status }}">
-              {{ period.status | uppercase }}
-            </span>
-            <span class="period-dates">
-              {{ period.startDate }} to {{ period.endDate }}
-            </span>
-            @if (period.unlockReason) {
-              <span class="unlock-note" title="{{ period.unlockReason }}">
-                (Unlocked: {{ period.unlockReason | slice:0:30 }}...)
-              </span>
-            }
+        <!-- Top Action Bar -->
+        <div class="header-bar">
+          <div class="title-section">
+            <h2>Attendance</h2>
+            <span class="subtitle">Employee attendance records, absence tracking, and status verification</span>
           </div>
 
-          <div class="lifecycle-actions">
-            <button (click)="onDownloadTemplate()" class="btn btn-outline">
-              <span class="material-symbols-outlined icon-sm">download</span>
-              <span>Download Excel Template</span>
-            </button>
-
-            @if (period.status !== 'locked') {
-              <button (click)="openImportModal()" class="btn btn-outline">
-                <span class="material-symbols-outlined icon-sm">upload_file</span>
-                <span>Import Excel</span>
-              </button>
-            }
-
-            @if (period.status === 'draft') {
-              <button
-                (click)="onSubmitPeriod()"
-                [disabled]="(gridData()?.summary?.totalAnomalies || 0) > 0"
-                class="btn btn-primary"
-                [title]="(gridData()?.summary?.totalAnomalies || 0) > 0 ? 'Resolve all anomalies before submission' : 'Submit for approval'"
-              >
-                <span class="material-symbols-outlined icon-sm">send</span>
-                <span>Submit for Approval</span>
-              </button>
-            }
-
-            @if (period.status === 'submitted') {
-              <button (click)="onApprovePeriod()" class="btn btn-success">
-                <span class="material-symbols-outlined icon-sm">check_circle</span>
-                <span>Approve Timesheet</span>
-                <span>Approve Attendance</span>
-              </button>
-            }
-
-            @if (period.status === 'approved') {
-              <button (click)="onLockPeriod()" class="btn btn-warning">
-                <span class="material-symbols-outlined icon-sm">lock</span>
-                <span>Lock for Payroll</span>
-              </button>
-            }
-
-            @if (period.status === 'locked') {
-              <button (click)="showUnlockModal.set(true)" class="btn btn-danger">
-                <span class="material-symbols-outlined icon-sm">lock_open</span>
-                <span>Request Unlock</span>
-              </button>
-            }
-          </div>
-        </div>
-
-        <!-- Summary KPI Cards -->
-        <!-- Attendance KPIs -->
-        @if (gridData()?.summary; as sum) {
-          <div class="kpi-grid">
-            <div class="kpi-card">
-              <span class="kpi-label">Headcount</span>
-              <span class="kpi-value">{{ sum.totalEmployees }}</span>
-            </div>
-            <div class="kpi-card">
-              <span class="kpi-label">Total Actual Hours</span>
-              <span class="kpi-value">{{ sum.totalActualHours.toFixed(1) }}h</span>
-              <span class="kpi-label">Present</span>
-              <span class="kpi-value text-success">{{ totalPresentDays() }}</span>
-            </div>
-            <div class="kpi-card">
-              <span class="kpi-label">Regular Hours</span>
-              <span class="kpi-value">{{ sum.totalRegularHours.toFixed(1) }}h</span>
-              <span class="kpi-label">Absent</span>
-              <span class="kpi-value text-danger">{{ sum.totalAbsences }}</span>
-            </div>
-            <div class="kpi-card">
-              <span class="kpi-label">Overtime Hours</span>
-              <span class="kpi-value text-accent">{{ sum.totalOtHours.toFixed(1) }}h</span>
-              <span class="kpi-label">Leave</span>
-              <span class="kpi-value text-warning">{{ totalLeaveDays() }}</span>
-            </div>
-            <div class="kpi-card">
-              <span class="kpi-label">Total Absences</span>
-              <span class="kpi-value text-muted">{{ sum.totalAbsences }}</span>
-            </div>
-            <div
-              class="kpi-card anomaly-card"
-              [class.has-anomaly]="sum.totalAnomalies > 0"
+          <div class="period-controls">
+            <label for="periodSelect">Period:</label>
+            <select
+              id="periodSelect"
+              [ngModel]="selectedPeriodId()"
+              (ngModelChange)="onPeriodChange($event)"
+              class="select-input"
             >
-              <span class="kpi-label">Unresolved Anomalies</span>
-              <span class="kpi-value">{{ sum.totalAnomalies }}</span>
-              @if (sum.totalAnomalies > 0) {
-                <span class="kpi-help">Blocks submission & locking</span>
+              @for (p of periods(); track p.id) {
+                <option [value]="p.id">
+                  {{ p.periodCode }} ({{ p.name }}) - {{ p.status | uppercase }}
+                </option>
               }
-            </div>
-            @if (sum.totalAnomalies > 0) {
-              <div class="kpi-card anomaly-card has-anomaly">
-                <span class="kpi-label">Unresolved Anomalies</span>
-                <span class="kpi-value">{{ sum.totalAnomalies }}</span>
-                <span class="kpi-help">Requires verification</span>
-              </div>
-            }
+            </select>
+
+            <button (click)="showCreatePeriodModal.set(true)" class="btn btn-secondary">
+              <span class="material-symbols-outlined icon-sm">add</span>
+              <span>New Period</span>
+            </button>
           </div>
+        </div>
+
+        <!-- Messages -->
+        @if (errorMessage()) {
+          <div class="alert alert-danger">{{ errorMessage() }}</div>
+        }
+        @if (successMessage()) {
+          <div class="alert alert-success">{{ successMessage() }}</div>
         }
 
-        <!-- Filter & Search Controls -->
-        <div class="filter-bar">
-          <div class="filter-group">
-            <label>Client:</label>
-            <select [(ngModel)]="filterClientId" (change)="applyFilters()" class="filter-select">
-              <option value="">All Clients</option>
-              @for (c of clients(); track c.id) {
-                <option [value]="c.id">{{ c.name }}</option>
+        @if (selectedPeriod(); as period) {
+          <!-- Status Banner and Lifecycle Actions -->
+          <div class="lifecycle-banner status-{{ period.status }}">
+            <div class="status-info">
+              <span class="status-badge status-{{ period.status }}">
+                {{ period.status | uppercase }}
+              </span>
+              <span class="period-dates">
+                {{ period.startDate }} to {{ period.endDate }}
+              </span>
+              @if (period.unlockReason) {
+                <span class="unlock-note" title="{{ period.unlockReason }}">
+                  (Unlocked: {{ period.unlockReason | slice:0:30 }}...)
+                </span>
               }
-            </select>
-          </div>
+            </div>
 
-          <div class="filter-group">
-            <label>Project:</label>
-            <select [(ngModel)]="filterProjectId" (change)="applyFilters()" class="filter-select">
-              <option value="">All Projects</option>
-              @for (p of projects(); track p.id) {
-                <option [value]="p.id">{{ p.name }}</option>
+            <div class="lifecycle-actions">
+              <button (click)="onDownloadTemplate()" class="btn btn-outline">
+                <span class="material-symbols-outlined icon-sm">download</span>
+                <span>Download Excel Template</span>
+              </button>
+
+              @if (period.status !== 'locked') {
+                <button (click)="openImportModal()" class="btn btn-outline">
+                  <span class="material-symbols-outlined icon-sm">upload_file</span>
+                  <span>Import Excel</span>
+                </button>
               }
-            </select>
+
+              @if (period.status === 'draft') {
+                <button
+                  (click)="onSubmitPeriod()"
+                  [disabled]="(gridData()?.summary?.totalAnomalies || 0) > 0"
+                  class="btn btn-primary"
+                  [title]="(gridData()?.summary?.totalAnomalies || 0) > 0 ? 'Resolve all anomalies before submission' : 'Submit for approval'"
+                >
+                  <span class="material-symbols-outlined icon-sm">send</span>
+                  <span>Submit for Approval</span>
+                </button>
+              }
+
+              @if (period.status === 'submitted') {
+                <button (click)="onApprovePeriod()" class="btn btn-success">
+                  <span class="material-symbols-outlined icon-sm">check_circle</span>
+                  <span>Approve Attendance</span>
+                </button>
+              }
+
+              @if (period.status === 'approved') {
+                <button (click)="onLockPeriod()" class="btn btn-warning">
+                  <span class="material-symbols-outlined icon-sm">lock</span>
+                  <span>Lock for Payroll</span>
+                </button>
+              }
+
+              @if (period.status === 'locked') {
+                <button (click)="showUnlockModal.set(true)" class="btn btn-danger">
+                  <span class="material-symbols-outlined icon-sm">lock_open</span>
+                  <span>Request Unlock</span>
+                </button>
+              }
+            </div>
           </div>
 
-          <div class="filter-group checkbox-group">
-            <label>
-              <input
-                type="checkbox"
-                [(ngModel)]="filterAnomalyOnly"
-                (change)="applyFilters()"
-              />
-              Show Anomalies Only
-            </label>
-          </div>
-
-          <button (click)="loadGrid()" class="btn btn-secondary btn-sm">
-            <span class="material-symbols-outlined icon-sm">sync</span>
-            <span>Refresh Grid</span>
-            <span>Refresh</span>
-          </button>
-        </div>
-
-        <!-- Attendance Matrix Grid -->
-        @if (isLoading()) {
-          <div class="loading-state">Loading monthly attendance grid...</div>
-        } @else {
-          @if (gridData(); as grid) {
-            <div class="grid-table-container">
-              <table class="attendance-table">
-        <!-- Employee Attendance List Table -->
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Attendance</h3>
-            <span class="text-muted">Showing {{ filteredRows().length }} employee attendance record(s)</span>
-          </div>
-
-          @if (isLoading()) {
-            <div class="loading-state">Loading attendance records...</div>
-          } @else {
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th class="sticky-col col-code">Code</th>
-                    <th class="sticky-col col-name">Employee</th>
-                    <th class="col-meta">Designation</th>
-                    <th class="col-meta">Project</th>
-                    <th class="col-shift">Shift</th>
-
-                    @for (date of grid.dates; track date) {
-                      <th
-                        class="col-day"
-                        [class.day-weekly-off]="isWeeklyOff(date)"
-                        [class.day-holiday]="isPublicHoliday(date)"
-                        title="{{ date }}"
-                      >
-                        <div class="day-num">{{ getDayNumber(date) }}</div>
-                        <div class="day-name">{{ getDayShortName(date) }}</div>
-                      </th>
-                    }
-
-                    <th class="col-summary">Act</th>
-                    <th class="col-summary">Reg</th>
-                    <th class="col-summary">OT</th>
-                    <th class="col-summary">Abs</th>
-                    <th class="col-summary">Anom</th>
-                    <th>Employee</th>
-                    <th>Employee Code</th>
-                    <th>Date/period</th>
-                    <th>Present</th>
-                    <th>Absent</th>
-                    <th>Leave</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of filteredRows(); track row.employeeId) {
-                    <tr>
-                      <td class="sticky-col col-code font-mono">{{ row.employeeCode }}</td>
-                      <td class="sticky-col col-name font-bold">{{ row.employeeName }}</td>
-                      <td class="col-meta">{{ row.designationTitle || '-' }}</td>
-                      <td class="col-meta">{{ row.projectName || '-' }}</td>
-                      <td class="col-shift">
-                        <span class="shift-tag" [class.no-shift]="!row.shiftWorkHours">
-                          {{ row.shiftName || 'None' }} ({{ row.shiftWorkHours || 0 }}h)
-                      <td>
-                        <strong>{{ row.employeeName }}</strong>
-                        <div class="sub-text">{{ row.designationTitle || '—' }}</div>
-                      </td>
-                      <td>
-                        <code>{{ row.employeeCode }}</code>
-                      </td>
-                      <td>
-                        {{ period.periodCode }} ({{ period.name }})
-                      </td>
-                      <td>
-                        <span class="badge badge-success">{{ getRowPresentDays(row) }} days</span>
-                      </td>
-                      <td>
-                        <span class="badge" [class.badge-danger]="getRowAbsentDays(row) > 0" [class.badge-neutral]="getRowAbsentDays(row) === 0">
-                          {{ getRowAbsentDays(row) }} days
-                        </span>
-                      </td>
-
-                      @for (date of grid.dates; track date) {
-                        @let rec = row.records ? row.records[date] : null;
-                        <td
-                          class="col-day-cell"
-                          [class.cell-weekend]="isWeeklyOff(date)"
-                          [class.cell-holiday]="isPublicHoliday(date)"
-                          [class.cell-absent]="rec?.isAbsent"
-                          [class.cell-anomaly]="rec?.hasAnomaly"
-                          [class.cell-leave]="rec?.isOnLeave"
-                          [class.cell-clickable]="period.status !== 'locked'"
-                          (click)="onCellClick(rec, row)"
-                          title="{{ getCellTooltip(rec, date) }}"
-                        >
-                          @if (rec) {
-                            @if (rec.hasAnomaly) {
-                              <div class="cell-warning" title="{{ rec.anomalyReason }}">⚠️</div>
-                            } @else if (rec.isOnLeave) {
-                              <span class="tag-leave">L</span>
-                            } @else if (rec.isAbsent) {
-                              <span class="tag-absent">A</span>
-                            } @else if (rec.actualHours > 0) {
-                              <span class="hours-val">{{ rec.actualHours }}</span>
-                              @if (rec.otHours > 0) {
-                                <span class="ot-badge">+{{ rec.otHours }}</span>
-                              }
-                            } @else if (isWeeklyOff(date) || isPublicHoliday(date)) {
-                              <span class="tag-off">-</span>
-                            } @else {
-                              <span class="tag-zero">0</span>
-                            }
-                          } @else {
-                            <span class="tag-na">-</span>
-                          }
-                        </td>
-                      }
-
-                      <td class="col-summary font-bold">{{ row.summary?.totalActualHours }}</td>
-                      <td class="col-summary">{{ row.summary?.totalRegularHours }}</td>
-                      <td class="col-summary text-accent font-bold">{{ row.summary?.totalOtHours }}</td>
-                      <td class="col-summary">{{ row.summary?.totalAbsences }}</td>
-                      <td class="col-summary">
-                        @if ((row.summary?.anomalyCount || 0) > 0) {
-                          <span class="badge-anomaly">{{ row.summary?.anomalyCount }}</span>
-                        } @else {
-                          0
-                        }
-                      <td>
-                        <span class="badge" [class.badge-warning]="getRowLeaveDays(row) > 0" [class.badge-neutral]="getRowLeaveDays(row) === 0">
-                          {{ getRowLeaveDays(row) }} days
-                        </span>
-                      </td>
-                      <td>
-                        <span class="status-badge status-{{ period.status }}">
-                          {{ period.status | uppercase }}
-                        </span>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="7" class="empty-state">No employee attendance records found for this period.</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+          <!-- Top KPIs -->
+          @if (gridData()?.summary; as sum) {
+            <div class="kpi-grid">
+              <div class="kpi-card">
+                <span class="kpi-label">Headcount</span>
+                <span class="kpi-value">{{ sum.totalEmployees }}</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-label">Present</span>
+                <span class="kpi-value text-success">{{ totalPresentDays() }}</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-label">Absent</span>
+                <span class="kpi-value text-danger">{{ sum.totalAbsences }}</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-label">Leave</span>
+                <span class="kpi-value text-warning">{{ totalLeaveDays() }}</span>
+              </div>
+              @if (sum.totalAnomalies > 0) {
+                <div class="kpi-card anomaly-card has-anomaly">
+                  <span class="kpi-label">Unresolved Anomalies</span>
+                  <span class="kpi-value">{{ sum.totalAnomalies }}</span>
+                  <span class="kpi-help">Requires verification</span>
+                </div>
+              }
             </div>
           }
-        }
-      }
 
-      <!-- Cell Edit Contextual Drawer -->
-      @if (editingRecord(); as editItem) {
-        <div class="drawer-backdrop" (click)="closeEditDrawer()">
-          <div class="drawer-panel" (click)="$event.stopPropagation()">
-            <div class="drawer-header">
-              <div class="drawer-header-content">
-                <h2 class="drawer-title">Timesheet Cell Adjustment</h2>
-                <p class="drawer-subtitle">
-                  {{ editItem.employeeName }} ({{ editItem.employeeCode }}) • {{ editItem.record.workDate }} ({{ editItem.record.dayType }})
-                </p>
-              </div>
-              <button type="button" class="drawer-close" (click)="closeEditDrawer()" aria-label="Close drawer">
-                <span class="material-symbols-outlined">close</span>
-              </button>
+          <!-- Filter & Search Controls -->
+          <div class="filter-bar">
+            <div class="filter-group">
+              <label>Client:</label>
+              <select [(ngModel)]="filterClientId" (change)="applyFilters()" class="filter-select">
+                <option value="">All Clients</option>
+                @for (c of clients(); track c.id) {
+                  <option [value]="c.id">{{ c.name }}</option>
+                }
+              </select>
             </div>
-            <div class="drawer-body">
-              @if (editItem.record.hasAnomaly) {
-                <div class="alert alert-warning">
-                  <span class="material-symbols-outlined">warning</span>
+
+            <div class="filter-group">
+              <label>Project:</label>
+              <select [(ngModel)]="filterProjectId" (change)="applyFilters()" class="filter-select">
+                <option value="">All Projects</option>
+                @for (p of projects(); track p.id) {
+                  <option [value]="p.id">{{ p.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="filter-group checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  [(ngModel)]="filterAnomalyOnly"
+                  (change)="applyFilters()"
+                />
+                Show Anomalies Only
+              </label>
+            </div>
+
+            <button (click)="loadGrid()" class="btn btn-secondary btn-sm">
+              <span class="material-symbols-outlined icon-sm">sync</span>
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          <!-- Employee Attendance List Table -->
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Attendance</h3>
+              <span class="text-muted">Showing {{ filteredRows().length }} employee attendance record(s)</span>
+            </div>
+
+            @if (isLoading()) {
+              <div class="loading-state">Loading attendance records...</div>
+            } @else {
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Employee Code</th>
+                      <th>Date / Period</th>
+                      <th>Present</th>
+                      <th>Absent</th>
+                      <th>Leave</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of filteredRows(); track row.employeeId) {
+                      <tr>
+                        <td>
+                          <strong>{{ row.employeeName }}</strong>
+                          <div class="sub-text">{{ row.designationTitle || '—' }}</div>
+                        </td>
+                        <td>
+                          <code>{{ row.employeeCode }}</code>
+                        </td>
+                        <td>
+                          {{ period.periodCode }} ({{ period.name }})
+                        </td>
+                        <td>
+                          <span class="badge badge-present">{{ getRowPresentDays(row) }} days</span>
+                        </td>
+                        <td>
+                          <span class="badge" [class.badge-absent]="getRowAbsentDays(row) > 0" [class.badge-neutral]="getRowAbsentDays(row) === 0">
+                            {{ getRowAbsentDays(row) }} days
+                          </span>
+                        </td>
+                        <td>
+                          <span class="badge" [class.badge-leave]="getRowLeaveDays(row) > 0" [class.badge-neutral]="getRowLeaveDays(row) === 0">
+                            {{ getRowLeaveDays(row) }} days
+                          </span>
+                        </td>
+                        <td>
+                          <span class="status-badge status-{{ period.status }}">
+                            {{ period.status | uppercase }}
+                          </span>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="7" class="empty-state">No employee attendance records found for this period.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Unlock Confirmation Dialog (Consequential Super Admin Override) -->
+        @if (showUnlockModal()) {
+          <div class="dialog-backdrop" (click)="showUnlockModal.set(false)">
+            <div class="dialog-box dialog-danger" (click)="$event.stopPropagation()">
+              <div class="dialog-header">
+                <div class="dialog-header-content">
+                  <div class="dialog-icon danger">
+                    <span class="material-symbols-outlined">lock_open</span>
+                  </div>
                   <div>
-                    <strong>Anomaly Detected:</strong> {{ editItem.record.anomalyReason }}
+                    <h3 class="dialog-title">Unlock Attendance Period</h3>
+                    <p class="dialog-subtitle">Return period to DRAFT status for corrections</p>
                   </div>
                 </div>
-              }
-
-              <div class="form-section">
-                <div class="form-section-title">
-                  <span class="material-symbols-outlined icon-sm">schedule</span>
-                  <span>Hours & Status</span>
+                <button type="button" class="dialog-close" (click)="showUnlockModal.set(false)">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div class="dialog-body">
+                <div class="alert alert-warning">
+                  <strong>Controlled Unlock Protocol:</strong>
+                  Unlocking returns this period to DRAFT status. Resubmission, reapproval,
+                  and relocking will be strictly required before payroll integration.
                 </div>
-                <div class="form-group">
-                  <label for="editHours">Actual Hours Worked (0 - 24) *</label>
-                  <input
-                    id="editHours"
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    max="24"
-                    [(ngModel)]="editActualHours"
+
+                <div class="form-group" style="margin-top: 1rem;">
+                  <label for="unlockReason">Audit Justification Reason (Min 15 Characters) *</label>
+                  <textarea
+                    id="unlockReason"
+                    rows="4"
+                    [(ngModel)]="unlockReasonText"
+                    placeholder="Enter detailed audit justification for reopening attendance..."
                     class="form-control"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                    <input type="checkbox" [(ngModel)]="editIsOnLeave" />
-                    <span>On Approved Leave</span>
-                  </label>
+                  ></textarea>
+                  <span class="char-count" style="display: block; font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-text-muted);">
+                    Characters: {{ unlockReasonText.length }} / 15 minimum
+                  </span>
                 </div>
               </div>
-
-              <div class="form-section">
-                <div class="form-section-title">
-                  <span class="material-symbols-outlined icon-sm">verified_user</span>
-                  <span>Mandatory Audit Rationale</span>
-                </div>
-                <div class="form-group">
-                  <label for="editReason">Change Justification Reason *</label>
-                  <input
-                    id="editReason"
-                    type="text"
-                    [(ngModel)]="editChangeReason"
-                    placeholder="e.g. Approved site overtime timesheet verified"
-                    class="form-control"
-                    required
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="editRemarks">Operational Remarks</label>
-                  <input
-                    id="editRemarks"
-                    type="text"
-                    [(ngModel)]="editRemarks"
-                    placeholder="Optional operational notes"
-                    class="form-control"
-                  />
-                </div>
+              <div class="dialog-footer">
+                <button type="button" (click)="showUnlockModal.set(false)" class="btn btn-secondary">Cancel</button>
+                <button
+                  type="button"
+                  (click)="onExecuteUnlock()"
+                  [disabled]="unlockReasonText.trim().length < 15"
+                  class="btn btn-danger"
+                >
+                  <span class="material-symbols-outlined icon-sm">lock_open</span>
+                  <span>Confirm Unlock</span>
+                </button>
               </div>
+            </div>
+          </div>
+        }
 
-              <!-- Audit Trail for this cell -->
-              <div class="form-section">
-                <div class="form-section-title">
-                  <span class="material-symbols-outlined icon-sm">history</span>
-                  <span>Cell Modification History</span>
+        <!-- Excel Import Contextual Drawer -->
+        @if (showImportModal()) {
+          <div class="drawer-backdrop" (click)="showImportModal.set(false)">
+            <div class="drawer-panel drawer-panel-lg" (click)="$event.stopPropagation()">
+              <div class="drawer-header">
+                <div class="drawer-header-content">
+                  <h2 class="drawer-title">Import Attendance from Excel</h2>
+                  <p class="drawer-subtitle">Batch ingest time tracking entries with dry-run validation</p>
                 </div>
-                @if (cellAuditLogs().length === 0) {
-                  <p class="text-muted" style="font-size: 0.8125rem; margin: 0.5rem 0;">No historical manual modifications on this cell.</p>
-                } @else {
-                  <div class="audit-timeline">
-                    @for (log of cellAuditLogs(); track log.id) {
-                      <div class="timeline-item">
-                        <div class="timeline-badge"></div>
-                        <div class="timeline-content">
-                          <div class="timeline-header">
-                            <strong>{{ log.fieldName }}</strong>
-                            <span class="timeline-time">{{ log.createdAt | date:'short' }}</span>
-                          </div>
-                          <div class="timeline-change">
-                            <span>{{ log.oldValue || 'None' }} &rarr; <strong>{{ log.newValue }}</strong></span>
-                          </div>
-                          <div class="timeline-reason">{{ log.changeReason }}</div>
-                        </div>
+                <button type="button" class="drawer-close" (click)="showImportModal.set(false)">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div class="drawer-body">
+                <div class="form-group">
+                  <label>Select Spreadsheet (.xlsx, .xls) *</label>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    (change)="onFileSelected($event)"
+                    class="form-control"
+                  />
+                </div>
+
+                @if (importResult(); as res) {
+                  <div class="import-report" style="margin-top: 1.5rem;">
+                    <div class="report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                      <h4 style="margin: 0; font-size: 1rem;">Validation Report</h4>
+                      <span class="badge" [class.badge-success]="res.errorCount === 0" [class.badge-danger]="res.errorCount > 0">
+                        {{ res.errorCount === 0 ? 'Validation Passed' : 'Validation Failed (' + res.errorCount + ' Errors)' }}
+                      </span>
+                    </div>
+                    <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 1rem;">
+                      <div class="kpi-card"><span class="kpi-label">Analyzed</span><span class="kpi-value">{{ res.totalRows }}</span></div>
+                      <div class="kpi-card"><span class="kpi-label">Valid Rows</span><span class="kpi-value text-success">{{ res.validRows }}</span></div>
+                      <div class="kpi-card"><span class="kpi-label">Error Rows</span><span class="kpi-value" [class.text-danger]="res.errorCount > 0">{{ res.errorCount }}</span></div>
+                    </div>
+
+                    @if (res.errors && res.errors.length > 0) {
+                      <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                        <table class="data-table">
+                          <thead>
+                            <tr>
+                              <th>Row</th>
+                              <th>Employee</th>
+                              <th>Date</th>
+                              <th>Field</th>
+                              <th>Error Message</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (err of res.errors; track $index) {
+                              <tr>
+                                <td>{{ err.rowNumber }}</td>
+                                <td>{{ err.employeeCode || '-' }}</td>
+                                <td>{{ err.workDate || '-' }}</td>
+                                <td>{{ err.field }}</td>
+                                <td class="text-danger">{{ err.message }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
                       </div>
                     }
                   </div>
                 }
               </div>
-            </div>
-            <div class="drawer-footer">
-              <button type="button" (click)="closeEditDrawer()" class="btn btn-secondary">Cancel</button>
-              <button
-                type="button"
-                (click)="saveCellEdit()"
-                [disabled]="!editChangeReason || editChangeReason.trim().length === 0"
-                class="btn btn-primary"
-              >
-                <span class="material-symbols-outlined icon-sm">save</span>
-                <span>Save Changes</span>
-              </button>
+              <div class="drawer-footer">
+                <button type="button" (click)="showImportModal.set(false)" class="btn btn-secondary">Close</button>
+                <button
+                  type="button"
+                  (click)="onDryRunImport()"
+                  [disabled]="!selectedFile"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined icon-sm">fact_check</span>
+                  <span>Dry-Run Validation</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="onExecuteImport()"
+                  [disabled]="!selectedFile || (importResult() && importResult()!.errorCount > 0)"
+                  class="btn btn-primary"
+                >
+                  <span class="material-symbols-outlined icon-sm">upload</span>
+                  <span>Execute Full Import</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Unlock Confirmation Dialog (Consequential Super Admin Override) -->
-      @if (showUnlockModal()) {
-        <div class="dialog-backdrop" (click)="showUnlockModal.set(false)">
-          <div class="dialog-box dialog-danger" (click)="$event.stopPropagation()">
-            <div class="dialog-header">
-              <div class="dialog-header-content">
-                <div class="dialog-icon danger">
-                  <span class="material-symbols-outlined">lock_open</span>
+        <!-- Create Period Focused Dialog -->
+        @if (showCreatePeriodModal()) {
+          <div class="dialog-backdrop" (click)="showCreatePeriodModal.set(false)">
+            <div class="dialog-box" (click)="$event.stopPropagation()">
+              <div class="dialog-header">
+                <div class="dialog-header-content">
+                  <h3 class="dialog-title">Generate Monthly Attendance Period</h3>
+                  <p class="dialog-subtitle">Create a new calendar tracking window</p>
                 </div>
-                <div>
-                  <h3 class="dialog-title">Unlock Timesheet Period</h3>
-                  <p class="dialog-subtitle">Return period to DRAFT status for corrections</p>
+                <button type="button" class="dialog-close" (click)="showCreatePeriodModal.set(false)">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div class="dialog-body">
+                <div class="form-group">
+                  <label for="newPeriodCode">Period Code (YYYY-MM) *</label>
+                  <input
+                    id="newPeriodCode"
+                    type="text"
+                    [(ngModel)]="newPeriodCode"
+                    placeholder="e.g. 2026-05"
+                    class="form-control"
+                  />
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                  <label for="newPeriodName">Display Name (Optional)</label>
+                  <input
+                    id="newPeriodName"
+                    type="text"
+                    [(ngModel)]="newPeriodName"
+                    placeholder="e.g. May 2026"
+                    class="form-control"
+                  />
                 </div>
               </div>
-              <button type="button" class="dialog-close" (click)="showUnlockModal.set(false)">
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div class="dialog-body">
-              <div class="alert alert-warning">
-                <strong>Controlled Unlock Protocol:</strong>
-                Unlocking returns this period to DRAFT status. Resubmission, reapproval,
-                and relocking will be strictly required before payroll integration.
+              <div class="dialog-footer">
+                <button type="button" (click)="showCreatePeriodModal.set(false)" class="btn btn-secondary">Cancel</button>
+                <button type="button" (click)="onCreatePeriod()" [disabled]="!newPeriodCode" class="btn btn-primary">
+                  <span class="material-symbols-outlined icon-sm">add_circle</span>
+                  <span>Generate Period</span>
+                </button>
               </div>
-
-              <div class="form-group" style="margin-top: 1rem;">
-                <label for="unlockReason">Audit Justification Reason (Min 15 Characters) *</label>
-                <textarea
-                  id="unlockReason"
-                  rows="4"
-                  [(ngModel)]="unlockReasonText"
-                  placeholder="Enter detailed audit justification for reopening timesheet..."
-                  class="form-control"
-                ></textarea>
-                <span class="char-count" style="display: block; font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-text-muted);">
-                  Characters: {{ unlockReasonText.length }} / 15 minimum
-                </span>
-              </div>
-            </div>
-            <div class="dialog-footer">
-              <button type="button" (click)="showUnlockModal.set(false)" class="btn btn-secondary">Cancel</button>
-              <button
-                type="button"
-                (click)="onExecuteUnlock()"
-                [disabled]="unlockReasonText.trim().length < 15"
-                class="btn btn-danger"
-              >
-                <span class="material-symbols-outlined icon-sm">lock_open</span>
-                <span>Confirm Unlock</span>
-              </button>
             </div>
           </div>
-        </div>
-      }
-
-      <!-- Excel Import Contextual Drawer -->
-      @if (showImportModal()) {
-        <div class="drawer-backdrop" (click)="showImportModal.set(false)">
-          <div class="drawer-panel drawer-panel-lg" (click)="$event.stopPropagation()">
-            <div class="drawer-header">
-              <div class="drawer-header-content">
-                <h2 class="drawer-title">Import Timesheet from Excel</h2>
-                <p class="drawer-subtitle">Batch ingest time tracking entries with dry-run validation</p>
-              </div>
-              <button type="button" class="drawer-close" (click)="showImportModal.set(false)">
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div class="drawer-body">
-              <div class="form-group">
-                <label>Select Spreadsheet (.xlsx, .xls) *</label>
-                <input
-                  type="file"
-                  accept=".xlsx, .xls"
-                  (change)="onFileSelected($event)"
-                  class="form-control"
-                />
-              </div>
-
-              @if (importResult(); as res) {
-                <div class="import-report" style="margin-top: 1.5rem;">
-                  <div class="report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                    <h4 style="margin: 0; font-size: 1rem;">Validation Report</h4>
-                    <span class="badge" [class.badge-success]="res.errorCount === 0" [class.badge-danger]="res.errorCount > 0">
-                      {{ res.errorCount === 0 ? 'Validation Passed' : 'Validation Failed (' + res.errorCount + ' Errors)' }}
-                    </span>
-                  </div>
-                  <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 1rem;">
-                    <div class="kpi-card"><span class="kpi-label">Analyzed</span><span class="kpi-value">{{ res.totalRows }}</span></div>
-                    <div class="kpi-card"><span class="kpi-label">Valid Rows</span><span class="kpi-value text-success">{{ res.validRows }}</span></div>
-                    <div class="kpi-card"><span class="kpi-label">Error Rows</span><span class="kpi-value" [class.text-danger]="res.errorCount > 0">{{ res.errorCount }}</span></div>
-                  </div>
-
-                  @if (res.errors && res.errors.length > 0) {
-                    <div class="table-container" style="max-height: 250px; overflow-y: auto;">
-                      <table class="data-table">
-                        <thead>
-                          <tr>
-                            <th>Row</th>
-                            <th>Employee</th>
-                            <th>Date</th>
-                            <th>Field</th>
-                            <th>Error Message</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          @for (err of res.errors; track $index) {
-                            <tr>
-                              <td>{{ err.rowNumber }}</td>
-                              <td>{{ err.employeeCode || '-' }}</td>
-                              <td>{{ err.workDate || '-' }}</td>
-                              <td>{{ err.field }}</td>
-                              <td class="text-danger">{{ err.message }}</td>
-                            </tr>
-                          }
-                        </tbody>
-                      </table>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-            <div class="drawer-footer">
-              <button type="button" (click)="showImportModal.set(false)" class="btn btn-secondary">Close</button>
-              <button
-                type="button"
-                (click)="onDryRunImport()"
-                [disabled]="!selectedFile"
-                class="btn btn-secondary"
-              >
-                <span class="material-symbols-outlined icon-sm">fact_check</span>
-                <span>Dry-Run Validation</span>
-              </button>
-              <button
-                type="button"
-                (click)="onExecuteImport()"
-                [disabled]="!selectedFile || (importResult() && importResult()!.errorCount > 0)"
-                class="btn btn-primary"
-              >
-                <span class="material-symbols-outlined icon-sm">upload</span>
-                <span>Execute Full Import</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Create Period Focused Dialog -->
-      @if (showCreatePeriodModal()) {
-        <div class="dialog-backdrop" (click)="showCreatePeriodModal.set(false)">
-          <div class="dialog-box" (click)="$event.stopPropagation()">
-            <div class="dialog-header">
-              <div class="dialog-header-content">
-                <h3 class="dialog-title">Generate Monthly Timesheet Period</h3>
-                <p class="dialog-subtitle">Create a new calendar tracking window</p>
-              </div>
-              <button type="button" class="dialog-close" (click)="showCreatePeriodModal.set(false)">
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div class="dialog-body">
-              <div class="form-group">
-                <label for="newPeriodCode">Period Code (YYYY-MM) *</label>
-                <input
-                  id="newPeriodCode"
-                  type="text"
-                  [(ngModel)]="newPeriodCode"
-                  placeholder="e.g. 2026-05"
-                  class="form-control"
-                />
-              </div>
-              <div class="form-group" style="margin-top: 1rem;">
-                <label for="newPeriodName">Display Name (Optional)</label>
-                <input
-                  id="newPeriodName"
-                  type="text"
-                  [(ngModel)]="newPeriodName"
-                  placeholder="e.g. May 2026"
-                  class="form-control"
-                />
-              </div>
-            </div>
-            <div class="dialog-footer">
-              <button type="button" (click)="showCreatePeriodModal.set(false)" class="btn btn-secondary">Cancel</button>
-              <button type="button" (click)="onCreatePeriod()" [disabled]="!newPeriodCode" class="btn btn-primary">
-                <span class="material-symbols-outlined icon-sm">add_circle</span>
-                <span>Generate Period</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+        }
       </div>
     </app-shell>
   `,
@@ -741,14 +506,17 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         gap: 1rem;
         box-shadow: var(--shadow-sm);
       }
+      .status-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
       .period-dates {
-        margin-left: 0.75rem;
         font-size: 0.8125rem;
         color: var(--text-secondary);
         font-weight: 500;
       }
       .unlock-note {
-        margin-left: 0.5rem;
         font-size: 0.8rem;
         color: var(--color-danger);
         font-style: italic;
@@ -784,18 +552,19 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         color: var(--color-text-primary);
         margin-top: 0.25rem;
       }
-      .text-accent { color: var(--color-info); }
-      .text-muted { color: var(--color-text-muted); }
+      .text-success { color: #16a34a; }
+      .text-danger { color: #dc2626; }
+      .text-warning { color: #d97706; }
       .anomaly-card.has-anomaly {
         border-color: #fca5a5;
-        background: var(--color-danger-bg);
+        background: #fff5f5;
       }
       .anomaly-card.has-anomaly .kpi-value {
-        color: var(--color-danger);
+        color: #dc2626;
       }
       .kpi-help {
         font-size: 0.7rem;
-        color: var(--color-danger);
+        color: #dc2626;
         margin-top: 0.25rem;
       }
       .filter-bar {
@@ -821,17 +590,13 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         border-radius: 4px;
         background: #fff;
       }
-      .grid-table-container {
       .panel {
         background: #fff;
         border: 1px solid var(--color-border);
         border-radius: 8px;
-        overflow: auto;
-        max-height: 65vh;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         overflow: hidden;
       }
-      .attendance-table {
       .panel-header {
         display: flex;
         justify-content: space-between;
@@ -852,12 +617,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
       .data-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.8125rem;
-        white-space: nowrap;
         font-size: 0.875rem;
       }
-      .attendance-table th, .attendance-table td {
-        border: 1px solid var(--color-border);
       .data-table th, .data-table td {
         padding: 0.85rem 1rem;
         border-bottom: 1px solid var(--color-border);
@@ -875,31 +636,61 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         font-size: 0.75rem;
         color: var(--color-text-muted);
       }
-      .badge-present {
-        background: var(--color-success-bg);
-        color: var(--color-success-text);
+      .badge {
+        display: inline-block;
+        font-size: 0.75rem;
         font-weight: 600;
         padding: 0.25rem 0.5rem;
         border-radius: 4px;
+      }
+      .badge-present {
+        background: #dcfce7;
+        color: #166534;
       }
       .badge-absent {
-        background: var(--color-danger-bg);
-        color: var(--color-danger-text);
-        font-weight: 600;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
+        background: #fee2e2;
+        color: #991b1b;
       }
       .badge-leave {
-        background: var(--color-warning-bg);
-        color: var(--color-warning-text);
-        font-weight: 600;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
+        background: #fef3c7;
+        color: #92400e;
       }
       .badge-neutral {
         color: var(--color-text-muted);
         font-weight: 500;
+        background: #f1f5f9;
+      }
+      .badge-success {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .badge-danger {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .status-badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 700;
         padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+      .status-draft {
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .status-submitted {
+        background: #e0f2fe;
+        color: #0369a1;
+      }
+      .status-approved {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .status-locked {
+        background: #fef3c7;
+        color: #92400e;
       }
       .empty-state {
         text-align: center;
@@ -907,124 +698,15 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         color: var(--color-text-muted);
         font-style: italic;
       }
-        padding: 0.4rem 0.5rem;
-        text-align: center;
+      .alert {
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
       }
-      .attendance-table th {
-        background: var(--color-surface-alt);
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        font-weight: 600;
-        color: var(--color-text-primary);
-      }
-      .sticky-col {
-        position: sticky;
-        left: 0;
-        background: #fff;
-        z-index: 5;
-        text-align: left;
-      }
-      .col-code { left: 0; width: 90px; }
-      .col-name { left: 90px; min-width: 160px; z-index: 6; }
-      .col-meta { min-width: 120px; text-align: left; }
-      .col-shift { min-width: 130px; }
-      .shift-tag {
-        font-size: 0.75rem;
-        padding: 0.2rem 0.4rem;
-        background: var(--color-hover);
-        border-radius: 4px;
-      }
-      .shift-tag.no-shift {
-        background: var(--color-danger-bg);
-        color: var(--color-danger-text);
-      }
-      .col-day {
-        min-width: 36px;
-        padding: 0.25rem;
-      }
-      .day-weekly-off { background: var(--color-selected) !important; color: var(--color-primary-hover); }
-      .day-holiday { background: var(--color-warning-bg) !important; color: var(--color-warning); }
-      .col-day-cell {
-        cursor: pointer;
-        transition: background 0.15s ease;
-      }
-      .col-day-cell:hover {
-        background: var(--color-hover);
-      }
-      .cell-weekend { background: var(--color-surface-alt); }
-      .cell-holiday { background: var(--color-warning-bg); }
-      .cell-absent { background: var(--color-danger-bg); color: var(--color-danger); font-weight: 700; }
-      .cell-leave { background: var(--color-warning-bg); color: #854d0e; font-weight: 700; }
-      .cell-anomaly {
-        border: 2px solid var(--color-danger) !important;
-        background: var(--color-danger-bg);
-      }
-      .ot-badge {
-        font-size: 0.65rem;
-        background: var(--color-primary-light);
-        color: var(--color-primary-hover);
-        padding: 1px 3px;
-        border-radius: 3px;
-        margin-left: 2px;
-      }
-      .tag-absent { color: var(--color-danger); font-weight: bold; }
-      .tag-leave { color: var(--color-warning); font-weight: bold; }
-      .tag-off { color: var(--color-disabled); }
-      .tag-zero { color: var(--color-border); }
-      .tag-na { color: var(--color-border); }
-      .badge-anomaly {
-        background: var(--color-danger);
-        color: #fff;
-        padding: 2px 6px;
-        border-radius: 9999px;
-        font-size: 0.7rem;
-      }
-      .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-      }
-      .modal-card {
-        background: #fff;
-        border-radius: 8px;
-        width: 100%;
-        max-width: 500px;
-        max-height: 90vh;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      .modal-lg { max-width: 750px; }
-      .modal-header {
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid var(--color-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .modal-header h3 { margin: 0; font-size: 1.2rem; }
-      .btn-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-      }
-      .modal-body {
-        padding: 1.5rem;
-        overflow-y: auto;
-      }
-      .modal-footer {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid var(--color-border);
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.75rem;
-      }
+      .alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+      .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+      .alert-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
       .form-group {
         margin-bottom: 1rem;
       }
@@ -1042,38 +724,72 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         border-radius: 4px;
         font-size: 0.875rem;
       }
-      .alert {
-        padding: 0.75rem 1rem;
-        border-radius: 6px;
-        margin-bottom: 1rem;
-        font-size: 0.875rem;
-      }
-      .alert-danger { background: var(--color-danger-bg); color: var(--color-danger); border: 1px solid #fecaca; }
-      .alert-success { background: var(--color-success-bg); color: var(--color-success-text); border: 1px solid #bbf7d0; }
-      .alert-warning { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid #fde68a; }
-      .audit-history {
-        margin-top: 1.5rem;
-        border-top: 1px solid var(--color-border);
-        padding-top: 1rem;
-      }
-      .audit-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        font-size: 0.8rem;
-      }
-      .audit-list li {
-        padding: 0.35rem 0;
-        border-bottom: 1px dashed var(--color-border);
+      .dialog-backdrop, .drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
       }
-      .audit-reason { color: var(--color-text-muted); font-style: italic; }
-      .audit-time { color: var(--color-disabled); font-size: 0.7rem; }
-      .error-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
-      .error-table th, .error-table td { border: 1px solid var(--color-border); padding: 0.35rem; }
-      .loading-state { text-align: center; padding: 3rem; color: var(--color-text-muted); }
-      .char-count { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem; display: block; }
+      .dialog-box {
+        background: #fff;
+        border-radius: 8px;
+        width: 100%;
+        max-width: 500px;
+        overflow: hidden;
+      }
+      .dialog-header, .drawer-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .dialog-title, .drawer-title {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 700;
+      }
+      .dialog-subtitle, .drawer-subtitle {
+        margin: 0.25rem 0 0 0;
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+      }
+      .dialog-close, .drawer-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.25rem;
+        color: var(--color-text-muted);
+      }
+      .dialog-body, .drawer-body {
+        padding: 1.25rem;
+      }
+      .dialog-footer, .drawer-footer {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid var(--color-border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+      }
+      .drawer-panel {
+        background: #fff;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: 8px;
+      }
+      .drawer-panel-lg {
+        max-width: 750px;
+      }
+      .loading-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--color-text-muted);
+      }
     `,
   ],
 })
@@ -1166,17 +882,6 @@ export class AttendanceSheetComponent implements OnInit {
   public showImportModal = signal<boolean>(false);
   public selectedFile: File | null = null;
   public importResult = signal<AttendanceImportResultDto | null>(null);
-
-  public editingRecord = signal<{
-    record: any;
-    employeeName: string;
-    employeeCode: string;
-  } | null>(null);
-  public editActualHours = 0;
-  public editIsOnLeave = false;
-  public editChangeReason = '';
-  public editRemarks = '';
-  public cellAuditLogs = signal<AttendanceAuditLogDto[]>([]);
 
   constructor(
     private attendanceApi: AttendanceApiService,
@@ -1361,68 +1066,6 @@ export class AttendanceSheetComponent implements OnInit {
     });
   }
 
-  // Cell Click & Edit
-  public onCellClick(record: any, row: AttendanceGridRowDto): void {
-    const period = this.selectedPeriod();
-    if (!period || period.status === 'locked' || !record) return;
-
-    this.editingRecord.set({
-      record,
-      employeeName: row.employeeName,
-      employeeCode: row.employeeCode,
-    });
-    this.editActualHours = Number(record.actualHours);
-    this.editIsOnLeave = record.isOnLeave;
-    this.editChangeReason = '';
-    this.editRemarks = record.remarks || '';
-
-    // Fetch audit history for cell
-    this.attendanceApi.getRecordAuditLogs(record.id).subscribe({
-      next: (res) => this.cellAuditLogs.set(res.data),
-      error: () => this.cellAuditLogs.set([]),
-    });
-  }
-
-  public closeEditDrawer(): void {
-    this.editingRecord.set(null);
-  }
-
-  public saveCellEdit(): void {
-    const editItem = this.editingRecord();
-    const periodId = this.selectedPeriodId();
-    if (!editItem || !periodId) return;
-
-    if (!this.editChangeReason || this.editChangeReason.trim().length < 3) {
-      this.setError('Change justification reason (minimum 3 characters) is required.');
-      return;
-    }
-
-    this.attendanceApi
-      .batchUpdateRecords(periodId, {
-        batchReason: this.editChangeReason,
-        records: [
-          {
-            recordId: editItem.record.id,
-            actualHours: this.editActualHours,
-            isOnLeave: this.editIsOnLeave,
-            remarks: this.editRemarks,
-            changeReason: this.editChangeReason,
-          },
-        ],
-      })
-      .subscribe({
-        next: (res) => {
-          this.setSuccess('Record updated successfully.');
-          this.closeEditDrawer();
-          this.loadGrid();
-          if (res.data.newPeriodStatus === 'draft' && this.selectedPeriod()?.status !== 'draft') {
-            this.loadPeriods();
-          }
-        },
-        error: (err) => this.setError(err.error?.error?.message || 'Update failed'),
-      });
-  }
-
   public onCreatePeriod(): void {
     if (!this.newPeriodCode) {
       this.setError('Period Code (YYYY-MM) is required.');
@@ -1444,31 +1087,6 @@ export class AttendanceSheetComponent implements OnInit {
         },
         error: (err) => this.setError(err.error?.error?.message || 'Period creation failed'),
       });
-  }
-
-  // Helpers
-  public getDayNumber(dateStr: string): string {
-    return dateStr.slice(8, 10);
-  }
-
-  public getDayShortName(dateStr: string): string {
-    const days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-    const d = new Date(`${dateStr}T00:00:00Z`);
-    return days[d.getUTCDay()];
-  }
-
-  public isWeeklyOff(dateStr: string): boolean {
-    const d = new Date(`${dateStr}T00:00:00Z`);
-    return d.getUTCDay() === 0; // Default Sunday
-  }
-
-  public isPublicHoliday(_dateStr: string): boolean {
-    return false;
-  }
-
-  public getCellTooltip(rec: any, date: string): string {
-    if (!rec) return `Date: ${date} (No Record)`;
-    return `Date: ${date} | Day: ${rec.dayType} | Actual: ${rec.actualHours}h | Regular: ${rec.regularHours}h | OT: ${rec.otHours}h ${rec.hasAnomaly ? '| ⚠️ ' + rec.anomalyReason : ''}`;
   }
 
   private setError(msg: string): void {

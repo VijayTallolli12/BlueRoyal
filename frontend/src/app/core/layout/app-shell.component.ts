@@ -538,12 +538,10 @@ export class AppShellComponent {
   public expandedSections = signal<Record<string, boolean>>({
     orgSetup: true,
     workforceOversight: true,
-    operationsGov: false,
     operationsGov: true,
     operations: true,
     people: true,
     workforceOps: true,
-    payroll: false,
     payroll: true,
     orgRef: false,
   });
@@ -624,8 +622,6 @@ export class AppShellComponent {
           isAccordion: true,
           items: [
             { label: 'Employees', route: '/employees', icon: 'badge' },
-            { label: 'Onboarding', route: '/onboarding', icon: 'person_add_alt' },
-            { label: 'Documents', route: '/documents', icon: 'folder_shared' }
             { label: 'Onboarding', route: '/onboarding', icon: 'person_add_alt' }
           ]
         },
@@ -636,23 +632,15 @@ export class AppShellComponent {
           isAccordion: true,
           items: [
             { label: 'Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
-            { label: 'Pay Rates', route: '/masters', tab: 'employee-rates', icon: 'price_change' },
-            { label: 'Leave Management', route: '/leave', icon: 'event_available' },
-            { label: 'Attendance', route: '/attendance', icon: 'schedule' },
-            { label: 'Timesheet', route: '/timesheet', icon: 'timeline' }
             { label: 'Pay Rates', route: '/masters', tab: 'employee-rates', icon: 'price_change' }
           ]
         },
         {
-          id: 'payroll',
-          title: 'PAYROLL',
-          icon: 'receipt_long',
           id: 'operations',
           title: 'OPERATIONS',
           icon: 'admin_panel_settings',
           isAccordion: true,
           items: [
-            { label: 'Payroll', route: '/payroll', icon: 'payments' }
             { label: 'Leave Management', route: '/leave', icon: 'event_available' },
             { label: 'Attendance', route: '/attendance', icon: 'fact_check' },
             { label: 'Timesheet', route: '/timesheet', icon: 'timeline' },

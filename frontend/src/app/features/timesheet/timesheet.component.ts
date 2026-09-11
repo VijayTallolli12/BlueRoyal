@@ -1,11 +1,10 @@
-import { Component, computed, signal } from '@angular/core';
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AppShellComponent } from '../../core/layout/app-shell.component';
 import { AttendanceApiService } from '../../core/services/attendance-api.service';
 import { MasterService } from '../../core/services/master.service';
-import { AttendancePeriodDto, AttendanceGridResponseDto } from '@blue-royal/contracts';
+import { AttendancePeriodDto, AttendanceGridResponseDto, EmployeeDto } from '@blue-royal/contracts';
 
 export interface TimesheetEmployeeRow {
   id: string;
@@ -20,21 +19,18 @@ export interface TimesheetEmployeeRow {
 @Component({
   selector: 'app-timesheet',
   standalone: true,
-  imports: [CommonModule, AppShellComponent],
   imports: [CommonModule, FormsModule, AppShellComponent],
   template: `
     <app-shell>
       <div class="timesheet-page">
         <header class="page-header">
           <div>
-            <div class="breadcrumb">OPERATIONS / TIMESHEET</div>
             <h1 class="page-title">Timesheet</h1>
             <p class="subtitle">Monthly employee timesheet hours, overtime tracking, and export</p>
           </div>
           <div class="header-actions">
             <label class="month-picker">
               <span>Month</span>
-              <input type="month" [value]="selectedMonth()" (change)="selectedMonth.set($any($event.target).value)" />
               <input
                 type="month"
                 [ngModel]="selectedMonth()"
@@ -60,17 +56,14 @@ export interface TimesheetEmployeeRow {
         <section class="kpi-grid">
           <div class="kpi-card">
             <span class="kpi-label">Employees</span>
-            <span class="kpi-value">{{ employees.length }}</span>
             <span class="kpi-value">{{ employeeRows().length }}</span>
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Total Hours</span>
-            <span class="kpi-value">{{ totalHours() }}h</span>
             <span class="kpi-value">{{ totalHours() | number: '1.1-1' }}h</span>
           </div>
           <div class="kpi-card">
             <span class="kpi-label">OT</span>
-            <span class="kpi-value accent">{{ totalOt() }}h</span>
             <span class="kpi-value accent">{{ totalOt() | number: '1.1-1' }}h</span>
           </div>
         </section>
@@ -78,7 +71,6 @@ export interface TimesheetEmployeeRow {
         <!-- Timesheet Panel -->
         <section class="panel">
           <div class="panel-header">
-            <h2>Timesheet</h2>
             <h3>Timesheet</h3>
             <div class="panel-meta">
               @if (currentPeriod()) {
@@ -91,20 +83,6 @@ export interface TimesheetEmployeeRow {
             </div>
           </div>
 
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Total Hours</th>
-                  <th>OT</th>
-                  @for (day of daysInMonth(); track day) {
-                    <th>{{ day }}</th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (employee of employees; track employee.id) {
           @if (isLoading()) {
             <div class="loading-state">Loading monthly timesheet grid...</div>
           } @else {
@@ -112,23 +90,13 @@ export interface TimesheetEmployeeRow {
               <table class="data-table">
                 <thead>
                   <tr>
-                    <td>
-                      <div class="employee-name">{{ employee.name }}</div>
-                    </td>
-                    <td>{{ employee.totalHours }}h</td>
-                    <td class="accent">{{ employee.ot }}h</td>
                     <th class="col-sticky-left">Employee</th>
                     <th>Total Hours</th>
                     <th>OT</th>
                     @for (day of daysInMonth(); track day) {
-                      <td>{{ getCellValue(employee, day) }}h</td>
                       <th class="col-day">{{ day }}</th>
                     }
                   </tr>
-                }
-              </tbody>
-            </table>
-          </div>
                 </thead>
                 <tbody>
                   @for (employee of employeeRows(); track employee.id) {
@@ -160,8 +128,6 @@ export interface TimesheetEmployeeRow {
 
         <!-- Download Actions -->
         <section class="download-actions">
-          <button class="btn btn-secondary" type="button">Download Employee Timesheet</button>
-          <button class="btn btn-secondary" type="button">Download All Employees Timesheet</button>
           <button
             class="btn btn-secondary"
             type="button"
@@ -194,27 +160,15 @@ export interface TimesheetEmployeeRow {
         flex-direction: column;
         gap: 1.25rem;
       }
-      .page-header,
-      .panel-header,
-      .download-actions {
       .page-header {
         display: flex;
-        align-items: center;
         align-items: flex-start;
         justify-content: space-between;
         gap: 1rem;
         flex-wrap: wrap;
       }
-      .breadcrumb {
-        font-size: 0.72rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #64748b;
-        margin-bottom: 0.35rem;
-      }
       .page-title {
         margin: 0;
-        font-size: 1.8rem;
         font-size: 1.375rem;
         font-weight: 700;
         color: var(--text-primary, #1e293b);
@@ -233,14 +187,10 @@ export interface TimesheetEmployeeRow {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid #dfe6ee;
-        border-radius: 0.75rem;
         padding: 0.45rem 0.75rem;
         border: 1px solid #cbd5e1;
         border-radius: 0.5rem;
         background: #fff;
-        font-size: 0.875rem;
         font-size: 0.8125rem;
         font-weight: 500;
       }
@@ -258,8 +208,6 @@ export interface TimesheetEmployeeRow {
       .kpi-card {
         background: #fff;
         border: 1px solid #e2e8f0;
-        border-radius: 1rem;
-        padding: 1rem;
         border-radius: 0.75rem;
         padding: 1rem 1.25rem;
         display: flex;
@@ -270,13 +218,11 @@ export interface TimesheetEmployeeRow {
       .kpi-label {
         font-size: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
         letter-spacing: 0.06em;
         font-weight: 600;
         color: #64748b;
       }
       .kpi-value {
-        font-size: 1.5rem;
         font-size: 1.625rem;
         font-weight: 700;
         color: #1e293b;
@@ -286,7 +232,6 @@ export interface TimesheetEmployeeRow {
       .panel {
         background: #fff;
         border: 1px solid #e2e8f0;
-        border-radius: 1rem;
         border-radius: 0.75rem;
         overflow: hidden;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -299,10 +244,8 @@ export interface TimesheetEmployeeRow {
         border-bottom: 1px solid #edf2f7;
         background: #f8fafc;
       }
-      .panel-header h2 {
       .panel-header h3 {
         margin: 0;
-        font-size: 1.1rem;
         font-size: 1rem;
         font-weight: 700;
         color: #1e293b;
@@ -319,7 +262,6 @@ export interface TimesheetEmployeeRow {
       }
       .data-table th,
       .data-table td {
-        padding: 0.7rem 0.75rem;
         padding: 0.65rem 0.75rem;
         border-bottom: 1px solid #edf2f7;
         text-align: left;
@@ -387,9 +329,6 @@ export interface TimesheetEmployeeRow {
         gap: 0.5rem;
         border: 1px solid #cbd5e1;
         background: #fff;
-        border-radius: 0.75rem;
-        padding: 0.65rem 1rem;
-        font-size: 0.875rem;
         border-radius: 0.5rem;
         padding: 0.6rem 1.1rem;
         font-size: 0.8125rem;
@@ -397,13 +336,6 @@ export interface TimesheetEmployeeRow {
         cursor: pointer;
         transition: all 0.15s ease;
       }
-      @media (max-width: 768px) {
-        .page-header,
-        .panel-header,
-        .download-actions {
-          flex-direction: column;
-          align-items: flex-start;
-        }
       .btn:hover:not(:disabled) {
         background: #f1f5f9;
       }
@@ -451,13 +383,8 @@ export interface TimesheetEmployeeRow {
     `,
   ],
 })
-export class TimesheetComponent {
 export class TimesheetComponent implements OnInit {
   public selectedMonth = signal<string>(this.defaultMonth());
-  public employees = [
-    { id: '1', name: 'Aisha Rahman', totalHours: 168, ot: 12, dailyHours: { 1: 8, 2: 8, 3: 8, 4: 8, 5: 8, 6: 8, 7: 8, 8: 8, 9: 8, 10: 8, 11: 8, 12: 8, 13: 8, 14: 8, 15: 8, 16: 8, 17: 8, 18: 8, 19: 8, 20: 8, 21: 8, 22: 8, 23: 8, 24: 8, 25: 8, 26: 8, 27: 8, 28: 8, 29: 8, 30: 8 }, },
-    { id: '2', name: 'Daniel Smith', totalHours: 152, ot: 8, dailyHours: { 1: 7, 2: 7, 3: 8, 4: 8, 5: 8, 6: 8, 7: 8, 8: 8, 9: 8, 10: 8, 11: 8, 12: 8, 13: 8, 14: 8, 15: 8, 16: 8, 17: 8, 18: 8, 19: 8, 20: 8, 21: 8, 22: 8, 23: 8, 24: 8, 25: 8, 26: 8, 27: 8, 28: 8, 29: 7, 30: 7 }, },
-  ];
   public periods = signal<AttendancePeriodDto[]>([]);
   public currentPeriod = signal<AttendancePeriodDto | null>(null);
   public employeeRows = signal<TimesheetEmployeeRow[]>([]);
@@ -468,12 +395,10 @@ export class TimesheetComponent implements OnInit {
   public successMessage = signal<string | null>(null);
 
   public totalHours = computed(() =>
-    this.employees.reduce((sum, employee) => sum + Number(employee.totalHours || 0), 0),
     this.employeeRows().reduce((sum, e) => sum + Number(e.totalHours || 0), 0),
   );
 
   public totalOt = computed(() =>
-    this.employees.reduce((sum, employee) => sum + Number(employee.ot || 0), 0),
     this.employeeRows().reduce((sum, e) => sum + Number(e.ot || 0), 0),
   );
 
@@ -485,7 +410,6 @@ export class TimesheetComponent implements OnInit {
     return Array.from({ length: date.getDate() }, (_, index) => index + 1);
   });
 
-  public getCellValue(employee: any, day: number): number {
   constructor(
     private attendanceApi: AttendanceApiService,
     private masterService: MasterService,
@@ -573,7 +497,7 @@ export class TimesheetComponent implements OnInit {
   private loadFallbackEmployees(): void {
     this.masterService.getEmployees().subscribe({
       next: (empRes) => {
-        const rows: TimesheetEmployeeRow[] = (empRes.data || []).map((emp) => ({
+        const rows: TimesheetEmployeeRow[] = (empRes.data || []).map((emp: EmployeeDto) => ({
           id: emp.id,
           name: `${emp.firstName} ${emp.lastName}`.trim(),
           code: emp.employeeCode,
@@ -626,7 +550,7 @@ export class TimesheetComponent implements OnInit {
     const period = this.currentPeriod();
     if (period) {
       this.attendanceApi.downloadTemplate(period.id).subscribe({
-        next: (blob) => {
+        next: (blob: Blob) => {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
