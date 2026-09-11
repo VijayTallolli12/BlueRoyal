@@ -539,9 +539,12 @@ export class AppShellComponent {
     orgSetup: true,
     workforceOversight: true,
     operationsGov: false,
+    operationsGov: true,
+    operations: true,
     people: true,
     workforceOps: true,
     payroll: false,
+    payroll: true,
     orgRef: false,
   });
 
@@ -594,7 +597,9 @@ export class AppShellComponent {
           icon: 'admin_panel_settings',
           isAccordion: true,
           items: [
+            { label: 'Leave Management', route: '/leave', icon: 'event_available' },
             { label: 'Attendance', route: '/attendance', icon: 'fact_check' },
+            { label: 'Timesheet', route: '/timesheet', icon: 'timeline' },
             { label: 'Payroll', route: '/payroll', icon: 'payments' },
             { label: 'Documents', route: '/documents', icon: 'folder_shared' }
           ]
@@ -621,6 +626,7 @@ export class AppShellComponent {
             { label: 'Employees', route: '/employees', icon: 'badge' },
             { label: 'Onboarding', route: '/onboarding', icon: 'person_add_alt' },
             { label: 'Documents', route: '/documents', icon: 'folder_shared' }
+            { label: 'Onboarding', route: '/onboarding', icon: 'person_add_alt' }
           ]
         },
         {
@@ -631,17 +637,27 @@ export class AppShellComponent {
           items: [
             { label: 'Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
             { label: 'Pay Rates', route: '/masters', tab: 'employee-rates', icon: 'price_change' },
+            { label: 'Leave Management', route: '/leave', icon: 'event_available' },
             { label: 'Attendance', route: '/attendance', icon: 'schedule' },
-            { label: 'Leaves', route: '/leave', icon: 'event_available' }
+            { label: 'Timesheet', route: '/timesheet', icon: 'timeline' }
+            { label: 'Pay Rates', route: '/masters', tab: 'employee-rates', icon: 'price_change' }
           ]
         },
         {
           id: 'payroll',
           title: 'PAYROLL',
           icon: 'receipt_long',
+          id: 'operations',
+          title: 'OPERATIONS',
+          icon: 'admin_panel_settings',
           isAccordion: true,
           items: [
             { label: 'Payroll', route: '/payroll', icon: 'payments' }
+            { label: 'Leave Management', route: '/leave', icon: 'event_available' },
+            { label: 'Attendance', route: '/attendance', icon: 'fact_check' },
+            { label: 'Timesheet', route: '/timesheet', icon: 'timeline' },
+            { label: 'Payroll', route: '/payroll', icon: 'payments' },
+            { label: 'Documents', route: '/documents', icon: 'folder_shared' }
           ]
         },
         {
@@ -697,14 +713,15 @@ export class AppShellComponent {
     if (cleanPath === '/employees') return { group: 'WORKFORCE', page: 'Employees' };
     if (cleanPath === '/onboarding') return { group: 'PEOPLE', page: 'Onboarding & Verification Hub' };
     if (cleanPath === '/documents/my-documents') return { group: 'MY WORKSPACE', page: 'My Compliance Documents' };
-    if (cleanPath === '/documents') return { group: this.isSuperAdmin() ? 'OPERATIONS & GOVERNANCE' : 'PEOPLE', page: this.isSuperAdmin() ? 'Compliance & Documents' : 'Document Center & Compliance' };
+    if (cleanPath === '/documents') return { group: 'OPERATIONS', page: 'Documents' };
     if (cleanPath === '/attendance/my-attendance') return { group: 'MY WORKSPACE', page: 'My Timesheet & Punches' };
-    if (cleanPath === '/attendance') return { group: this.isSuperAdmin() ? 'OPERATIONS & GOVERNANCE' : 'WORKFORCE', page: this.isSuperAdmin() ? 'Attendance Periods' : 'Attendance & Timesheets' };
+    if (cleanPath === '/attendance') return { group: 'OPERATIONS', page: 'Attendance' };
+    if (cleanPath === '/timesheet') return { group: 'OPERATIONS', page: 'Timesheet' };
     if (cleanPath === '/leave/my-leave') return { group: 'MY WORKSPACE', page: 'My Leave Requests' };
-    if (cleanPath === '/leave') return { group: 'WORKFORCE', page: 'Leave Management & Approvals' };
+    if (cleanPath === '/leave') return { group: 'OPERATIONS', page: 'Leave Management' };
     if (cleanPath === '/payroll/my-payroll') return { group: 'MY WORKSPACE', page: 'My Itemized Payslips' };
     if (cleanPath.startsWith('/payroll/periods/')) return { group: 'PAYROLL', page: 'Payroll Period Breakdown' };
-    if (cleanPath === '/payroll') return { group: this.isSuperAdmin() ? 'OPERATIONS & GOVERNANCE' : 'PAYROLL', page: 'Payroll Processing' };
+    if (cleanPath === '/payroll') return { group: 'OPERATIONS', page: 'Payroll' };
     if (cleanPath === '/invoices') return { group: 'WORKFORCE OVERSIGHT', page: 'Client Invoices' };
 
     if (cleanPath === '/masters') {

@@ -25,6 +25,7 @@ export const permissionGuard: CanActivateFn = async (route: ActivatedRouteSnapsh
   }
 
   if (authService.hasPermission(requiredPermission)) {
+  if (authService.hasRole('super_admin') || authService.hasPermission(requiredPermission)) {
     return true;
   }
 

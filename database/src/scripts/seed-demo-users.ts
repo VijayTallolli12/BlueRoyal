@@ -161,6 +161,17 @@ export async function seedDemoUsers(): Promise<Record<string, { role: string; em
         { replacements: { userId, roleId }, type: QueryTypes.RAW },
       );
 
+      // Ensure super_admin has all permissions mapped
+      if (acc.roleName === 'super_admin') {
+        await sequelize.query(
+          `INSERT INTO role_permissions (role_id, permission_id, created_at)
+           SELECT :roleId, p.id, NOW()
+           FROM permissions p
+           ON CONFLICT DO NOTHING;`,
+          { replacements: { roleId }, type: QueryTypes.RAW },
+        );
+      }
+
       // 3. For employee account, link to employees table for self-service capability
       if (acc.roleName === 'employee') {
         const existingEmp = await sequelize.query<{ id: string }>(

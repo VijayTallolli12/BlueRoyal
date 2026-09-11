@@ -1,4 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LeaveService } from '../../core/services/leave.service';
@@ -27,8 +28,10 @@ type ActiveTab = 'requests' | 'types' | 'balances';
       <div class="hub-header">
         <div>
           <h2>Leave Management & Entitlements Hub</h2>
+          <h2>Leave Management</h2>
           <p class="subtitle">
             Enterprise leave approval pipeline, policy configurations, and annual employee entitlement allocations.
+            Manage employee leave requests, approvals, and entitlements.
           </p>
         </div>
         <div class="tab-buttons">
@@ -53,6 +56,22 @@ type ActiveTab = 'requests' | 'types' | 'balances';
           >
             Leave Types Catalog
           </button>
+        </div>
+      </div>
+
+      <!-- Top KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Leave Types</span>
+          <span class="kpi-value">{{ leaveTypes().length }}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">On Leave</span>
+          <span class="kpi-value">{{ onLeaveCount() }}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Pending Approval</span>
+          <span class="kpi-value text-amber">{{ pendingApprovalCount() }}</span>
         </div>
       </div>
 
@@ -83,8 +102,23 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                 <option value="REJECTED">Rejected</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>
+            <div class="panel-title-area">
+              <h3>Leave Management</h3>
             </div>
             <button (click)="loadRequests()" class="btn btn-secondary">Refresh</button>
+            <div class="panel-actions">
+              <div class="filter-group">
+                <label>Status Filter:</label>
+                <select [(ngModel)]="statusFilter" (change)="loadRequests()" class="form-select">
+                  <option value="">All Statuses</option>
+                  <option value="PENDING">Pending Review</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="REJECTED">Rejected</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
+              <button (click)="loadRequests()" class="btn btn-secondary">Refresh</button>
+            </div>
           </div>
 
           @if (loadingRequests()) {
@@ -100,6 +134,9 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                     <th>Date Range</th>
                     <th>Duration</th>
                     <th class="col-hide-mobile">Reason</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Days</th>
                     <th>Status</th>
                     <th class="col-sticky-right text-right">Actions</th>
                   </tr>
@@ -117,6 +154,8 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                       <td>
                         <span class="tag-type">{{ r.leaveType?.name }}</span>
                       </td>
+                      <td>{{ r.startDate }}</td>
+                      <td>{{ r.endDate }}</td>
                       <td>
                         <strong>{{ r.startDate }}</strong> ➔ <strong>{{ r.endDate }}</strong>
                       </td>
@@ -155,6 +194,7 @@ type ActiveTab = 'requests' | 'types' | 'balances';
                   } @empty {
                     <tr>
                       <td colspan="8" class="empty-cell">No leave requests found matching filters.</td>
+                      <td colspan="7" class="empty-cell">No leave requests found matching filters.</td>
                     </tr>
                   }
                 </tbody>
@@ -663,6 +703,34 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         font-weight: 600;
         box-shadow: 0 1px 2px rgba(29, 78, 216, 0.1);
       }
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+      .kpi-card {
+        background: #ffffff;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        padding: 1.125rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        box-shadow: var(--shadow-sm);
+      }
+      .kpi-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-secondary);
+      }
+      .kpi-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.1;
+      }
       .panel {
         background: #ffffff;
         border: 1px solid var(--border-default);
@@ -675,8 +743,22 @@ type ActiveTab = 'requests' | 'types' | 'balances';
         justify-content: space-between;
         align-items: center;
         padding: 16px 20px;
+        padding: 14px 20px;
         border-bottom: 1px solid var(--color-border);
         background: var(--color-surface-alt);
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .panel-title-area h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+      .panel-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
       }
       .filter-group {
         display: flex;
@@ -917,6 +999,20 @@ export class LeaveHubComponent implements OnInit {
   public selectedRequestForAction: LeaveRequestDto | null = null;
   public showRejectModal = signal(false);
   public rejectionReasonText = '';
+
+  public onLeaveCount = computed(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.requests().filter((r) => {
+      if (r.status !== 'APPROVED') return false;
+      if (r.startDate && r.startDate > today) return false;
+      if (r.endDate && r.endDate < today) return false;
+      return true;
+    }).length;
+  });
+
+  public pendingApprovalCount = computed(() => {
+    return this.requests().filter((r) => r.status === 'PENDING').length;
+  });
   public showRevokeModal = signal(false);
   public revokeReasonText = '';
 

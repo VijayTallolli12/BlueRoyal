@@ -76,9 +76,29 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       expect(itemLabels).toContain('Employees');
       expect(itemLabels).toContain('Deployments');
       expect(itemLabels).toContain('Billing Rates');
+      expect(itemLabels).toContain('Leave Management');
       expect(itemLabels).toContain('Attendance');
+      expect(itemLabels).toContain('Timesheet');
       expect(itemLabels).toContain('Payroll');
       expect(itemLabels).toContain('Documents');
+
+      expect(allItems.slice(0, 15).map(i => i.label)).toEqual([
+        'Dashboard',
+        'Clients',
+        'Projects',
+        'Designations',
+        'Work Shift',
+        'Holidays',
+        'Salary Packages',
+        'Employees',
+        'Deployments',
+        'Billing Rates',
+        'Invoices',
+        'Leave Management',
+        'Attendance',
+        'Timesheet',
+        'Payroll',
+      ]);
 
       // Assert zero ESS items exist
       expect(itemLabels).not.toContain('My Timesheet');
@@ -107,11 +127,13 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       const sectionTitles = sections.map(s => s.title);
 
       expect(sectionIds).toEqual(['core', 'people', 'workforceOps', 'payroll', 'orgRef']);
+      expect(sectionIds).toEqual(['core', 'people', 'workforceOps', 'operations', 'orgRef']);
       expect(sectionTitles).toEqual([
         'CORE',
         'PEOPLE',
         'WORKFORCE',
         'PAYROLL',
+        'OPERATIONS',
         'ORGANIZATION MASTER',
       ]);
 
@@ -128,8 +150,9 @@ describe('AppShellComponent - Role-Specific Sidebar Navigation', () => {
       expect(itemLabels).toContain('Documents');
       expect(itemLabels).toContain('Deployments');
       expect(itemLabels).toContain('Pay Rates');
+      expect(itemLabels).toContain('Leave Management');
       expect(itemLabels).toContain('Attendance');
-      expect(itemLabels).toContain('Leaves');
+      expect(itemLabels).toContain('Timesheet');
       expect(itemLabels).toContain('Payroll');
       expect(itemLabels).toContain('Designations');
       expect(itemLabels).toContain('Work Shift');

@@ -64,6 +64,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'timesheet',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'attendance:read' },
+    loadComponent: () =>
+      import('./features/timesheet/timesheet.component').then((m) => m.TimesheetComponent),
+  },
+  {
     path: 'attendance/my-attendance',
     canActivate: [authGuard, permissionGuard],
     data: { permission: 'attendance:self_read' },

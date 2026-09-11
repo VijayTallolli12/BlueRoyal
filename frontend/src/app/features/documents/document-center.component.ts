@@ -26,8 +26,10 @@ import {
           <div>
             <div class="breadcrumb">PEOPLE / DOCUMENT CENTER</div>
             <h1 class="page-title">Workforce Document & Expiry Management</h1>
+            <h1 class="page-title">Documents</h1>
             <p class="page-desc">
               Centralized repository for statutory employee records (Passport, Visa, Emirates ID, Labor Card, Driving License). Enforce cryptographic verification and deterministic expiry alerting.
+              Manage employee compliance documents, statutory records, and expiration tracking.
             </p>
           </div>
           <div class="header-actions">
@@ -86,6 +88,9 @@ import {
 
         <!-- Filter Bar -->
         <div class="filter-bar">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Documents</h3>
+          </div>
           <div class="tabs">
             <button
               class="tab-btn"
@@ -448,6 +453,18 @@ import {
       align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
     }
 
     .tabs {

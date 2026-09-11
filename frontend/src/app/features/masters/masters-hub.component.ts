@@ -58,48 +58,14 @@ export type MasterTab =
           }
         </header>
 
-        <!-- Contextual Workforce Flow Indicator (Subtle, Compact Secondary Navigation) -->
-        @if (currentMeta().isFlowTab) {
-          <div class="contextual-flow-strip">
-            <div class="flow-lead">
-              <span class="material-symbols-outlined icon-xs">linear_scale</span>
-              <span>WORKFORCE PIPELINE:</span>
-            </div>
-            <div class="flow-steps">
-              <button class="flow-step-pill" [class.current]="activeTab() === 'clients'" (click)="setTab('clients')">
-                <span class="step-badge">1</span>
-                <span>Clients</span>
-              </button>
-              <span class="flow-sep">➔</span>
-              <button class="flow-step-pill" [class.current]="activeTab() === 'projects'" (click)="setTab('projects')">
-                <span class="step-badge">2</span>
-                <span>Projects</span>
-              </button>
-              <span class="flow-sep">➔</span>
-              <button class="flow-step-pill" [class.current]="activeTab() === 'assignments'" (click)="setTab('assignments')">
-                <span class="step-badge">3</span>
-                <span>Deployments</span>
-              </button>
-              <span class="flow-sep">➔</span>
-              <button class="flow-step-pill" [class.current]="activeTab() === 'employee-rates'" (click)="setTab('employee-rates')">
-                <span class="step-badge">4</span>
-                <span>Employee Pay</span>
-              </button>
-              <span class="flow-sep">➔</span>
-              <button class="flow-step-pill" [class.current]="activeTab() === 'client-rates'" (click)="setTab('client-rates')">
-                <span class="step-badge">5</span>
-                <span>Client Billing</span>
-              </button>
-            </div>
-          </div>
-        }
+
 
         <!-- View Assignment Modal -->
         @if (selectedAssignmentForView(); as assign) {
           <div class="modal-overlay" (click)="selectedAssignmentForView.set(null)">
             <div class="modal-card" (click)="$event.stopPropagation()">
               <div class="modal-header">
-                <h3>Workforce Deployment Details</h3>
+                <h3>Assignment Details</h3>
                 <button type="button" class="btn-icon-close" (click)="selectedAssignmentForView.set(null)">
                   <span class="material-symbols-outlined">close</span>
                 </button>
@@ -128,17 +94,17 @@ export type MasterTab =
                     <code>{{ assign.effectiveFrom }} ➔ {{ assign.effectiveTo || 'Ongoing' }}</code>
                   </div>
                   <div class="detail-item">
-                    <span class="detail-label">Deployment Status</span>
+                    <span class="detail-label">Status</span>
                     <div>
                       <span class="badge" [class.badge-active]="!assign.effectiveTo">
-                        {{ assign.effectiveTo ? 'Closed / Past' : 'Active Deployment' }}
+                        {{ assign.effectiveTo ? 'Closed / Past' : 'Active' }}
                       </span>
                     </div>
                   </div>
                 </div>
                 @if (assign.remarks) {
                   <div class="detail-remarks">
-                    <span class="detail-label">Deployment Remarks</span>
+                    <span class="detail-label">Remarks</span>
                     <p>{{ assign.remarks }}</p>
                   </div>
                 }
@@ -418,11 +384,11 @@ export type MasterTab =
                       [(ngModel)]="editAssignEffectiveTo"
                       name="editAssignEffectiveTo"
                     />
-                    <small class="form-hint">Leave blank for ongoing deployment. Setting past or today will mark deployment as closed.</small>
+                    <small class="form-hint">Leave blank for ongoing assignment. Setting past or today will mark it as closed.</small>
                   </div>
 
                   <div class="form-group mb-3">
-                    <label class="form-label" for="editAssignRemarks">Deployment Remarks / Transfer Notes</label>
+                    <label class="form-label" for="editAssignRemarks">Remarks</label>
                     <textarea
                       id="editAssignRemarks"
                       rows="3"
@@ -1131,8 +1097,8 @@ export type MasterTab =
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <h2>Workforce Deployments</h2>
-                  <p class="subtitle">Assign employees to clients, projects and designated roles (satisfies Onboarding Pillar 3).</p>
+                  <h2>Employee Assignments</h2>
+                  <p class="subtitle">Assign employees to clients and projects.</p>
                 </div>
               </div>
 
@@ -1140,19 +1106,19 @@ export type MasterTab =
                 <div class="alert-guidance alert-info">
                   <div class="guidance-icon"><span class="material-symbols-outlined">info</span></div>
                   <div class="guidance-content">
-                    <strong>Workforce Deployment Prerequisites</strong>
+                    <strong>Prerequisites</strong>
                     <p>
-                      An authoritative deployment assignment links an <strong>Employee</strong> to an active <strong>Client Project</strong> worksite and an authoritative <strong>Designation</strong> (satisfies Onboarding Pillar 3).
+                      To create an assignment, you need at least one <strong>Employee</strong>, one <strong>Project</strong>, and one <strong>Designation</strong>.
                     </p>
                     <div class="guidance-actions">
                       @if (employees().length === 0) {
-                        <a routerLink="/employees" class="btn btn-sm btn-outline">Add Employee in Directory</a>
+                        <a routerLink="/employees" class="btn btn-sm btn-outline">Add Employee</a>
                       }
                       @if (projects().length === 0) {
-                        <button type="button" class="btn btn-sm btn-outline" (click)="setTab('projects')">Create Project Worksite</button>
+                        <button type="button" class="btn btn-sm btn-outline" (click)="setTab('projects')">Create Project</button>
                       }
                       @if (designations().length === 0) {
-                        <button type="button" class="btn btn-sm btn-outline" (click)="setTab('designations')">Create Job Designation</button>
+                        <button type="button" class="btn btn-sm btn-outline" (click)="setTab('designations')">Create Designation</button>
                       }
                     </div>
                   </div>
@@ -1166,7 +1132,7 @@ export type MasterTab =
                   <input
                     type="text"
                     class="search-input"
-                    placeholder="Search deployments by employee, client, project, designation..."
+                    placeholder="Search assignments by employee, client, project, designation..."
                     [ngModel]="assignmentSearch()"
                     (ngModelChange)="assignmentSearch.set($event)"
                   />
@@ -1195,8 +1161,8 @@ export type MasterTab =
                     (ngModelChange)="assignmentStatusFilter.set($event)"
                   >
                     <option value="all">All Statuses</option>
-                    <option value="active">Active Deployments</option>
-                    <option value="closed">Closed Deployments</option>
+                    <option value="active">Active</option>
+                    <option value="closed">Closed</option>
                   </select>
                 </div>
               </div>
@@ -1207,9 +1173,9 @@ export type MasterTab =
                     <tr>
                       <th>Employee</th>
                       <th>Client</th>
-                      <th>Project / Worksite</th>
+                      <th>Project</th>
                       <th>Designation</th>
-                      <th>Effective From</th>
+                      <th>Start Date</th>
                       <th>Status</th>
                       <th class="text-right">Actions</th>
                     </tr>
@@ -1229,7 +1195,7 @@ export type MasterTab =
                         </td>
                         <td>
                           <span class="badge" [class.badge-active]="!a.effectiveTo">
-                            {{ a.effectiveTo ? 'Closed' : 'Active Deployment' }}
+                            {{ a.effectiveTo ? 'Closed' : 'Active' }}
                           </span>
                         </td>
                         <td class="text-right">
@@ -1247,7 +1213,7 @@ export type MasterTab =
                               type="button"
                               class="btn-action btn-action-edit"
                               (click)="openEditAssignment(a)"
-                              title="Edit Deployment"
+                              title="Edit Assignment"
                             >
                               <span class="material-symbols-outlined icon-xs">edit</span>
                               <span>Edit</span>
@@ -1257,7 +1223,7 @@ export type MasterTab =
                                 type="button"
                                 class="btn-action btn-action-danger"
                                 (click)="deactivateAssignment(a)"
-                                title="Deactivate / Close Deployment"
+                                title="Deactivate"
                               >
                                 <span class="material-symbols-outlined icon-xs">person_remove</span>
                                 <span>Deactivate</span>
@@ -1270,9 +1236,9 @@ export type MasterTab =
                       <tr>
                         <td colspan="7" class="empty-state">
                           @if (assignments().length === 0) {
-                            <span>No employee deployments configured yet. Click 'Deploy Employee' to assign a worker to a site.</span>
+                            <span>No employee assignments yet. Click 'Assign Employee' to create one.</span>
                           } @else {
-                            <span>No deployments match the current search or filters.</span>
+                            <span>No assignments match the current search or filters.</span>
                           }
                         </td>
                       </tr>
@@ -2932,7 +2898,7 @@ export class MastersHubComponent implements OnInit {
   public editAssignEffectiveTo = '';
   public editAssignRemarks = '';
 
-  // Filtered Deployments computed signal
+  // Filtered Assignments computed signal
   public filteredAssignments = computed(() => {
     const list = this.assignments();
     const query = this.assignmentSearch().trim().toLowerCase();
@@ -2971,13 +2937,13 @@ export class MastersHubComponent implements OnInit {
       case 'assignments':
         return {
           breadcrumbGroup: isSuperAdmin ? 'WORKFORCE OVERSIGHT' : 'WORKFORCE OPERATIONS',
-          breadcrumbPage: 'Workforce Deployments',
-          title: 'Workforce Deployments',
-          subtitle: 'Assign employees to clients, projects and designated roles.',
-          ctaLabel: 'Deploy Employee',
+          breadcrumbPage: 'Employee Assignments',
+          title: 'Employee Assignments',
+          subtitle: 'Assign employees to clients and projects.',
+          ctaLabel: 'Assign Employee',
           ctaIcon: 'add',
-          isFlowTab: true,
-          flowStep: 3,
+          isFlowTab: false,
+          flowStep: 0,
         };
       case 'clients':
         return {
@@ -3211,8 +3177,8 @@ export class MastersHubComponent implements OnInit {
     }
     if (this.selectedAssignmentForEdit()) {
       return {
-        title: 'Edit Deployment',
-        subtitle: 'Update effective duration and transfer notes',
+        title: 'Edit Assignment',
+        subtitle: 'Update effective duration and remarks',
         icon: 'edit_calendar',
         submitLabel: 'Save Changes',
       };
@@ -3344,7 +3310,7 @@ export class MastersHubComponent implements OnInit {
 
   public deactivateAssignment(assign: EmployeeAssignmentDto): void {
     const confirmed = confirm(
-      `Are you sure you want to deactivate and close deployment for ${assign.employeeName || 'this employee'}? Effective end date will be set to today.`
+      `Are you sure you want to deactivate the assignment for ${assign.employeeName || 'this employee'}? Effective end date will be set to today.`
     );
     if (!confirmed) return;
     const today = new Date().toISOString().slice(0, 10);

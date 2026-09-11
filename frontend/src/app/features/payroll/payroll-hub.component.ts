@@ -24,8 +24,10 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
       <div class="hub-header">
         <div>
           <h2>Payroll Management & Financial Hub</h2>
+          <h2>Payroll</h2>
           <p class="subtitle">
             Enterprise compensation calculation engine, locked attendance consumption, manual adjustments, and auditable payroll sign-off.
+            Manage payroll periods, calculations, and disbursements.
           </p>
         </div>
         <div class="header-actions">
@@ -79,6 +81,9 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
       <!-- Periods Panel -->
       <div class="panel">
         <div class="panel-bar">
+          <div class="panel-title-area">
+            <h3>Payroll</h3>
+          </div>
           <div class="filter-group">
             <label>Filter Status:</label>
             <select [(ngModel)]="statusFilter" class="form-select">

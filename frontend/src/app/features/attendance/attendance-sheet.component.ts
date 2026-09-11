@@ -29,6 +29,8 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         <div class="title-section">
           <h2>Attendance & Overtime Management</h2>
           <span class="subtitle">Monthly Point-in-Time Deployment & Timesheet Engine</span>
+          <h2>Attendance</h2>
+          <span class="subtitle">Employee attendance records, absence tracking, and status verification</span>
         </div>
 
         <div class="period-controls">
@@ -107,6 +109,7 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
               <button (click)="onApprovePeriod()" class="btn btn-success">
                 <span class="material-symbols-outlined icon-sm">check_circle</span>
                 <span>Approve Timesheet</span>
+                <span>Approve Attendance</span>
               </button>
             }
 
@@ -127,6 +130,7 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         </div>
 
         <!-- Summary KPI Cards -->
+        <!-- Attendance KPIs -->
         @if (gridData()?.summary; as sum) {
           <div class="kpi-grid">
             <div class="kpi-card">
@@ -136,14 +140,20 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
             <div class="kpi-card">
               <span class="kpi-label">Total Actual Hours</span>
               <span class="kpi-value">{{ sum.totalActualHours.toFixed(1) }}h</span>
+              <span class="kpi-label">Present</span>
+              <span class="kpi-value text-success">{{ totalPresentDays() }}</span>
             </div>
             <div class="kpi-card">
               <span class="kpi-label">Regular Hours</span>
               <span class="kpi-value">{{ sum.totalRegularHours.toFixed(1) }}h</span>
+              <span class="kpi-label">Absent</span>
+              <span class="kpi-value text-danger">{{ sum.totalAbsences }}</span>
             </div>
             <div class="kpi-card">
               <span class="kpi-label">Overtime Hours</span>
               <span class="kpi-value text-accent">{{ sum.totalOtHours.toFixed(1) }}h</span>
+              <span class="kpi-label">Leave</span>
+              <span class="kpi-value text-warning">{{ totalLeaveDays() }}</span>
             </div>
             <div class="kpi-card">
               <span class="kpi-label">Total Absences</span>
@@ -159,6 +169,13 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                 <span class="kpi-help">Blocks submission & locking</span>
               }
             </div>
+            @if (sum.totalAnomalies > 0) {
+              <div class="kpi-card anomaly-card has-anomaly">
+                <span class="kpi-label">Unresolved Anomalies</span>
+                <span class="kpi-value">{{ sum.totalAnomalies }}</span>
+                <span class="kpi-help">Requires verification</span>
+              </div>
+            }
           </div>
         }
 
@@ -198,6 +215,7 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
           <button (click)="loadGrid()" class="btn btn-secondary btn-sm">
             <span class="material-symbols-outlined icon-sm">sync</span>
             <span>Refresh Grid</span>
+            <span>Refresh</span>
           </button>
         </div>
 
@@ -208,6 +226,18 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
           @if (gridData(); as grid) {
             <div class="grid-table-container">
               <table class="attendance-table">
+        <!-- Employee Attendance List Table -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Attendance</h3>
+            <span class="text-muted">Showing {{ filteredRows().length }} employee attendance record(s)</span>
+          </div>
+
+          @if (isLoading()) {
+            <div class="loading-state">Loading attendance records...</div>
+          } @else {
+            <div class="table-responsive">
+              <table class="data-table">
                 <thead>
                   <tr>
                     <th class="sticky-col col-code">Code</th>
@@ -233,6 +263,13 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                     <th class="col-summary">OT</th>
                     <th class="col-summary">Abs</th>
                     <th class="col-summary">Anom</th>
+                    <th>Employee</th>
+                    <th>Employee Code</th>
+                    <th>Date/period</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                    <th>Leave</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -245,6 +282,22 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                       <td class="col-shift">
                         <span class="shift-tag" [class.no-shift]="!row.shiftWorkHours">
                           {{ row.shiftName || 'None' }} ({{ row.shiftWorkHours || 0 }}h)
+                      <td>
+                        <strong>{{ row.employeeName }}</strong>
+                        <div class="sub-text">{{ row.designationTitle || '—' }}</div>
+                      </td>
+                      <td>
+                        <code>{{ row.employeeCode }}</code>
+                      </td>
+                      <td>
+                        {{ period.periodCode }} ({{ period.name }})
+                      </td>
+                      <td>
+                        <span class="badge badge-success">{{ getRowPresentDays(row) }} days</span>
+                      </td>
+                      <td>
+                        <span class="badge" [class.badge-danger]="getRowAbsentDays(row) > 0" [class.badge-neutral]="getRowAbsentDays(row) === 0">
+                          {{ getRowAbsentDays(row) }} days
                         </span>
                       </td>
 
@@ -294,7 +347,20 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
                         } @else {
                           0
                         }
+                      <td>
+                        <span class="badge" [class.badge-warning]="getRowLeaveDays(row) > 0" [class.badge-neutral]="getRowLeaveDays(row) === 0">
+                          {{ getRowLeaveDays(row) }} days
+                        </span>
                       </td>
+                      <td>
+                        <span class="status-badge status-{{ period.status }}">
+                          {{ period.status | uppercase }}
+                        </span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="empty-state">No employee attendance records found for this period.</td>
                     </tr>
                   }
                 </tbody>
@@ -756,20 +822,91 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
         background: #fff;
       }
       .grid-table-container {
+      .panel {
         background: #fff;
         border: 1px solid var(--color-border);
         border-radius: 8px;
         overflow: auto;
         max-height: 65vh;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
       }
       .attendance-table {
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+        background: #f8fafc;
+      }
+      .panel-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-text-primary);
+      }
+      .table-responsive {
+        overflow-x: auto;
+      }
+      .data-table {
         width: 100%;
         border-collapse: collapse;
         font-size: 0.8125rem;
         white-space: nowrap;
+        font-size: 0.875rem;
       }
       .attendance-table th, .attendance-table td {
         border: 1px solid var(--color-border);
+      .data-table th, .data-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+        text-align: left;
+      }
+      .data-table th {
+        background: #f8fafc;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+      }
+      .sub-text {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+      }
+      .badge-present {
+        background: var(--color-success-bg);
+        color: var(--color-success-text);
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+      }
+      .badge-absent {
+        background: var(--color-danger-bg);
+        color: var(--color-danger-text);
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+      }
+      .badge-leave {
+        background: var(--color-warning-bg);
+        color: var(--color-warning-text);
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+      }
+      .badge-neutral {
+        color: var(--color-text-muted);
+        font-weight: 500;
+        padding: 0.25rem 0.5rem;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: var(--color-text-muted);
+        font-style: italic;
+      }
         padding: 0.4rem 0.5rem;
         text-align: center;
       }
@@ -969,6 +1106,53 @@ export class AttendanceSheetComponent implements OnInit {
       rows = rows.filter((r) => (r.summary?.anomalyCount || 0) > 0);
     }
     return rows;
+  });
+
+  public getRowPresentDays(row: AttendanceGridRowDto): number {
+    if (row.records) {
+      return Object.values(row.records).filter(
+        (rec: any) => rec && !rec.isAbsent && !rec.isOnLeave && (Number(rec.actualHours || 0) > 0 || Number(rec.regularHours || 0) > 0),
+      ).length;
+    }
+    if (row.days) {
+      return Object.values(row.days).filter(
+        (c) => c && !c.isAbsent && !c.isOnLeave && (Number(c.actualHours || 0) > 0 || Number(c.regularHours || 0) > 0),
+      ).length;
+    }
+    return row.totalDaysPresent ?? Math.max(0, (this.gridData()?.dates?.length || 30) - (row.summary?.totalAbsences || 0));
+  }
+
+  public getRowAbsentDays(row: AttendanceGridRowDto): number {
+    if (row.summary?.totalAbsences !== undefined) {
+      return row.summary.totalAbsences;
+    }
+    if (row.records) {
+      return Object.values(row.records).filter((rec: any) => rec?.isAbsent).length;
+    }
+    if (row.days) {
+      return Object.values(row.days).filter((c) => c?.isAbsent).length;
+    }
+    return 0;
+  }
+
+  public getRowLeaveDays(row: AttendanceGridRowDto): number {
+    if (row.records) {
+      return Object.values(row.records).filter((rec: any) => rec?.isOnLeave).length;
+    }
+    if (row.days) {
+      return Object.values(row.days).filter((c) => c?.isOnLeave).length;
+    }
+    return 0;
+  }
+
+  public totalPresentDays = computed(() => {
+    const rows = this.gridData()?.rows || [];
+    return rows.reduce((sum, r) => sum + this.getRowPresentDays(r), 0);
+  });
+
+  public totalLeaveDays = computed(() => {
+    const rows = this.gridData()?.rows || [];
+    return rows.reduce((sum, r) => sum + this.getRowLeaveDays(r), 0);
   });
 
   // Modals & Drawers

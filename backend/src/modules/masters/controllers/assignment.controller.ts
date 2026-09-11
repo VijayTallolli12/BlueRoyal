@@ -28,7 +28,24 @@ export class AssignmentController {
         ],
         order: [['effectiveFrom', 'DESC']],
       });
-      sendSuccess(req, res, assignments);
+
+      const mapped = assignments.map((a) => {
+        const json = a.toJSON() as Record<string, unknown>;
+        const emp = a.employee;
+        const cli = a.client;
+        const proj = a.project;
+        const desig = a.designation;
+        return {
+          ...json,
+          employeeName: emp ? `${emp.firstName} ${emp.lastName}`.trim() : null,
+          employeeCode: emp?.employeeCode ?? null,
+          clientName: cli?.name ?? null,
+          projectName: proj?.name ?? null,
+          designationTitle: desig?.title ?? null,
+        };
+      });
+
+      sendSuccess(req, res, mapped);
     } catch (err) {
       next(err);
     }
