@@ -74,13 +74,46 @@ export async function checkDatabaseHealth(): Promise<{
   status: 'healthy' | 'unhealthy';
   latencyMs: number;
   message?: string;
+  diagnostics?: any;
 }> {
   const start = Date.now();
   try {
     await sequelize.query('SELECT 1;');
+
+    // Inspect database metadata and table counts
+    let diagnostics: any = {};
+    try {
+      const [dbInfo] = await sequelize.query(`
+        SELECT current_database() as db_name, current_user as user_name, inet_server_addr() as server_ip, inet_server_port() as server_port;
+      `);
+      const [counts] = await sequelize.query(`
+        SELECT 
+          (SELECT COUNT(*) FROM users) as users,
+          (SELECT COUNT(*) FROM employees) as employees,
+          (SELECT COUNT(*) FROM clients) as clients,
+          (SELECT COUNT(*) FROM projects) as projects,
+          (SELECT COUNT(*) FROM employee_assignments) as assignments,
+          (SELECT COUNT(*) FROM attendance_records) as attendance,
+          (SELECT COUNT(*) FROM leave_requests) as leaves,
+          (SELECT COUNT(*) FROM payroll_periods) as payroll_periods,
+          (SELECT COUNT(*) FROM payroll_items) as payroll_items,
+          (SELECT COUNT(*) FROM client_invoices) as invoices,
+          (SELECT COUNT(*) FROM client_payments) as payments;
+      `);
+      diagnostics = {
+        connection: dbInfo[0],
+        counts: counts[0],
+        configuredHost: sequelize.config.host,
+        configuredDatabase: sequelize.config.database,
+      };
+    } catch (e: any) {
+      diagnostics = { queryError: e.message };
+    }
+
     return {
       status: 'healthy',
       latencyMs: Date.now() - start,
+      diagnostics,
     };
   } catch (error: any) {
     return {

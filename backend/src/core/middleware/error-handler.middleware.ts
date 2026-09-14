@@ -18,9 +18,9 @@ export function errorHandlerMiddleware(
   let message = 'An unexpected server error occurred.';
   let details: any[] | undefined = undefined;
 
-  if (err instanceof AppError) {
-    statusCode = err.statusCode;
-    errorCode = err.errorCode;
+  if (err instanceof AppError || (err && (err.isOperational || err.name === 'AuthenticationError' || err.name === 'AppError' || err.name === 'NotFoundError' || err.name === 'ValidationError' || err.name === 'ConflictError' || err.name === 'AuthorizationError'))) {
+    statusCode = err.statusCode || 400;
+    errorCode = err.errorCode || 'OPERATIONAL_ERROR';
     message = err.message;
     details = err.details;
   } else if (err instanceof ZodError) {

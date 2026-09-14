@@ -9,7 +9,7 @@ export class HealthController {
       const dbHealth = await checkDatabaseHealth();
       const overallStatus = dbHealth.status === 'healthy' ? 'healthy' : 'degraded';
 
-      const healthData: HealthCheckResponse = {
+      const healthData: any = {
         status: overallStatus,
         version: '1.0.0',
         uptimeSeconds: Math.floor(process.uptime()),
@@ -19,6 +19,7 @@ export class HealthController {
             status: dbHealth.status,
             latencyMs: dbHealth.latencyMs,
             message: dbHealth.message,
+            diagnostics: dbHealth.diagnostics,
           },
         },
       };
