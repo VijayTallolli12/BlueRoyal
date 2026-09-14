@@ -2,6 +2,108 @@ import bcrypt from 'bcryptjs';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/db';
 
+const { Client } = require('pg') as {
+  Client: new (config?: Record<string, unknown>) => SeedTransferClient;
+};
+
+type SeedTransferClient = {
+  connect: () => Promise<void>;
+  query: <T = Record<string, unknown>>(sql: string) => Promise<{ rows: T[] }>;
+  end: () => Promise<void>;
+};
+
+const RAW_PG_TIMEOUT_MS = 30000;
+
+function buildSeedTransferClientConfig() {
+  const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_INTERNAL_URL;
+  const sslEnabled = process.env.DB_SSL === 'true' || Boolean(databaseUrl && databaseUrl.includes('sslmode=require'));
+
+  const sslConfig = sslEnabled
+    ? {
+        rejectUnauthorized: false,
+      }
+    : false;
+
+  if (databaseUrl) {
+    return {
+      connectionString: databaseUrl,
+      ssl: sslConfig,
+      statement_timeout: RAW_PG_TIMEOUT_MS,
+      query_timeout: RAW_PG_TIMEOUT_MS,
+      connectionTimeoutMillis: RAW_PG_TIMEOUT_MS,
+      application_name: 'blue-royal-seed-transfer',
+    };
+  }
+
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || 5432),
+    database: process.env.DB_NAME || 'blue_royal_hrms_dev',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    ssl: sslConfig,
+    statement_timeout: RAW_PG_TIMEOUT_MS,
+    query_timeout: RAW_PG_TIMEOUT_MS,
+    connectionTimeoutMillis: RAW_PG_TIMEOUT_MS,
+    application_name: 'blue-royal-seed-transfer',
+  };
+}
+
+export async function connectSeedTransferClient(): Promise<SeedTransferClient> {
+  const client = new Client(buildSeedTransferClientConfig());
+  console.log('[seed-transfer] Attempting raw pg connection using dedicated client.');
+  await client.connect();
+
+  const authResult = await client.query<{ database: string; user: string; ssl_enabled: string | null }>(`
+    SELECT
+      current_database() AS database,
+      current_user AS user,
+      current_setting('ssl', true) AS ssl_enabled;
+  `);
+
+  const row = authResult.rows[0];
+  const sslEnabled = row.ssl_enabled === 'on';
+  console.log(
+    `[seed-transfer] Connected to database=${row.database}, user=${row.user}, ssl_enabled=${sslEnabled}`,
+  );
+
+  return client;
+}
+
+export async function validateProductionTransferConnection(): Promise<{
+  database: string;
+  user: string;
+  ssl_enabled: boolean;
+  select_ok: boolean;
+}> {
+  const client = await connectSeedTransferClient();
+
+  try {
+    const authResult = await client.query<{ database: string; user: string; ssl_enabled: string | null }>(`
+      SELECT
+        current_database() AS database,
+        current_user AS user,
+        current_setting('ssl', true) AS ssl_enabled;
+    `);
+
+    const selectResult = await client.query<{ ok: number }>('SELECT 1 AS ok;');
+    const row = authResult.rows[0];
+    const result = {
+      database: row.database,
+      user: row.user,
+      ssl_enabled: row.ssl_enabled === 'on',
+      select_ok: selectResult.rows[0]?.ok === 1,
+    };
+
+    console.log('[seed-transfer] Read-only validation succeeded.');
+    console.log(JSON.stringify(result, null, 2));
+    return result;
+  } finally {
+    await client.end();
+    console.log('[seed-transfer] Raw pg client closed.');
+  }
+}
+
 // ============================================================================
 // CONSTANTS & DEMO DATA DEFINITIONS
 // ============================================================================
@@ -2515,13 +2617,27 @@ export async function seedDemoUsers(): Promise<Record<string, { role: string; em
 }
 
 if (require.main === module) {
-  seedDemoUsers()
-    .then(async () => {
-      await sequelize.close();
-      process.exit(0);
-    })
-    .catch(async () => {
-      await sequelize.close();
-      process.exit(1);
-    });
+  const validateOnly = process.argv.includes('--validate-only');
+
+  if (validateOnly) {
+    validateProductionTransferConnection()
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error('[seed-transfer] Raw pg validation failed:', error);
+        process.exit(1);
+      });
+  } else if (process.env.ALLOW_DESTRUCTIVE_SEED === 'true') {
+    seedDemoUsers()
+      .then(async () => {
+        await sequelize.close();
+        process.exit(0);
+      })
+      .catch(async () => {
+        await sequelize.close();
+        process.exit(1);
+      });
+  } else {
+    console.log('[seed-transfer] Production/Existing database protected. Skipping destructive demo seed.');
+    process.exit(0);
+  }
 }

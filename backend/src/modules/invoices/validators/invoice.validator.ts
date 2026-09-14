@@ -6,8 +6,15 @@ export const generateInvoiceSchema = z.object({
   billingPeriod: z
     .string()
     .regex(/^\d{4}-\d{2}$/, 'Billing period must match YYYY-MM format (e.g. 2026-08)'),
-  designationId: z.string().uuid('Invalid Designation UUID format').optional(),
-  notes: z.string().optional(),
+  designationId: z
+    .string()
+    .nullish()
+    .transform((val) => (val && val.trim() !== '' ? val : undefined))
+    .pipe(z.string().uuid('Invalid Designation UUID format').optional()),
+  notes: z
+    .string()
+    .nullish()
+    .transform((val) => (val && val.trim() !== '' ? val : undefined)),
 });
 
 export const rejectInvoiceSchema = z.object({
