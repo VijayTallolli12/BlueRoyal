@@ -9,6 +9,7 @@ export class InvoiceLine extends BaseModel {
   declare public employeeId: string | null;
   declare public projectId: string;
   declare public description: string;
+  declare public designationTitle: string | null;
   declare public hours: number;
   declare public overtimeHours: number;
   declare public rate: number;
@@ -45,6 +46,11 @@ InvoiceLine.init(
       type: DataTypes.STRING(255),
       allowNull: false,
       field: 'description',
+    },
+    designationTitle: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'designation_title',
     },
     hours: {
       type: DataTypes.DECIMAL(8, 2),

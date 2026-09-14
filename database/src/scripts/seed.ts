@@ -174,6 +174,12 @@ const BASELINE_PERMISSIONS: PermissionSeed[] = [
   { code: 'invoices:read', description: 'View client invoices and commercial billing summaries', module: 'invoices' },
   { code: 'invoices:create', description: 'Generate client draft invoices from attendance and billing rates', module: 'invoices' },
   { code: 'invoices:issue', description: 'Issue and finalize client invoices', module: 'invoices' },
+
+  // Phase 8: Client Payments & Receivables
+  { code: 'payments:read', description: 'View client payments and receipts', module: 'payments' },
+  { code: 'payments:create', description: 'Record client payments and allocations', module: 'payments' },
+  { code: 'payments:reverse', description: 'Reverse client payments with reason', module: 'payments' },
+  { code: 'receivables:read', description: 'View client receivables aging and ledger', module: 'receivables' },
 ];
 
 const DEFAULT_DESIGNATIONS = [
@@ -305,6 +311,9 @@ async function seed(): Promise<void> {
         'separations',
         'settlements',
         'air_ticket_policies',
+        'invoices',
+        'payments',
+        'receivables',
       ];
       for (const perm of allPermissions) {
         const [mod] = perm.code.split(':');

@@ -222,6 +222,7 @@ export class AttendancePeriodService {
       clientId?: string;
       projectId?: string;
       employeeId?: string;
+      designationId?: string;
       hasAnomaly?: boolean;
     },
   ): Promise<AttendanceGridResponseDto> {
@@ -237,6 +238,7 @@ export class AttendancePeriodService {
     if (filters?.clientId) recordWhere.clientId = filters.clientId;
     if (filters?.projectId) recordWhere.projectId = filters.projectId;
     if (filters?.employeeId) recordWhere.employeeId = filters.employeeId;
+    if (filters?.designationId) recordWhere.designationId = filters.designationId;
     if (filters?.hasAnomaly !== undefined) recordWhere.hasAnomaly = filters.hasAnomaly;
 
     const records = await AttendanceRecord.findAll({

@@ -11,6 +11,8 @@ export interface ProjectDto {
   startDate: string | null;
   endDate: string | null;
   status: ProjectStatus;
+  supervisorId?: string | null;
+  supervisorName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +26,7 @@ export interface CreateProjectDto {
   startDate?: string | null;
   endDate?: string | null;
   status?: ProjectStatus;
+  supervisorId?: string | null;
 }
 
 export interface UpdateProjectDto {
@@ -35,4 +38,5 @@ export interface UpdateProjectDto {
   startDate?: string | null;
   endDate?: string | null;
   status?: ProjectStatus;
+  supervisorId?: string | null;
 }

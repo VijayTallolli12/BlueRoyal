@@ -2,6 +2,7 @@ import { DataTypes } from 'sequelize';
 import { sequelize } from '../../../core/database/sequelize';
 import { BaseModel, baseModelAttributes } from '../../../core/database/base.model';
 import { Client } from './client.model';
+import { Employee } from './employee.model';
 
 export class Project extends BaseModel {
   declare public clientId: string;
@@ -11,9 +12,11 @@ export class Project extends BaseModel {
   declare public startDate: string | null;
   declare public endDate: string | null;
   declare public status: string;
+  declare public supervisorId: string | null;
   declare public deletedAt: Date | null;
 
   declare public client?: Client;
+  declare public supervisor?: Employee;
 
   public get location(): string | null {
     return this.siteLocation;
@@ -67,6 +70,15 @@ Project.init(
       allowNull: false,
       defaultValue: 'active',
     },
+    supervisorId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'supervisor_id',
+      references: {
+        model: 'employees',
+        key: 'id',
+      },
+    },
     deletedAt: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -84,3 +96,7 @@ Project.init(
 
 Client.hasMany(Project, { foreignKey: 'client_id', as: 'projects' });
 Project.belongsTo(Client, { foreignKey: 'client_id', as: 'client' });
+
+Employee.hasMany(Project, { foreignKey: 'supervisor_id', as: 'supervisedProjects' });
+Project.belongsTo(Employee, { foreignKey: 'supervisor_id', as: 'supervisor' });
+

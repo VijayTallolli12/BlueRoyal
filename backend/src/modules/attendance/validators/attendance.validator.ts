@@ -28,6 +28,7 @@ export const getGridQuerySchema = z.object({
   clientId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
   employeeId: z.string().uuid().optional(),
+  designationId: z.string().uuid().optional(),
   hasAnomaly: z
     .string()
     .optional()

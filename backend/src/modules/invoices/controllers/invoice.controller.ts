@@ -50,6 +50,33 @@ export class InvoiceController {
     }
   }
 
+  public static async approveInvoice(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const actorId = (req as any).user?.id;
+      const actorIp = req.ip || req.socket.remoteAddress;
+      const actorUserAgent = req.headers['user-agent'];
+
+      const invoice = await InvoiceService.approveInvoice(req.params.id as string, actorId, actorIp, actorUserAgent);
+      sendSuccess(req, res, invoice);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async rejectInvoice(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const actorId = (req as any).user?.id;
+      const actorIp = req.ip || req.socket.remoteAddress;
+      const actorUserAgent = req.headers['user-agent'];
+      const { reason } = req.body;
+
+      const invoice = await InvoiceService.rejectInvoice(req.params.id as string, reason, actorId, actorIp, actorUserAgent);
+      sendSuccess(req, res, invoice);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   public static async issueInvoice(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const actorId = (req as any).user?.id;

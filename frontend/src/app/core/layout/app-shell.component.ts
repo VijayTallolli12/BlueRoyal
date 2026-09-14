@@ -538,6 +538,7 @@ export class AppShellComponent {
   public expandedSections = signal<Record<string, boolean>>({
     orgSetup: true,
     workforceOversight: true,
+    billing: true,
     operationsGov: true,
     operations: true,
     people: true,
@@ -584,9 +585,18 @@ export class AppShellComponent {
           isAccordion: true,
           items: [
             { label: 'Employees', route: '/employees', icon: 'group' },
-            { label: 'Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
+            { label: 'Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' }
+          ]
+        },
+        {
+          id: 'billing',
+          title: 'BILLING',
+          icon: 'receipt_long',
+          isAccordion: true,
+          items: [
             { label: 'Billing Rates', route: '/masters', tab: 'client-rates', icon: 'receipt' },
-            { label: 'Invoices', route: '/invoices', icon: 'request_quote' }
+            { label: 'Invoices', route: '/invoices', icon: 'request_quote' },
+            { label: 'Receivables', route: '/receivables', icon: 'account_balance_wallet' }
           ]
         },
         {
@@ -633,6 +643,17 @@ export class AppShellComponent {
           items: [
             { label: 'Deployments', route: '/masters', tab: 'assignments', icon: 'assignment_ind' },
             { label: 'Pay Rates', route: '/masters', tab: 'employee-rates', icon: 'price_change' }
+          ]
+        },
+        {
+          id: 'billing',
+          title: 'BILLING',
+          icon: 'receipt_long',
+          isAccordion: true,
+          items: [
+            { label: 'Billing Rates', route: '/masters', tab: 'client-rates', icon: 'receipt' },
+            { label: 'Invoices', route: '/invoices', icon: 'request_quote' },
+            { label: 'Receivables', route: '/receivables', icon: 'account_balance_wallet' }
           ]
         },
         {
@@ -710,7 +731,8 @@ export class AppShellComponent {
     if (cleanPath === '/payroll/my-payroll') return { group: 'MY WORKSPACE', page: 'My Itemized Payslips' };
     if (cleanPath.startsWith('/payroll/periods/')) return { group: 'PAYROLL', page: 'Payroll Period Breakdown' };
     if (cleanPath === '/payroll') return { group: 'OPERATIONS', page: 'Payroll' };
-    if (cleanPath === '/invoices') return { group: 'WORKFORCE OVERSIGHT', page: 'Client Invoices' };
+    if (cleanPath === '/invoices') return { group: 'BILLING', page: 'Client Invoices' };
+    if (cleanPath === '/receivables') return { group: 'BILLING', page: 'Client Receivables' };
 
     if (cleanPath === '/masters') {
       if (url.includes('tab=clients')) return { group: 'ORGANIZATION MASTER', page: 'Clients' };
@@ -721,7 +743,7 @@ export class AppShellComponent {
       if (url.includes('tab=salary')) return { group: 'ORGANIZATION MASTER', page: 'Salary Packages' };
       if (url.includes('tab=assignments')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'WORKFORCE OPERATIONS', page: 'Workforce Deployments' };
       if (url.includes('tab=employee-rates')) return { group: 'WORKFORCE OPERATIONS', page: 'Employee Compensation' };
-      if (url.includes('tab=client-rates')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL', page: 'Client Billing Rates' };
+      if (url.includes('tab=client-rates')) return { group: 'BILLING', page: 'Client Billing Rates' };
       if (url.includes('tab=rates')) return { group: this.isSuperAdmin() ? 'WORKFORCE OVERSIGHT' : 'COMMERCIAL', page: 'Rate Simulator' };
       return { group: 'ORGANIZATION MASTER', page: 'Master Catalogs' };
     }

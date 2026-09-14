@@ -18,6 +18,8 @@ import onboardingRouter from './modules/onboarding/routes/onboarding.routes';
 import settlementRouter from './modules/settlement/routes/settlement.routes';
 import dashboardRouter from './modules/dashboard/routes/dashboard.routes';
 import invoiceRouter from './modules/invoices/routes/invoice.routes';
+import timesheetRouter from './modules/timesheet/timesheet.routes';
+import { paymentRouter, receivablesRouter } from './modules/invoices/routes/payment.routes';
 
 export function createApp(): Express {
   const app = express();
@@ -69,6 +71,9 @@ export function createApp(): Express {
   app.use(env.API_PREFIX, settlementRouter);
   app.use(`${env.API_PREFIX}/dashboard`, dashboardRouter);
   app.use(`${env.API_PREFIX}/invoices`, invoiceRouter);
+  app.use(`${env.API_PREFIX}/timesheet`, timesheetRouter);
+  app.use(`${env.API_PREFIX}/payments`, paymentRouter);
+  app.use(`${env.API_PREFIX}/receivables`, receivablesRouter);
 
   // 404 handler for undefined routes
   app.use((req, res, _next) => {

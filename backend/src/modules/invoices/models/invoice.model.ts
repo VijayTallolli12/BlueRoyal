@@ -13,6 +13,7 @@ export class Invoice extends BaseModel {
   declare public projectId: string;
   declare public billingPeriod: string;
   declare public invoiceDate: string;
+  declare public dueDate: string | null;
   declare public status: InvoiceStatus;
   declare public subtotal: number;
   declare public taxAmount: number;
@@ -21,11 +22,19 @@ export class Invoice extends BaseModel {
   declare public notes: string | null;
   declare public issuedAt: Date | null;
   declare public issuedBy: string | null;
+  declare public approvedAt: Date | null;
+  declare public approvedBy: string | null;
+  declare public rejectedAt: Date | null;
+  declare public rejectedBy: string | null;
+  declare public rejectionReason: string | null;
 
   declare public client?: Client;
   declare public project?: Project;
   declare public issuedByUser?: User;
+  declare public approvedByUser?: User;
+  declare public rejectedByUser?: User;
   declare public lines?: InvoiceLine[];
+  declare public allocations?: any[];
 }
 
 Invoice.init(
@@ -58,6 +67,11 @@ Invoice.init(
       type: DataTypes.DATEONLY,
       allowNull: false,
       field: 'invoice_date',
+    },
+    dueDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: 'due_date',
     },
     status: {
       type: DataTypes.STRING(32),
@@ -105,6 +119,33 @@ Invoice.init(
       field: 'issued_by',
       references: { model: 'users', key: 'id' },
     },
+    approvedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'approved_at',
+    },
+    approvedBy: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'approved_by',
+      references: { model: 'users', key: 'id' },
+    },
+    rejectedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'rejected_at',
+    },
+    rejectedBy: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'rejected_by',
+      references: { model: 'users', key: 'id' },
+    },
+    rejectionReason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'rejection_reason',
+    },
   },
   {
     sequelize,
@@ -117,5 +158,7 @@ Invoice.init(
 Invoice.belongsTo(Client, { foreignKey: 'client_id', as: 'client' });
 Invoice.belongsTo(Project, { foreignKey: 'project_id', as: 'project' });
 Invoice.belongsTo(User, { foreignKey: 'issued_by', as: 'issuedByUser' });
+Invoice.belongsTo(User, { foreignKey: 'approved_by', as: 'approvedByUser' });
+Invoice.belongsTo(User, { foreignKey: 'rejected_by', as: 'rejectedByUser' });
 Invoice.hasMany(InvoiceLine, { foreignKey: 'invoice_id', as: 'lines' });
 InvoiceLine.belongsTo(Invoice, { foreignKey: 'invoice_id', as: 'invoice' });

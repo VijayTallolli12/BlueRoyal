@@ -3,8 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AppShellComponent } from '../../core/layout/app-shell.component';
 import { AttendanceApiService } from '../../core/services/attendance-api.service';
+import { TimesheetApiService } from '../../core/services/timesheet-api.service';
 import { MasterService } from '../../core/services/master.service';
-import { AttendancePeriodDto, AttendanceGridResponseDto, EmployeeDto } from '@blue-royal/contracts';
+import {
+  AttendancePeriodDto, AttendanceGridResponseDto, EmployeeDto,
+  ClientDto, ProjectDto,
+  TimesheetSupervisorDto, TimesheetDesignationFilterDto,
+} from '@blue-royal/contracts';
 
 @Directive({
   selector: '[appAutofocusCell]',
@@ -108,6 +113,26 @@ export interface TimesheetEmployeeRow {
               style="display: none;"
             />
             <button
+              class="btn btn-outline"
+              type="button"
+              (click)="onFillStandard()"
+              [disabled]="!selectedProjectId() || isFilling()"
+              title="Fill 8 regular hours for applicable working days for currently displayed employees"
+            >
+              <span class="material-symbols-outlined icon-sm">auto_fix_high</span>
+              <span>{{ isFilling() ? 'Filling...' : 'Fill 8h Standard' }}</span>
+            </button>
+            <button
+              class="btn btn-outline"
+              type="button"
+              (click)="onAddWorker()"
+              [disabled]="!selectedProjectId()"
+              title="Assign an existing employee to the selected project"
+            >
+              <span class="material-symbols-outlined icon-sm">person_add</span>
+              <span>Add Worker</span>
+            </button>
+            <button
               class="btn btn-secondary"
               type="button"
               (click)="fileInput.click()"
@@ -115,7 +140,7 @@ export interface TimesheetEmployeeRow {
               title="Import Attendance Excel for the selected month"
             >
               <span class="material-symbols-outlined icon-sm">upload_file</span>
-              <span>{{ isImporting() ? 'Importing...' : 'Import Attendance' }}</span>
+              <span>{{ isImporting() ? 'Importing...' : 'Bulk Upload' }}</span>
             </button>
             <button
               class="btn btn-primary"
@@ -125,10 +150,50 @@ export interface TimesheetEmployeeRow {
               title="Download Excel Timesheet report for all employees"
             >
               <span class="material-symbols-outlined icon-sm">download_for_offline</span>
-              <span>Download All Employees</span>
+              <span>Export CSV</span>
             </button>
           </div>
         </header>
+
+        <!-- Filter Bar -->
+        <section class="filter-bar">
+          <div class="filter-group">
+            <label class="filter-label">Client</label>
+            <select class="filter-select" [ngModel]="selectedClientId()" (ngModelChange)="onClientChange($event)">
+              <option value="">All Clients</option>
+              @for (c of clients(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Project</label>
+            <select class="filter-select" [ngModel]="selectedProjectId()" (ngModelChange)="onProjectChange($event)" [disabled]="!selectedClientId()">
+              <option value="">All Projects</option>
+              @for (p of filteredProjects(); track p.id) {
+                <option [value]="p.id">{{ p.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Supervisor</label>
+            <select class="filter-select" [ngModel]="selectedSupervisorId()" (ngModelChange)="onSupervisorChange($event)" [disabled]="!selectedProjectId()">
+              <option value="">All</option>
+              @for (s of supervisors(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Profession</label>
+            <select class="filter-select" [ngModel]="selectedDesignationId()" (ngModelChange)="onDesignationChange($event)" [disabled]="!selectedProjectId()">
+              <option value="">All Trades</option>
+              @for (d of projectDesignations(); track d.id) {
+                <option [value]="d.id">{{ d.title }}</option>
+              }
+            </select>
+          </div>
+        </section>
 
         <!-- Messages -->
         @if (errorMessage()) {
@@ -200,14 +265,19 @@ export interface TimesheetEmployeeRow {
                       <td class="col-sticky-emp">
                         <div class="employee-name" [title]="employee.name">{{ employee.name }}</div>
                         <div class="employee-code">{{ employee.code }}</div>
+                        @if (employee.designation) {
+                          <div class="employee-designation">{{ employee.designation }}</div>
+                        }
                       </td>
                       <td class="col-sticky-total font-bold">{{ employee.totalHours }}h</td>
                       <td class="col-sticky-ot accent font-bold">{{ employee.ot }}h</td>
                       @for (day of daysInMonth(); track day) {
                         <td
                           class="col-day-cell"
-                          [class.has-hours]="getCellValue(employee, day) > 0"
+                          [class.has-hours]="getCellActual(employee, day) > 0"
                           [class.is-editing]="isEditing(employee.id, day)"
+                          [class.is-leave]="getCellLeave(employee, day)"
+                          [class.is-off]="getCellOff(employee, day)"
                           (click)="startCellEdit(employee, day, $event)"
                           title="Click to edit day {{ day }} hours"
                         >
@@ -228,9 +298,14 @@ export interface TimesheetEmployeeRow {
                               (mousedown)="$event.stopPropagation()"
                             />
                           } @else {
-                            <span class="cell-display-val">
-                              {{ getCellValue(employee, day) > 0 ? getCellValue(employee, day) + 'h' : '-' }}
-                            </span>
+                            <div class="cell-display">
+                              <span class="cell-regular" [class.cell-zero]="getCellActual(employee, day) === 0">
+                                {{ getCellActual(employee, day) > 0 ? getCellActual(employee, day) + 'h' : '-' }}
+                              </span>
+                              @if (getCellOtHours(employee, day) > 0) {
+                                <span class="cell-ot">OT {{ getCellOtHours(employee, day) }}h</span>
+                              }
+                            </div>
                           }
                         </td>
                       }
@@ -254,10 +329,71 @@ export interface TimesheetEmployeeRow {
                     </tr>
                   }
                 </tbody>
+                <!-- Daily Totals Footer -->
+                @if (employeeRows().length > 0) {
+                  <tfoot>
+                    <tr class="daily-totals-row">
+                      <td class="col-sticky-emp totals-label">DAILY TOTALS</td>
+                      <td class="col-sticky-total font-bold">{{ totalHours() | number: '1.1-1' }}h</td>
+                      <td class="col-sticky-ot accent font-bold">{{ totalOt() | number: '1.1-1' }}h</td>
+                      @for (day of daysInMonth(); track day) {
+                        <td class="col-day-cell totals-cell">{{ dailyTotal(day) | number: '1.0-1' }}h</td>
+                      }
+                      <td class="col-download"></td>
+                    </tr>
+                  </tfoot>
+                }
               </table>
             </div>
           }
         </section>
+
+        <!-- Add Worker Modal -->
+        @if (showAddWorkerModal()) {
+          <div class="modal-overlay" (click)="closeAddWorkerModal()">
+            <div class="modal-dialog" (click)="$event.stopPropagation()">
+              <div class="modal-header">
+                <h3>Add Worker to Project</h3>
+                <button type="button" class="modal-close" (click)="closeAddWorkerModal()">&times;</button>
+              </div>
+              <div class="modal-body">
+                <div class="form-group">
+                  <label>Employee</label>
+                  <select [(ngModel)]="addWorkerEmployeeId" class="form-select">
+                    <option value="">Select Employee</option>
+                    @for (e of availableEmployees(); track e.id) {
+                      <option [value]="e.id">{{ e.firstName }} {{ e.lastName }} ({{ e.employeeCode }})</option>
+                    }
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Designation / Profession</label>
+                  <select [(ngModel)]="addWorkerDesignationId" class="form-select">
+                    <option value="">Select Designation</option>
+                    @for (d of allDesignations(); track d.id) {
+                      <option [value]="d.id">{{ d.title }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Effective From</label>
+                  <input type="date" [(ngModel)]="addWorkerEffectiveFrom" class="form-input" />
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" (click)="closeAddWorkerModal()">Cancel</button>
+                <button
+                  class="btn btn-primary"
+                  type="button"
+                  (click)="submitAddWorker()"
+                  [disabled]="!addWorkerEmployeeId || !addWorkerDesignationId || !addWorkerEffectiveFrom || isAssigning()"
+                >
+                  {{ isAssigning() ? 'Assigning...' : 'Assign Worker' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
       </div>
     </app-shell>
   `,
@@ -265,11 +401,17 @@ export interface TimesheetEmployeeRow {
     `
       :host {
         display: block;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
       }
       .timesheet-page {
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
       }
       .title-bar {
         display: flex;
@@ -292,7 +434,7 @@ export interface TimesheetEmployeeRow {
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
       }
       .header-left {
         display: inline-flex;
@@ -303,8 +445,9 @@ export interface TimesheetEmployeeRow {
       .header-right {
         display: inline-flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.5rem;
         flex-shrink: 0;
+        flex-wrap: wrap;
       }
       .btn-nav {
         display: inline-flex;
@@ -366,6 +509,49 @@ export interface TimesheetEmployeeRow {
         opacity: 0;
         cursor: pointer;
       }
+
+      /* Filter Bar */
+      .filter-bar {
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding: 0.75rem 1rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 160px;
+        flex: 1;
+        max-width: 260px;
+      }
+      .filter-label {
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 600;
+        color: #64748b;
+      }
+      .filter-select {
+        height: 36px;
+        padding: 0 0.5rem;
+        font-size: 0.8125rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #ffffff;
+        color: #1e293b;
+        cursor: pointer;
+      }
+      .filter-select:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -399,8 +585,10 @@ export interface TimesheetEmployeeRow {
         background: #fff;
         border: 1px solid #e2e8f0;
         border-radius: 0.75rem;
-        overflow: hidden;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
       }
       .panel-header {
         display: flex;
@@ -420,24 +608,27 @@ export interface TimesheetEmployeeRow {
         overflow-x: auto;
         overflow-y: auto;
         max-height: 65vh;
+        width: 100%;
+        max-width: 100%;
         position: relative;
         border-top: 1px solid #edf2f7;
-        scroll-behavior: auto;
         margin: 0;
         padding: 0;
       }
       .data-table {
         width: 100%;
+        min-width: max-content;
         border-collapse: separate;
         border-spacing: 0;
         margin: 0;
         font-size: 0.8125rem;
+        table-layout: fixed;
       }
-      col.cg-emp { width: 220px; min-width: 220px; }
-      col.cg-total { width: 100px; min-width: 100px; }
-      col.cg-ot { width: 80px; min-width: 80px; }
-      col.cg-day { width: 48px; min-width: 48px; }
-      col.cg-download { width: 140px; min-width: 140px; }
+      col.cg-emp { width: 220px; min-width: 220px; max-width: 220px; }
+      col.cg-total { width: 100px; min-width: 100px; max-width: 100px; }
+      col.cg-ot { width: 80px; min-width: 80px; max-width: 80px; }
+      col.cg-day { width: 56px; min-width: 56px; max-width: 56px; }
+      col.cg-download { width: 140px; min-width: 140px; max-width: 140px; }
 
       .data-table th,
       .data-table td {
@@ -460,13 +651,13 @@ export interface TimesheetEmployeeRow {
 
       /* Sticky Column 1: Employee */
       .col-sticky-emp {
-        position: sticky;
-        left: 0px;
-        width: 220px;
-        min-width: 220px;
-        max-width: 220px;
+        position: sticky !important;
+        left: 0px !important;
+        width: 220px !important;
+        min-width: 220px !important;
+        max-width: 220px !important;
         background-color: #ffffff;
-        z-index: 20;
+        z-index: 22;
         box-sizing: border-box;
         text-align: left;
         padding-left: 1rem !important;
@@ -475,24 +666,24 @@ export interface TimesheetEmployeeRow {
 
       /* Sticky Column 2: Total Hours */
       .col-sticky-total {
-        position: sticky;
-        left: 220px;
-        width: 100px;
-        min-width: 100px;
-        max-width: 100px;
+        position: sticky !important;
+        left: 220px !important;
+        width: 100px !important;
+        min-width: 100px !important;
+        max-width: 100px !important;
         background-color: #ffffff;
-        z-index: 20;
+        z-index: 21;
         box-sizing: border-box;
         text-align: center !important;
       }
 
       /* Sticky Column 3: OT */
       .col-sticky-ot {
-        position: sticky;
-        left: 320px;
-        width: 80px;
-        min-width: 80px;
-        max-width: 80px;
+        position: sticky !important;
+        left: 320px !important;
+        width: 80px !important;
+        min-width: 80px !important;
+        max-width: 80px !important;
         background-color: #ffffff;
         z-index: 20;
         box-sizing: border-box;
@@ -503,22 +694,22 @@ export interface TimesheetEmployeeRow {
 
       /* Top Intersection: Headers must be sticky to top and left with z-index 35 */
       th.col-sticky-emp {
-        top: 0;
-        left: 0px;
-        z-index: 35;
-        background-color: #f8fafc;
+        top: 0 !important;
+        left: 0px !important;
+        z-index: 35 !important;
+        background-color: #f8fafc !important;
       }
       th.col-sticky-total {
-        top: 0;
-        left: 220px;
-        z-index: 35;
-        background-color: #f8fafc;
+        top: 0 !important;
+        left: 220px !important;
+        z-index: 34 !important;
+        background-color: #f8fafc !important;
       }
       th.col-sticky-ot {
-        top: 0;
-        left: 320px;
-        z-index: 35;
-        background-color: #f8fafc;
+        top: 0 !important;
+        left: 320px !important;
+        z-index: 33 !important;
+        background-color: #f8fafc !important;
         border-right: 2px solid #cbd5e1 !important;
         box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
       }
@@ -541,27 +732,33 @@ export interface TimesheetEmployeeRow {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        max-width: 190px;
       }
       .employee-code {
         font-size: 0.72rem;
         color: #64748b;
         font-family: monospace;
       }
+      .employee-designation {
+        font-size: 0.67rem;
+        color: #94a3b8;
+        font-style: italic;
+      }
       .col-day {
         text-align: center;
-        width: 48px;
-        min-width: 48px;
-        max-width: 48px;
+        width: 56px;
+        min-width: 56px;
+        max-width: 56px;
         box-sizing: border-box;
         padding: 0.65rem 0.25rem !important;
       }
       .col-day-cell {
         text-align: center;
-        width: 48px;
-        min-width: 48px;
-        max-width: 48px;
+        width: 56px;
+        min-width: 56px;
+        max-width: 56px;
         box-sizing: border-box;
-        padding: 0.35rem 0.25rem !important;
+        padding: 0.2rem 0.15rem !important;
         cursor: pointer;
         user-select: none;
         transition: background-color 0.15s ease;
@@ -573,26 +770,40 @@ export interface TimesheetEmployeeRow {
         background-color: #dbeafe !important;
         padding: 0.15rem !important;
       }
-      .cell-display-val {
-        display: inline-block;
-        padding: 0.25rem 0.35rem;
-        border-radius: 4px;
-        color: #94a3b8;
-        font-size: 0.8125rem;
-        transition: all 0.15s ease;
+      .col-day-cell.is-leave {
+        background-color: #fef3c7;
       }
-      .col-day-cell.has-hours .cell-display-val {
-        color: #0f172a;
-        font-weight: 500;
+      .col-day-cell.is-off {
         background-color: #f1f5f9;
       }
-      .col-day-cell:hover .cell-display-val {
-        background-color: #bae6fd;
-        color: #0369a1;
+
+      /* Cell display with regular + OT */
+      .cell-display {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        line-height: 1.2;
       }
+      .cell-regular {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: #0f172a;
+      }
+      .cell-regular.cell-zero {
+        color: #94a3b8;
+        font-weight: 400;
+      }
+      .cell-ot {
+        font-size: 0.6rem;
+        color: #d97706;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
       .cell-edit-input {
         width: 100%;
-        max-width: 44px;
+        max-width: 48px;
         height: 28px;
         padding: 0.1rem 0.2rem;
         font-size: 0.8125rem;
@@ -656,15 +867,16 @@ export interface TimesheetEmployeeRow {
       .btn {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
         border: 1px solid #cbd5e1;
         background: #fff;
         border-radius: 0.5rem;
-        padding: 0.55rem 1.05rem;
-        font-size: 0.8125rem;
+        padding: 0.5rem 0.85rem;
+        font-size: 0.78rem;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.15s ease;
+        white-space: nowrap;
       }
       .btn:hover:not(:disabled) {
         background: #f1f5f9;
@@ -684,6 +896,18 @@ export interface TimesheetEmployeeRow {
       .btn-secondary {
         background: #ffffff;
         color: #334155;
+      }
+      .btn-outline {
+        background: #ffffff;
+        color: #475569;
+        border: 1px solid #94a3b8;
+      }
+      .btn-outline:hover:not(:disabled) {
+        background: #f8fafc;
+        border-color: #64748b;
+      }
+      .icon-sm {
+        font-size: 16px;
       }
       .loading-state,
       .empty-cell {
@@ -710,6 +934,115 @@ export interface TimesheetEmployeeRow {
       }
       .alert-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
       .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+      /* Daily Totals Footer */
+      .daily-totals-row {
+        background-color: #f1f5f9;
+        font-weight: 700;
+      }
+      .daily-totals-row td {
+        border-top: 2px solid #cbd5e1;
+        border-bottom: none;
+        position: sticky;
+        bottom: 0;
+        background-color: #f1f5f9;
+        z-index: 15;
+      }
+      .daily-totals-row td.col-sticky-emp {
+        left: 0px !important;
+        z-index: 35 !important;
+        background-color: #f1f5f9 !important;
+      }
+      .daily-totals-row td.col-sticky-total {
+        left: 220px !important;
+        z-index: 35 !important;
+        background-color: #f1f5f9 !important;
+      }
+      .daily-totals-row td.col-sticky-ot {
+        left: 320px !important;
+        z-index: 35 !important;
+        background-color: #f1f5f9 !important;
+        border-right: 2px solid #cbd5e1 !important;
+        box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
+      }
+      .totals-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #475569;
+      }
+      .totals-cell {
+        font-size: 0.75rem;
+        color: #334155;
+      }
+
+      /* Modal */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-dialog {
+        background: #fff;
+        border-radius: 0.75rem;
+        width: 480px;
+        max-width: 90vw;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .modal-header h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0 0.25rem;
+      }
+      .modal-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-top: 1px solid #e2e8f0;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .form-group label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .form-select, .form-input {
+        height: 38px;
+        padding: 0 0.75rem;
+        font-size: 0.875rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #fff;
+        color: #1e293b;
+      }
     `,
   ],
 })
@@ -731,8 +1064,28 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
   public employeeRows = signal<TimesheetEmployeeRow[]>([]);
   public selectedEmployeeId = signal<string>('');
 
+  // Filters
+  public clients = signal<ClientDto[]>([]);
+  public projects = signal<ProjectDto[]>([]);
+  public supervisors = signal<TimesheetSupervisorDto[]>([]);
+  public projectDesignations = signal<TimesheetDesignationFilterDto[]>([]);
+  public selectedClientId = signal<string>('');
+  public selectedProjectId = signal<string>('');
+  public selectedSupervisorId = signal<string>('');
+  public selectedDesignationId = signal<string>('');
+
+  // Add Worker
+  public showAddWorkerModal = signal<boolean>(false);
+  public availableEmployees = signal<EmployeeDto[]>([]);
+  public allDesignations = signal<{ id: string; title: string }[]>([]);
+  public addWorkerEmployeeId = '';
+  public addWorkerDesignationId = '';
+  public addWorkerEffectiveFrom = '';
+  public isAssigning = signal<boolean>(false);
+
   public isLoading = signal<boolean>(false);
   public isImporting = signal<boolean>(false);
+  public isFilling = signal<boolean>(false);
   public errorMessage = signal<string | null>(null);
   public successMessage = signal<string | null>(null);
 
@@ -743,6 +1096,12 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
 
   public formattedSelectedMonth = computed(() => {
     return `${this.monthNames[this.selectedMonthIndex()]}, ${this.selectedYear()}`;
+  });
+
+  public filteredProjects = computed(() => {
+    const cid = this.selectedClientId();
+    if (!cid) return this.projects();
+    return this.projects().filter(p => p.clientId === cid);
   });
 
   public totalHours = computed(() =>
@@ -763,6 +1122,7 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
 
   constructor(
     private attendanceApi: AttendanceApiService,
+    private timesheetApi: TimesheetApiService,
     private masterService: MasterService,
   ) {}
 
@@ -773,12 +1133,75 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       this.selectedYear.set(y);
       this.selectedMonthIndex.set(m - 1);
     }
+    this.loadClients();
     this.loadTimesheetData();
   }
 
   public ngAfterViewInit(): void {
     this.resetTableScroll();
   }
+
+  // ---------- Filter Handlers ----------
+
+  private loadClients(): void {
+    this.masterService.getClients().subscribe({
+      next: (res) => this.clients.set(res.data || []),
+      error: () => this.clients.set([]),
+    });
+  }
+
+  public onClientChange(clientId: string): void {
+    this.selectedClientId.set(clientId);
+    this.selectedProjectId.set('');
+    this.selectedSupervisorId.set('');
+    this.selectedDesignationId.set('');
+    this.supervisors.set([]);
+    this.projectDesignations.set([]);
+
+    if (clientId) {
+      this.masterService.getProjects(clientId).subscribe({
+        next: (res) => this.projects.set(res.data || []),
+        error: () => this.projects.set([]),
+      });
+    } else {
+      this.projects.set([]);
+    }
+    this.loadTimesheetData();
+  }
+
+  public onProjectChange(projectId: string): void {
+    this.selectedProjectId.set(projectId);
+    this.selectedSupervisorId.set('');
+    this.selectedDesignationId.set('');
+
+    if (projectId) {
+      this.timesheetApi.getProjectSupervisors(projectId).subscribe({
+        next: (res) => this.supervisors.set(res.data || []),
+        error: () => this.supervisors.set([]),
+      });
+      this.timesheetApi.getProjectDesignations(projectId).subscribe({
+        next: (res) => this.projectDesignations.set(res.data || []),
+        error: () => this.projectDesignations.set([]),
+      });
+    } else {
+      this.supervisors.set([]);
+      this.projectDesignations.set([]);
+    }
+    this.loadTimesheetData();
+  }
+
+  public onSupervisorChange(supervisorId: string): void {
+    this.selectedSupervisorId.set(supervisorId);
+    // Supervisor is project-level; changing it confirms context but does not further filter employees
+    // unless backend supports per-employee supervisor (it does not currently)
+  }
+
+  public onDesignationChange(designationId: string): void {
+    this.selectedDesignationId.set(designationId);
+    this.loadTimesheetData();
+  }
+
+  // ---------- Month Navigation ----------
 
   public onPreviousMonth(): void {
     let yr = this.selectedYear();
@@ -839,6 +1262,8 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
     this.loadTimesheetData();
   }
 
+  // ---------- Data Loading ----------
+
   public loadTimesheetData(): void {
     const month = this.selectedMonth();
     this.cancelCellEdit();
@@ -854,7 +1279,12 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
         this.currentPeriod.set(matchingPeriod || null);
 
         if (matchingPeriod) {
-          this.attendanceApi.getGrid(matchingPeriod.id).subscribe({
+          const filters: any = {};
+          if (this.selectedClientId()) filters.clientId = this.selectedClientId();
+          if (this.selectedProjectId()) filters.projectId = this.selectedProjectId();
+          if (this.selectedDesignationId()) filters.designationId = this.selectedDesignationId();
+
+          this.attendanceApi.getGrid(matchingPeriod.id, filters).subscribe({
             next: (gridRes) => {
               this.populateFromGrid(gridRes.data);
               this.isLoading.set(false);
@@ -883,6 +1313,8 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
   }
 
   private populateFromGrid(grid: AttendanceGridResponseDto): void {
+    const desigFilter = this.selectedDesignationId();
+
     const mapped: TimesheetEmployeeRow[] = (grid.rows || []).map((row) => {
       const dailyHours: Record<number, number> = {};
       const dailyCells: Record<number, TimesheetDayCell> = {};
@@ -941,45 +1373,109 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       };
     });
 
-    this.employeeRows.set(mapped);
-    if (mapped.length > 0 && !this.selectedEmployeeId()) {
-      this.selectedEmployeeId.set(mapped[0].id);
+    // Apply designation filter client-side (backend grid filters by client/project already)
+    let filtered = mapped;
+    if (desigFilter) {
+      // Filter by checking if the employee's attendance records have the matching designation
+      // The designation filter is based on the project assignment, not attendance records
+      // We use the designation title as a match since the grid returns designationTitle
+      const selectedDesig = this.projectDesignations().find(d => d.id === desigFilter);
+      if (selectedDesig) {
+        filtered = mapped.filter(e => e.designation === selectedDesig.title);
+      }
+    }
+
+    this.employeeRows.set(filtered);
+    if (filtered.length > 0 && !this.selectedEmployeeId()) {
+      this.selectedEmployeeId.set(filtered[0].id);
     }
   }
 
   private loadFallbackEmployees(): void {
-    this.masterService.getEmployees().subscribe({
-      next: (empRes) => {
-        const rows: TimesheetEmployeeRow[] = (empRes.data || []).map((emp: EmployeeDto) => ({
-          id: emp.id,
-          name: `${emp.firstName} ${emp.lastName}`.trim(),
-          code: emp.employeeCode,
-          designation: '',
-          totalHours: 0,
-          ot: 0,
-          dailyHours: {},
-          dailyCells: {},
-        }));
-        this.employeeRows.set(rows);
-        if (rows.length > 0 && !this.selectedEmployeeId()) {
-          this.selectedEmployeeId.set(rows[0].id);
-        }
-        this.isLoading.set(false);
-        this.resetTableScroll();
-      },
-      error: () => {
-        this.employeeRows.set([]);
-        this.isLoading.set(false);
-        this.resetTableScroll();
-      },
-    });
+    // If a project is selected, load from timesheet API; otherwise load all employees
+    const projectId = this.selectedProjectId();
+    const desigId = this.selectedDesignationId();
+
+    if (projectId) {
+      this.timesheetApi.getProjectEmployees(projectId, desigId || undefined).subscribe({
+        next: (res) => {
+          const rows: TimesheetEmployeeRow[] = (res.data || []).map((emp) => ({
+            id: emp.employeeId,
+            name: emp.employeeName,
+            code: emp.employeeCode,
+            designation: emp.designationTitle || '',
+            totalHours: 0,
+            ot: 0,
+            dailyHours: {},
+            dailyCells: {},
+          }));
+          this.employeeRows.set(rows);
+          if (rows.length > 0 && !this.selectedEmployeeId()) {
+            this.selectedEmployeeId.set(rows[0].id);
+          }
+          this.isLoading.set(false);
+          this.resetTableScroll();
+        },
+        error: () => {
+          this.employeeRows.set([]);
+          this.isLoading.set(false);
+          this.resetTableScroll();
+        },
+      });
+    } else {
+      this.masterService.getEmployees().subscribe({
+        next: (empRes) => {
+          const rows: TimesheetEmployeeRow[] = (empRes.data || []).map((emp: EmployeeDto) => ({
+            id: emp.id,
+            name: `${emp.firstName} ${emp.lastName}`.trim(),
+            code: emp.employeeCode,
+            designation: '',
+            totalHours: 0,
+            ot: 0,
+            dailyHours: {},
+            dailyCells: {},
+          }));
+          this.employeeRows.set(rows);
+          if (rows.length > 0 && !this.selectedEmployeeId()) {
+            this.selectedEmployeeId.set(rows[0].id);
+          }
+          this.isLoading.set(false);
+          this.resetTableScroll();
+        },
+        error: () => {
+          this.employeeRows.set([]);
+          this.isLoading.set(false);
+          this.resetTableScroll();
+        },
+      });
+    }
   }
 
-  public getCellValue(employee: TimesheetEmployeeRow, day: number): number {
+  // ---------- Cell Value Accessors ----------
+
+  public getCellActual(employee: TimesheetEmployeeRow, day: number): number {
     return employee.dailyHours?.[day] ?? 0;
   }
 
-  // Cell Edit Actions
+  public getCellOtHours(employee: TimesheetEmployeeRow, day: number): number {
+    return employee.dailyCells?.[day]?.otHours ?? 0;
+  }
+
+  public getCellLeave(employee: TimesheetEmployeeRow, day: number): boolean {
+    return employee.dailyCells?.[day]?.isOnLeave ?? false;
+  }
+
+  public getCellOff(employee: TimesheetEmployeeRow, day: number): boolean {
+    const dt = employee.dailyCells?.[day]?.dayType;
+    return dt === 'weekly_off' || dt === 'public_holiday';
+  }
+
+  public dailyTotal(day: number): number {
+    return this.employeeRows().reduce((sum, e) => sum + (e.dailyHours?.[day] ?? 0), 0);
+  }
+
+  // ---------- Cell Editing ----------
+
   public isEditing(employeeId: string, day: number): boolean {
     const c = this.editingCell();
     return c?.employeeId === employeeId && c?.day === day;
@@ -992,7 +1488,7 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       return;
     }
     this.selectedEmployeeId.set(employee.id);
-    const currentVal = this.getCellValue(employee, day);
+    const currentVal = this.getCellActual(employee, day);
     this.editValue = currentVal > 0 ? String(currentVal) : '0';
     this.editOpenTimestamp = Date.now();
     this.editingCell.set({ employeeId: employee.id, day });
@@ -1020,8 +1516,8 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const trimmed = (this.editValue || '').trim();
-    const parsed = trimmed === '' ? 0 : parseFloat(trimmed);
+    const normalized = String(this.editValue ?? '').trim();
+    const parsed = normalized === '' ? 0 : parseFloat(normalized);
 
     if (isNaN(parsed) || parsed < 0 || parsed > 24) {
       this.errorMessage.set('Hours must be a valid number between 0 and 24.');
@@ -1030,7 +1526,7 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const currentVal = this.getCellValue(employee, day);
+    const currentVal = this.getCellActual(employee, day);
     this.cancelCellEdit();
 
     if (parsed === currentVal) {
@@ -1060,15 +1556,29 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       const shiftHours = cell?.shiftHours ?? defaultShift;
       const isOnLeave = cell?.isOnLeave ?? false;
 
+      let dayOt = 0;
       if (isOnLeave) {
         // No OT on approved leave
       } else if (dayType === 'public_holiday' || dayType === 'weekly_off') {
         // Any hours worked on holiday / weekly off are 100% overtime
-        sumOt += hrs;
+        dayOt = hrs;
       } else {
         // Regular workday: OT only above shift hours
         if (shiftHours > 0 && hrs > shiftHours) {
-          sumOt += (hrs - shiftHours);
+          dayOt = (hrs - shiftHours);
+        }
+      }
+      sumOt += dayOt;
+
+      // Update cell-level OT for display
+      if (cell) {
+        cell.otHours = Math.round(dayOt * 10) / 10;
+        if (isOnLeave) {
+          cell.regularHours = 0;
+        } else if (dayType === 'public_holiday' || dayType === 'weekly_off') {
+          cell.regularHours = 0;
+        } else {
+          cell.regularHours = Math.min(hrs, shiftHours);
         }
       }
     }
@@ -1133,7 +1643,109 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       });
   }
 
-  // Import Attendance
+  // ---------- Fill 8h Standard ----------
+
+  public onFillStandard(): void {
+    const period = this.currentPeriod();
+    const projectId = this.selectedProjectId();
+
+    if (!period) {
+      this.errorMessage.set(`No attendance period found for ${this.formattedSelectedMonth()}. Please create the period in Attendance first.`);
+      setTimeout(() => this.errorMessage.set(null), 5000);
+      return;
+    }
+
+    if (!projectId) {
+      this.errorMessage.set('Please select a project before using Fill 8h Standard.');
+      setTimeout(() => this.errorMessage.set(null), 4000);
+      return;
+    }
+
+    this.isFilling.set(true);
+    this.errorMessage.set(null);
+
+    this.timesheetApi.fillStandardHours({
+      periodId: period.id,
+      projectId,
+      designationId: this.selectedDesignationId() || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.isFilling.set(false);
+        const data = res.data;
+        this.successMessage.set(
+          `Fill 8h Standard complete: ${data.updatedRecords} records updated, ${data.createdRecords} created. ` +
+          `Skipped: ${data.skippedLeave} leave, ${data.skippedHoliday} holiday, ${data.skippedWeeklyOff} weekly off.`
+        );
+        setTimeout(() => this.successMessage.set(null), 6000);
+        this.loadTimesheetData();
+      },
+      error: (err) => {
+        this.isFilling.set(false);
+        this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Failed to fill standard hours.');
+        setTimeout(() => this.errorMessage.set(null), 5000);
+      },
+    });
+  }
+
+  // ---------- Add Worker ----------
+
+  public onAddWorker(): void {
+    if (!this.selectedProjectId()) return;
+
+    // Load available employees and designations
+    this.masterService.getEmployees().subscribe({
+      next: (res) => this.availableEmployees.set(res.data || []),
+      error: () => this.availableEmployees.set([]),
+    });
+    this.masterService.getDesignations().subscribe({
+      next: (res) => this.allDesignations.set((res.data || []).map((d: any) => ({ id: d.id, title: d.title }))),
+      error: () => this.allDesignations.set([]),
+    });
+
+    // Default effective from to period start or today
+    const period = this.currentPeriod();
+    this.addWorkerEffectiveFrom = period?.startDate || new Date().toISOString().slice(0, 10);
+    this.addWorkerEmployeeId = '';
+    this.addWorkerDesignationId = '';
+    this.showAddWorkerModal.set(true);
+  }
+
+  public closeAddWorkerModal(): void {
+    this.showAddWorkerModal.set(false);
+  }
+
+  public submitAddWorker(): void {
+    const projectId = this.selectedProjectId();
+    if (!projectId || !this.addWorkerEmployeeId || !this.addWorkerDesignationId || !this.addWorkerEffectiveFrom) return;
+
+    this.isAssigning.set(true);
+
+    this.timesheetApi.assignWorker(projectId, {
+      employeeId: this.addWorkerEmployeeId,
+      designationId: this.addWorkerDesignationId,
+      effectiveFrom: this.addWorkerEffectiveFrom,
+    }).subscribe({
+      next: () => {
+        this.isAssigning.set(false);
+        this.showAddWorkerModal.set(false);
+        this.successMessage.set('Worker assigned to project successfully. Reloading timesheet...');
+        setTimeout(() => this.successMessage.set(null), 4000);
+        // Reload designations for the project
+        this.timesheetApi.getProjectDesignations(projectId).subscribe({
+          next: (res) => this.projectDesignations.set(res.data || []),
+        });
+        this.loadTimesheetData();
+      },
+      error: (err) => {
+        this.isAssigning.set(false);
+        this.errorMessage.set(err?.error?.error?.message || err?.error?.message || 'Failed to assign worker.');
+        setTimeout(() => this.errorMessage.set(null), 5000);
+      },
+    });
+  }
+
+  // ---------- Import Attendance ----------
+
   public onImportAttendanceFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input?.files?.[0];
@@ -1189,7 +1801,8 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
     });
   }
 
-  // Individual Employee Download
+  // ---------- Downloads ----------
+
   public downloadSingleEmployee(employee: TimesheetEmployeeRow, event?: MouseEvent): void {
     event?.stopPropagation();
     const month = this.selectedMonth();
@@ -1221,7 +1834,7 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
 
     for (const d of days) {
       const cell = employee.dailyCells[d];
-      const hrs = this.getCellValue(employee, d);
+      const hrs = this.getCellActual(employee, d);
       const dateStr = `${month}-${String(d).padStart(2, '0')}`;
       const dayType = cell?.dayType || (this.isWeeklyOff(d) ? 'weekly_off' : 'regular_workday');
       const shiftHrs = cell?.shiftHours ?? (employee.shiftWorkHours || 8);
@@ -1262,7 +1875,6 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
     setTimeout(() => this.successMessage.set(null), 3000);
   }
 
-  // All Employees Timesheet Download
   public downloadAllEmployeesTimesheet(): void {
     const month = this.selectedMonth();
     const formattedMonth = this.formattedSelectedMonth();
@@ -1319,7 +1931,7 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
       ];
 
       for (const d of days) {
-        const hrs = this.getCellValue(emp, d);
+        const hrs = this.getCellActual(emp, d);
         dayTotals[d] = (dayTotals[d] || 0) + hrs;
         cells.push(`<Cell ss:StyleID="Number"><Data ss:Type="Number">${hrs}</Data></Cell>`);
       }

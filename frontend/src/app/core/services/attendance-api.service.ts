@@ -35,12 +35,13 @@ export class AttendanceApiService {
 
   public getGrid(
     periodId: string,
-    filters?: { clientId?: string; projectId?: string; employeeId?: string; hasAnomaly?: boolean },
+    filters?: { clientId?: string; projectId?: string; employeeId?: string; designationId?: string; hasAnomaly?: boolean },
   ): Observable<ApiSuccessResponse<AttendanceGridResponseDto>> {
     let params = new HttpParams();
     if (filters?.clientId) params = params.set('clientId', filters.clientId);
     if (filters?.projectId) params = params.set('projectId', filters.projectId);
     if (filters?.employeeId) params = params.set('employeeId', filters.employeeId);
+    if (filters?.designationId) params = params.set('designationId', filters.designationId);
     if (filters?.hasAnomaly !== undefined) params = params.set('hasAnomaly', String(filters.hasAnomaly));
 
     return this.http.get<ApiSuccessResponse<AttendanceGridResponseDto>>(`${this.baseUrl}/periods/${periodId}/grid`, {

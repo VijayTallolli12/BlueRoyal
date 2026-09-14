@@ -53,6 +53,7 @@ export class AttendanceController {
         clientId: query.clientId,
         projectId: query.projectId,
         employeeId: query.employeeId,
+        designationId: query.designationId,
         hasAnomaly: query.hasAnomaly,
       });
 

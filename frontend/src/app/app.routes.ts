@@ -124,6 +124,15 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'receivables',
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'receivables:read' },
+    loadComponent: () =>
+      import('./features/receivables/receivables.component').then(
+        (m) => m.ReceivablesComponent,
+      ),
+  },
+  {
     path: '**',
     redirectTo: 'dashboard',
   },

@@ -19,3 +19,5 @@ export * from './onboarding/onboarding';
 export * from './settlement/settlement';
 export * from './dashboard/dashboard';
 export * from './invoice/invoice';
+export * from './timesheet/timesheet';
+export * from './payment/payment';

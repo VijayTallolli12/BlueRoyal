@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Client } from '../models/client.model';
 import { Project } from '../models/project.model';
+import { Employee } from '../models/employee.model';
 import { sendSuccess } from '../../../core/utils/response.util';
 import { AppError } from '../../../core/errors/app-error';
 import { AuditService } from '../../../core/audit/audit.service';
@@ -242,6 +243,15 @@ export class ProjectController {
       if (existing) {
         throw AppError.conflict(`Project code ${code} already exists`);
       }
+
+      const supervisorId = req.body.supervisorId ? String(req.body.supervisorId).trim() : null;
+      if (supervisorId) {
+        const supervisor = await Employee.findByPk(supervisorId);
+        if (!supervisor) {
+          throw AppError.badRequest(`Supervisor employee ${supervisorId} does not exist`);
+        }
+      }
+
       const item = await Project.create({
         clientId,
         code,
@@ -250,6 +260,7 @@ export class ProjectController {
         startDate: req.body.startDate || null,
         endDate: req.body.endDate || null,
         status: req.body.status || 'active',
+        supervisorId,
       });
 
       await AuditService.recordEvent({
@@ -296,6 +307,20 @@ export class ProjectController {
       // Preserve existing status unless explicitly specified
       const status = req.body.status !== undefined ? req.body.status : item.status;
 
+      // Supervisor handling
+      let supervisorId = item.supervisorId;
+      if (req.body.supervisorId !== undefined) {
+        if (req.body.supervisorId === null || req.body.supervisorId === '') {
+          supervisorId = null;
+        } else {
+          supervisorId = String(req.body.supervisorId).trim();
+          const supervisor = await Employee.findByPk(supervisorId);
+          if (!supervisor) {
+            throw AppError.badRequest(`Supervisor employee ${supervisorId} does not exist`);
+          }
+        }
+      }
+
       if (req.body.clientId !== undefined && !clientId) {
         throw AppError.badRequest('Client is required');
       }
@@ -316,7 +341,7 @@ export class ProjectController {
         }
       }
       const oldValues = item.toJSON();
-      await item.update({ clientId, code, name, siteLocation, startDate, endDate, status });
+      await item.update({ clientId, code, name, siteLocation, startDate, endDate, status, supervisorId });
 
       await AuditService.recordEvent({
         actorId: req.user?.id,

@@ -44,6 +44,14 @@ export class InvoiceService {
     return this.http.post<ApiSuccessResponse<InvoiceDto>>(`${this.baseUrl}/generate`, dto);
   }
 
+  public approveInvoice(id: string): Observable<ApiSuccessResponse<InvoiceDto>> {
+    return this.http.post<ApiSuccessResponse<InvoiceDto>>(`${this.baseUrl}/${id}/approve`, {});
+  }
+
+  public rejectInvoice(id: string, reason: string): Observable<ApiSuccessResponse<InvoiceDto>> {
+    return this.http.post<ApiSuccessResponse<InvoiceDto>>(`${this.baseUrl}/${id}/reject`, { reason });
+  }
+
   public issueInvoice(id: string): Observable<ApiSuccessResponse<InvoiceDto>> {
     return this.http.post<ApiSuccessResponse<InvoiceDto>>(`${this.baseUrl}/${id}/issue`, {});
   }
