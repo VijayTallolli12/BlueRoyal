@@ -210,6 +210,64 @@ describe('TimesheetComponent', () => {
     expect(btnDownload?.textContent).toContain('Download Excel');
   });
 
+  it('should select the latest populated attendance period on initial load instead of current calendar month', () => {
+    attendanceApi.listPeriods.and.returnValue(
+      of({
+        success: true,
+        data: [
+          { id: 'period-9', periodCode: '2026-09', name: 'September 2026', status: 'draft', startDate: '2026-09-01', endDate: '2026-09-30' },
+          { id: 'period-8', periodCode: '2026-08', name: 'August 2026', status: 'locked', startDate: '2026-08-01', endDate: '2026-08-31' },
+          { id: 'period-7', periodCode: '2026-07', name: 'July 2026', status: 'locked', startDate: '2026-07-01', endDate: '2026-07-31' },
+        ],
+        meta: { correlationId: 'c-init', timestamp: new Date().toISOString() },
+      }),
+    );
+
+    attendanceApi.getGrid.and.callFake((periodId: string) => {
+      if (periodId === 'period-9') {
+        return of({
+          success: true,
+          data: {
+            period: { id: 'period-9', periodCode: '2026-09', name: 'September 2026', status: 'draft', startDate: '2026-09-01', endDate: '2026-09-30' },
+            dates: [],
+            rows: [],
+            summary: { totalEmployees: 0, totalActualHours: 0, totalRegularHours: 0, totalOtHours: 0, totalAbsences: 0, totalAnomalies: 0 },
+          },
+          meta: { correlationId: 'c-empty', timestamp: new Date().toISOString() },
+        });
+      }
+
+      return of({
+        success: true,
+        data: {
+          period: { id: periodId, periodCode: periodId === 'period-8' ? '2026-08' : '2026-07', name: periodId === 'period-8' ? 'August 2026' : 'July 2026', status: 'locked', startDate: periodId === 'period-8' ? '2026-08-01' : '2026-07-01', endDate: periodId === 'period-8' ? '2026-08-31' : '2026-07-31' },
+          dates: ['2026-08-01'],
+          rows: [{
+            employeeId: 'emp-1',
+            employeeCode: 'EMP001',
+            employeeName: 'Ahmed Al-Mansoor',
+            designationTitle: 'Senior Engineer',
+            shiftName: 'Standard Day (8h)',
+            shiftWorkHours: 8,
+            totalActualHours: 8,
+            totalOtHours: 0,
+            records: { '2026-08-01': { id: 'rec-1', workDate: '2026-08-01', actualHours: 8, dayType: 'regular_workday' } },
+          }],
+          summary: { totalEmployees: 1, totalActualHours: 8, totalRegularHours: 8, totalOtHours: 0, totalAbsences: 0, totalAnomalies: 0 },
+        },
+        meta: { correlationId: 'c-populated', timestamp: new Date().toISOString() },
+      });
+    });
+
+    const initFixture = TestBed.createComponent(TimesheetComponent);
+    const initComponent = initFixture.componentInstance;
+    initFixture.detectChanges();
+
+    expect(initComponent.selectedMonth()).toBe('2026-08');
+    expect(initComponent.selectedYear()).toBe(2026);
+    expect(initComponent.selectedMonthIndex()).toBe(7);
+  });
+
   it('should update selected month and reload when month index changes', () => {
     component.selectedYear.set(2026);
     component.onMonthIndexChange(9); // October (index 9)

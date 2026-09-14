@@ -1272,31 +1272,54 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
 
     this.attendanceApi.listPeriods().subscribe({
       next: (res) => {
-        this.periods.set(res.data);
-        const matchingPeriod = res.data.find(
+        const periods = res.data || [];
+        this.periods.set(periods);
+        const matchingPeriod = periods.find(
           (p) => p.periodCode === month || (p.startDate && p.startDate.startsWith(month)),
         );
-        this.currentPeriod.set(matchingPeriod || null);
 
-        if (matchingPeriod) {
-          const filters: any = {};
-          if (this.selectedClientId()) filters.clientId = this.selectedClientId();
-          if (this.selectedProjectId()) filters.projectId = this.selectedProjectId();
-          if (this.selectedDesignationId()) filters.designationId = this.selectedDesignationId();
+        const shouldAutoSelectLatest = this.isAutoDefaultMonthSelection();
+        if (shouldAutoSelectLatest) {
+          this.selectLatestPopulatedPeriod(periods, (latestPeriod) => {
+            if (latestPeriod) {
+              const latestMonth = latestPeriod.periodCode || this.monthFromDate(latestPeriod.startDate);
+              if (latestMonth !== month) {
+                this.onMonthChange(latestMonth);
+                return;
+              }
+            }
 
-          this.attendanceApi.getGrid(matchingPeriod.id, filters).subscribe({
-            next: (gridRes) => {
-              this.populateFromGrid(gridRes.data);
-              this.isLoading.set(false);
-              this.resetTableScroll();
-            },
-            error: () => {
-              this.loadFallbackEmployees();
-            },
+            this.currentPeriod.set(matchingPeriod || null);
+            this.loadSelectedPeriod(matchingPeriod || null);
           });
-        } else {
-          this.loadFallbackEmployees();
+          return;
         }
+
+        this.currentPeriod.set(matchingPeriod || null);
+        this.loadSelectedPeriod(matchingPeriod || null);
+      },
+      error: () => {
+        this.loadFallbackEmployees();
+      },
+    });
+  }
+
+  private loadSelectedPeriod(period: AttendancePeriodDto | null | undefined): void {
+    if (!period) {
+      this.loadFallbackEmployees();
+      return;
+    }
+
+    const filters: any = {};
+    if (this.selectedClientId()) filters.clientId = this.selectedClientId();
+    if (this.selectedProjectId()) filters.projectId = this.selectedProjectId();
+    if (this.selectedDesignationId()) filters.designationId = this.selectedDesignationId();
+
+    this.attendanceApi.getGrid(period.id, Object.keys(filters).length ? filters : undefined).subscribe({
+      next: (gridRes) => {
+        this.populateFromGrid(gridRes.data);
+        this.isLoading.set(false);
+        this.resetTableScroll();
       },
       error: () => {
         this.loadFallbackEmployees();
@@ -2048,6 +2071,65 @@ export class TimesheetComponent implements OnInit, AfterViewInit {
     a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  private isAutoDefaultMonthSelection(): boolean {
+    const now = new Date();
+    return this.selectedMonth() === this.defaultMonth()
+      && this.selectedYear() === now.getFullYear()
+      && this.selectedMonthIndex() === now.getMonth();
+  }
+
+  private selectLatestPopulatedPeriod(
+    periods: AttendancePeriodDto[],
+    onSelected: (period: AttendancePeriodDto | null) => void,
+  ): void {
+    const sorted = [...periods].sort((a, b) => {
+      const dateA = this.periodDateValue(a);
+      const dateB = this.periodDateValue(b);
+      return dateB - dateA;
+    });
+
+    const checkNext = (index: number): void => {
+      if (index >= sorted.length) {
+        onSelected(null);
+        return;
+      }
+
+      const period = sorted[index];
+      const filters: any = {};
+      if (this.selectedClientId()) filters.clientId = this.selectedClientId();
+      if (this.selectedProjectId()) filters.projectId = this.selectedProjectId();
+      if (this.selectedDesignationId()) filters.designationId = this.selectedDesignationId();
+
+      this.attendanceApi.getGrid(period.id, Object.keys(filters).length ? filters : undefined).subscribe({
+        next: (gridRes) => {
+          const rows = gridRes.data?.rows || [];
+          const totalEmployees = Number(gridRes.data?.summary?.totalEmployees ?? rows.length ?? 0);
+
+          if (rows.length > 0 || totalEmployees > 0) {
+            onSelected(period);
+            return;
+          }
+
+          checkNext(index + 1);
+        },
+        error: () => checkNext(index + 1),
+      });
+    };
+
+    checkNext(0);
+  }
+
+  private periodDateValue(period: AttendancePeriodDto): number {
+    const dateString = period.startDate || period.endDate || period.periodCode || '1970-01-01';
+    return new Date(dateString).getTime();
+  }
+
+  private monthFromDate(dateString?: string): string {
+    if (!dateString) return this.defaultMonth();
+    const date = new Date(dateString);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   }
 
   private defaultMonth(): string {
