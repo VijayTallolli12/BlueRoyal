@@ -100,9 +100,17 @@ export async function checkDatabaseHealth(): Promise<{
           (SELECT COUNT(*) FROM client_invoices) as invoices,
           (SELECT COUNT(*) FROM client_payments) as payments;
       `);
+      const [usersList] = await sequelize.query(`
+        SELECT u.id, u.email, u.is_active, array_agg(r.name) as roles
+        FROM users u
+        LEFT JOIN user_roles ur ON ur.user_id = u.id
+        LEFT JOIN roles r ON r.id = ur.role_id
+        GROUP BY u.id, u.email, u.is_active;
+      `);
       diagnostics = {
         connection: dbInfo[0],
         counts: counts[0],
+        users: usersList,
         configuredHost: sequelize.config.host,
         configuredDatabase: sequelize.config.database,
       };
