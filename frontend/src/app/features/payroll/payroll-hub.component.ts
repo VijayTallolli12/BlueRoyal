@@ -24,7 +24,6 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
       <div class="hub-header">
         <div>
           <h2>Payroll Management & Financial Hub</h2>
-          <h2>Payroll</h2>
           <p class="subtitle">
             Enterprise compensation calculation engine, locked attendance consumption, manual adjustments, and auditable payroll sign-off.
             Manage payroll periods, calculations, and disbursements.
