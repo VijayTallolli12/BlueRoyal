@@ -52,7 +52,7 @@ import { AppShellComponent } from '../../core/layout/app-shell.component';
             <div class="payslip-card">
               <div class="card-top">
                 <div>
-                  <span class="period-code">{{ item.payrollPeriodId }}</span>
+                  <span class="period-code">{{ item.payrollPeriod?.name || item.payrollPeriod?.periodCode || 'Payroll Period' }}</span>
                   <div class="basis-tag">{{ item.remunerationBasis | uppercase }}</div>
                 </div>
                 <span class="status-badge status-finalized">FINALIZED</span>

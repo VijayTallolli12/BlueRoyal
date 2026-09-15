@@ -89,4 +89,24 @@ export class DocumentService {
   public getDownloadUrl(id: string): string {
     return `${this.apiUrl}/documents/${id}/download`;
   }
+
+  public downloadDocument(id: string, fileName: string): void {
+    this.http.get(`${this.apiUrl}/documents/${id}/download`, {
+      responseType: 'blob',
+    }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'document';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Document download failed', err);
+      },
+    });
+  }
 }

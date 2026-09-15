@@ -53,6 +53,15 @@ export interface PayrollItemDto {
   blockingReason?: string | null;
   createdAt: string;
   updatedAt: string;
+  payrollPeriod?: {
+    id: string;
+    periodCode: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: PayrollPeriodStatus;
+    finalizedAt?: string | null;
+  };
 }
 
 export interface PayrollItemLineDto {

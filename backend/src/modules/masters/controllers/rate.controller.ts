@@ -24,7 +24,18 @@ export class RateController {
         include: [{ model: Employee, as: 'employee' }],
         order: [['effectiveFrom', 'DESC']],
       });
-      sendSuccess(req, res, rates);
+
+      const flat = rates.map((r) => {
+        const plain = r.toJSON() as Record<string, unknown>;
+        const emp = plain.employee as Record<string, unknown> | undefined;
+        return {
+          ...plain,
+          employeeName: emp ? `${emp.firstName ?? ''} ${emp.lastName ?? ''}`.trim() : null,
+          employeeCode: emp?.employeeCode ?? null,
+        };
+      });
+
+      sendSuccess(req, res, flat);
     } catch (err) {
       next(err);
     }
@@ -96,7 +107,21 @@ export class RateController {
         ],
         order: [['effectiveFrom', 'DESC']],
       });
-      sendSuccess(req, res, rates);
+
+      const flat = rates.map((r) => {
+        const plain = r.toJSON() as Record<string, unknown>;
+        const client = plain.client as Record<string, unknown> | undefined;
+        const project = plain.project as Record<string, unknown> | undefined;
+        const designation = plain.designation as Record<string, unknown> | undefined;
+        return {
+          ...plain,
+          clientName: client?.name ?? null,
+          projectName: project?.name ?? null,
+          designationTitle: designation?.title ?? null,
+        };
+      });
+
+      sendSuccess(req, res, flat);
     } catch (err) {
       next(err);
     }

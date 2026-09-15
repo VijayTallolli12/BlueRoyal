@@ -105,15 +105,14 @@ import { EmployeeDocumentDto } from '@blue-royal/contracts';
                         </span>
                       </td>
                       <td class="col-sticky-right text-right">
-                        <a
-                          [href]="documentService.getDownloadUrl(doc.id)"
-                          target="_blank"
+                        <button
+                          (click)="documentService.downloadDocument(doc.id, doc.fileName)"
                           class="btn btn-secondary btn-sm"
                           title="Download Document"
                         >
                           <span class="material-symbols-outlined icon-sm">download</span>
                           <span>Download</span>
-                        </a>
+                        </button>
                       </td>
                     </tr>
                   }
